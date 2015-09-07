@@ -35,58 +35,52 @@ function validateip()
 function listAllRapidDiskVolumes()
 {
 	volumes=`curl --silent -H "Content-Type: application/json" -X GET \
-		http://$1/api/listAllRapidDiskVolumes|python -m json.tool`
+		http://$1/v1/listAllRapidDiskVolumes|python -m json.tool`
 	echo -ne "VOLUMES:\n$volumes"
 }
 
-#	snapshots=`echo "$pools"|grep "\-snap-"|cut -d'"' -f4`
-#	for snapshot in $snapshots; do
-#		echo -ne "Removing Snapshot: $snapshot..."
- #               command="curl --silent -H \"Content-Type: application/json\" -X PUT \
-  #                      http://$1/api/removeLogicalVolume \
-   #                     -d '{ \"logicalVolume\": \"$snapshot\" }'"
-    #            returnMsg=`eval "$command"|python -m json.tool`
-#		echo $returnMsg|grep -q "\"errorCode\": 0," 2>&1
-#		if [ $? -ne 0 ]; then
-#			echo -ne "\t${bold}FAILED${normal}.\n------\n"
-#			echo "$returnMsg"
-#			exit 1
-#		else
-#			echo -ne "\t${bold}SUCCESS${normal}.\n"
-#		fi
-#	done
-#	volumes=`echo "$pools"|grep "\-thinvol"|grep -v "iqn"|grep -v "\-snap-"|cut -d'"' -f4`
-#	for volume in $volumes; do
-#		echo -ne "Removing Logical Volume: $volume..."
- #               command="curl --silent -H \"Content-Type: application/json\" -X PUT \
-  #                      http://$1/api/removeLogicalVolume \
-  #                      -d '{ \"logicalVolume\": \"$volume\" }'"
-   #             returnMsg=`eval "$command"|python -m json.tool`
-    #            echo $returnMsg|grep -q "\"errorCode\": 0," 2>&1
-   #             if [ $? -ne 0 ]; then
-    #                    echo -ne "\t${bold}FAILED${normal}.\n------\n"
-     #                   echo "$returnMsg"
-  #                      exit 1
-   #             else
- #                       echo -ne "\t${bold}SUCCESS${normal}.\n"
-  #              fi
-#	done
-#	pools=`echo "$pools"|grep "\"rpool"|grep -v "-"|cut -d'"' -f4`
-#	for pool in $pools; do
- #               echo -ne "Removing RapidPool: $pool..."
-  #              command="curl --silent -H \"Content-Type: application/json\" -X PUT \
- #                       http://$1/api/removeRapidPool \
-  #                      -d '{ \"rapidPool\": \"$pool\" }'"
-   #             returnMsg=`eval "$command"|python -m json.tool`
-    #            echo $returnMsg|grep -q "\"errorCode\": 0," 2>&1
-     #           if [ $? -ne 0 ]; then
-  #                      echo -ne "\t${bold}FAILED${normal}.\n------\n"
-   #                     echo "$returnMsg"
-    #                    exit 1
-     #           else
-  #                      echo -ne "\t${bold}SUCCESS${normal}.\n"
-   #             fi
-#	done
+function createRapidDisk()
+{
+	command="curl --silent -H \"Content-Type: application/json\" -X POST \
+		http://$1/v1/createRapidDisk -d '{ \"size\": $2 }'"
+	eval "$command"|python -m json.tool
+}
+
+function resizeRapidDisk()
+{
+	command="curl --silent -H \"Content-Type: application/json\" -X PUT \
+		http://$1/v1/resizeRapidDisk -d '{ \"rapidDisk\": \"$2\", \"size\": $3 }'"
+	eval "$command"|python -m json.tool
+}
+
+function removeRapidDisk()
+{
+	curl --silent -H "Content-Type: application/json" -X DELETE \
+		http://$1/v1/removeRapidDisk/$2|python -m json.tool
+}
+
+function createRapidCacheMapping()
+{
+	command="curl --silent -H \"Content-Type: application/json\" -X POST \
+		http://$1/v1/createRapidCacheMapping \
+		-d '{ \"rapidDisk\": \"$2\", \"sourceDrive\": \"$3\" }'"
+	eval "$command"|python -m json.tool
+}
+
+function removeRapidCacheMapping()
+{
+        curl --silent -H "Content-Type: application/json" -X DELETE \
+                http://$1/v1/removeRapidDisk/$2|python -m json.tool
+}
+
+function showRapidCacheStatistics()
+{
+        volumes=`curl --silent -H "Content-Type: application/json" -X GET \
+                http://$1/v1/showRapidCacheStatistics/$2|python -m json.tool`
+        echo -ne "STATISTICS:\n$volumes"
+}
+
+
 
 #
 #
@@ -107,16 +101,22 @@ fi
 
 case "$1" in
 	createRapidDisk)
+		createRapidDisk $IP $3			# arg 3: size in MBytes #
 		;;
 	resizeRapidDisk)
+		resizeRapidDisk $IP $3 $4		# arg 3: rapiddisk, arg 4: size in MBytes #
 		;;
 	removeRapidDisk)
+		removeRapidDisk $IP $3			# arg 3: rapiddisk
 		;;
 	createRapidCacheMapping)
+		createRapidCacheMapping $IP $3 $4	# arg 3: rapiddisk, arg 4: source volume #
 		;;
 	removeRapidCacheMapping)
+		removeRapidCacheMapping $IP $3		# arg 3: rapidcache
 		;;
 	showRapidCacheStatistics)
+		showRapidCacheStatistics $IP $3		# arg 3: rapidcache
 		;;
 	listAllRapidDiskVolumes)
 		listAllRapidDiskVolumes $IP
