@@ -1,0 +1,204 @@
+#!/bin/bash
+#
+# Copyright (C) 2015 Petros Koutoupis. All rights reserved.
+#
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+export PATH
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs || exit 1
+
+declare RDSK_bin="/sbin/rapiddisk"
+
+metadata()
+{
+        cat <<EOT
+<?xml version="1.0" ?>
+<resource-agent name="rstor" version="rgmanager 2.0">
+    <version>1.0</version>
+
+    <longdesc lang="en">
+        This defines a standard RapidDisk HA failover.
+    </longdesc>
+
+    <shortdesc lang="en">
+        Defines a standard RapidDisk HA failover.
+    </shortdesc>
+
+    <parameters>
+        <parameter name="name" primary="1">
+            <longdesc lang="en">
+                This is the name of the resource rule.
+            </longdesc>
+            <shortdesc lang="en">
+                Name
+            </shortdesc>
+            <content type="string"/>
+        </parameter>
+
+        <parameter name="volume" unique="1" required="1">
+            <longdesc lang="en">
+                This is the absolute path of the storage device to map with RapidCache.
+            </longdesc>
+            <shortdesc lang="en">
+                Path of storage device for RapidCache.
+            </shortdesc>
+            <content type="string"/>
+        </parameter>
+
+        <parameter name="size" unique="1" required="1">
+            <longdesc lang="en">
+                This is the size of the RapidDisk (and cache for RapidCache) volume.
+            </longdesc>
+            <shortdesc lang="en">
+                RapidDisk size.
+            </shortdesc>
+            <content type="string"/>
+        </parameter>
+    </parameters>
+
+    <actions>
+        <action name="start" timeout="300"/>
+        <action name="stop" timeout="30"/>
+        
+        <action name="status" timeout="10" interval="30"/>
+        <action name="monitor" timeout="10" interval="30"/>
+
+        <!-- depth 10 calls the status_program -->
+        <action name="status" depth="10" timeout="20" interval="30"/>
+        <action name="monitor" depth="10" timeout="20" interval="30"/>
+
+        <action name="meta-data" timeout="5"/>
+        <action name="validate-all" timeout="5"/>
+
+    </actions>
+</resource-agent>
+EOT
+}
+
+
+verify_all()
+{
+	if [ -z "$OCF_RESKEY_name" ]; then
+		ocf_log err "Invalid Name Of Service: $OCF_RESKEY_name"
+		return $OCF_ERR_ARGS
+	fi
+
+	if [ -z "$OCF_RESKEY_volume" ]; then
+		ocf_log err "Invalid Name Of Volume: $OCF_RESKEY_volume"
+		return $OCF_ERR_ARGS
+	fi
+
+        if [ -z "$OCF_RESKEY_size" ]; then
+		ocf_log err "Invalid Size Of RapidDisk Volume: $OCF_RESKEY_size"
+                return $OCF_ERR_ARGS
+        fi
+
+	return $OCF_SUCCESS
+}
+
+
+do_start()
+{
+	verify_all || exit $?
+
+	if do_status; then
+		ocf_log info "Starting Service $OCF_RESOURCE_INSTANCE > Already running"
+		return $OCF_SUCCESS
+	fi
+
+	output=`$RDSK_bin --attach $OCF_RESKEY_size`
+	if [ $? -ne 0 ]; then
+		ocf_log info "Unable to create a RapidDisk volume of $OCF_RESKEY_size MB"
+		return $OCF_ERR_GENERIC
+	fi
+	/sbin/cryptsetup isLuks $OCF_RESKEY_volume
+	if [ $? -eq 0 ]; then
+		$RDSK_bin --activate-crypt $OCF_RESKEY_volume
+		if [ $? -ne 0 ]; then
+			ocf_log info "Unable to activate encryption on $OCF_RESKEY_volume"
+			return $OCF_ERR_GENERIC
+		fi
+		volume="/dev/mapper/rxcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+	else
+		volume="$OCF_RESKEY_volume"
+	fi
+	rxdsk=`echo $output|sed -e 's/^.*rxd/rxd/' -e 's/ .*$//'`
+	$RDSK_bin --rxc-map $rxdsk $volume 4
+
+        return $OCF_SUCCESS
+}
+
+
+do_stop()
+{
+	verify_all || exit $?
+	crypt=0
+
+	/sbin/cryptsetup isLuks $OCF_RESKEY_volume
+	if [ $? -eq 0 ]; then
+		cache="rxc_rxcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		crypt=1
+	else
+		cache="rxc_`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+	fi
+	output=`$RDSK_bin --short-list|grep "$cache:"`
+	$RDSK_bin --rxc-unmap $cache
+	$RDSK_bin --detach `echo "$output"|sed -e 's/^rxc.*://' -e 's/,.*$//'`
+	if [ $crypt -eq "1" ]; then
+		$RDSK_bin --deactivate-crypt /dev/mapper/rxcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
+	fi
+
+        return $OCF_SUCCESS
+}
+
+
+do_status()
+{
+	verify_all || exit $?
+
+	volume=`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
+	if [ -e "/dev/$mapper/$volume" ]; then
+		return $OCF_SUCCESS
+	fi
+	ocf_log debug "RapidDisk resource for $OCF_RESKEY_volume is not running."
+	return $OCF_ERR_GENERIC
+}
+
+#
+#
+#
+
+case $1 in
+	validate-all|verify-all)
+		verify_all
+		exit $?
+		;;
+	start)
+		do_start
+		exit $?
+		;;
+	stop)
+		do_stop
+		exit $?
+		;;
+	restart)
+		do_stop
+		do_start
+		exit $?
+		;;
+	status|monitor)
+		do_status
+		exit $?
+		;;
+	meta-data)
+		metadata
+		exit 0
+		;;
+	*)
+		echo "usage: $0 {start|stop|restart|status|meta-data|validate-all}"
+		exit 1
+		;;
+esac

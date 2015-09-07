@@ -1,0 +1,54 @@
+Author: Petros Koutoupis <petros@petroskoutoupis.com>
+
+
+Building and Installing the rapiddisk utility and the rxdsk & rxcache kernel modules
+================================================================
+Change into the project's parent directory path.
+
+** NOTE ** To build the rapiddisk management utility, you will need to have the zlib libraries and zlib development files installed on your host system. As of 1.3, the build links to zlib for compressed archiving and decompressed restoration of rxdsk volumes.
+** You are required to having either the full kernel source or the kernel headers installed for your current kernel revision.
+
+To build rapiddisk from source, you would type the following on the command line:
+# make
+
+To install rapiddisk (must execute with superuser rights: sudo):
+# make install
+
+To uninstall rapiddisk (must execute with superuser rights: sudo):
+# make uninstall
+
+The rapiddisk utility will install in the following path:
+/sbin/
+
+** For utility information please reference the rapiddisk manual page: man 1 rapiddisk
+
+
+Inserting/Removing the rxdsk kernel module
+================================================================
+
+To insert the rxdsk module:
+# modprobe rxdsk
+
+To remove the rxdsk module:
+# modprobe -r rxdsk
+
+To insert the rxcache module (rxdsk should be loaded prior to rxcache):
+# modprobe rxcache
+
+To remove the rxcache module:
+# modprobe -r rxcache
+
+
+Building and installing / uninstalling the tools ONLY
+================================================================
+
+Installing:
+# make tools-install
+
+Uninstalling:
+# make tools-uninstall
+
+
+Installing modules for DKMS support
+================================================================
+# make dkms

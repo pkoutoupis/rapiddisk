@@ -1,0 +1,117 @@
+.TH RAPIDDISK 1 "Oct 16 2010" "Linux" "GENERAL COMMANDS"
+.SH NAME
+rapiddisk \- An administration tool to manage the RapidDisk (rxdsk) RAM disk devices and RapidCache (rxcache) mappings.
+.SH SYNOPSIS
+rapiddisk [ -h | -v ] function [parameters: unit | size | src & dest | cache & source & block size ]
+.SH DESCRIPTION
+rapiddisk is a RapidDisk (rxdsk) module management tool. The tool allows the user to list all attached rxdsk devices, with the ability to dynamically attach a new rxdsk block devices and detach existing ones. It also is capable of mapping and unmapping a rxd volume to any block device via the RapidCache (rxcache) kernel module.
+.SS Options
+.TP
+-h
+Invoke the help menu.
+.TP
+-v
+Display the version number.
+.SS Function
+.TP
+--attach
+Dynamically attach new rxdsk devices.
+.TP
+--attach-nv
+Dynamically attach an rxdsk device over a non-volatile region of memory.
+.TP
+--detach
+Dynamically detach rxdsk devices.
+.TP
+--list   
+List all attached rxdsk devices.
+.TP
+--short-list   
+List all attached rxdsk devices in script friendly format.
+.TP
+--flush
+Erase all data to a specified rxdsk device (dangerous).
+.TP
+--resize
+Dynamically grow the size of an existing rxdsk device. Not supported with non-volatile memory.
+.TP
+--archive
+Using zlib, archive an rxdsk device to a data file.
+.TP
+--restore
+Using zlib, restore an rxdsk device from an archived data file.
+.TP
+--rxc-map
+Map an rxdsk device as a caching node to anotther block device.
+.TP
+--rxc-unmap
+Map an rxdsk device as a caching node to anotther block device.
+.TP
+--stat-cache
+Obtain RapidCache Mappings statistics.
+.TP
+--enable-crypt
+Initialize a storage volume for data encryption.
+.TP
+--activate-crypt
+Activate an encryption volume.
+.TP
+--deactivate-crypt
+Deactivate an encryption volume.
+.SS Parameters (if applicable)
+.TP
+[size]
+Specify desired size of attaching RAM disk device in MBytes.
+.TP
+[unit]
+Specify unit number of RAM disk device to detach.
+.TP
+[src]
+Source path for archive/restore options.
+.TP
+[dest]
+Destination path for arcive/restore options.
+.TP
+[cache]
+Specify rxd node to use as caching volume.
+.TP
+[source]
+Specify block device to map cache to.
+.TP
+[block size]
+Specify cache block size in KBytes (multiples of 4).
+.SH EXAMPLES
+.TP
+rapiddisk --list
+.TP
+rapiddisk --attach 64
+.TP
+rapiddisk --attach-nv fee01000 fffbffff
+.TP
+rapiddisk --detach rxd2
+.TP
+rapiddisk --resize rxd2 128
+.TP
+rapiddisk --archive rxd0 rxd-052911.dat
+.TP
+rapiddisk --restore rxd-052911.dat rxd0
+.TP
+rapiddisk --rxc-map rxd1 /dev/sdb
+.TP
+rapiddisk --rxc-unmap rxc0
+.TP
+rapiddisk --stat-cache rxc0
+.TP
+rapiddisk --flush rxd2
+.TP
+rapidstor --enable-crypt /dev/rxd0
+.TP
+rapidstor --activate-crypt /dev/rxd0
+.TP
+rapidstor --deactivate-crypt /dev/mapper/rxcrypt-rxd0
+.SH EXIT STATUS
+rapiddisk returns a zero exit status if no error occurs during operation. A non-zero value is returned on error.
+.SH AUTHORS
+Original version: Petros Koutoupis (petros@petroskoutoupis.com)
+.SH SEE ALSO
+View the RapidDisk project page: http://www.rapiddisk.org
