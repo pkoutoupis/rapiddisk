@@ -1,5 +1,5 @@
-/*********************************************************************************
- ** Copyright (c) 2011-2014 Petros Koutoupis
+/*******************************************************************************
+ ** Copyright (c) 2011-2015 Petros Koutoupis
  ** All rights reserved.
  **
  ** filename: rxcache.c
@@ -11,14 +11,14 @@
  **	 Which in turn was based on DM-Cache:
  **	  Copyright (C) International Business Machines Corp., 2006
  **	  Author: Ming Zhao (mingzhao@ufl.edu)
- ** 
+ **
  ** created: 3Dec11, petros@petroskoutoupis.com
  **
  ** This file is licensed under GPLv2.
  **
- ********************************************************************************/
+ ******************************************************************************/
 
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/list.h>
@@ -43,11 +43,11 @@
 	if (unlikely(!(x))) { \
 		dump_stack(); \
 		panic("ASSERT: assertion (%s) failed at %s (%d)\n", \
-		#x,  __FILE__ , __LINE__);			\
+		#x,  __FILE__, __LINE__); \
 	} \
-} while(0)
+} while (0)
 
-#define VERSION_STR	"3.2"
+#define VERSION_STR	"3.3"
 #define DM_MSG_PREFIX	"rxc"
 
 #define READCACHE	1
@@ -88,12 +88,12 @@ struct cache_context {
 	struct dm_dev *disk_dev;	/* Source device */
 	struct dm_dev *cache_dev;	/* Cache device */
 
-	spinlock_t	cache_spin_lock;
+	spinlock_t cache_spin_lock;
 	struct cache_block *cache;
-	u_int8_t *cache_state;
-	u_int32_t *set_lru_next;
+	u8 *cache_state;
+	u32 *set_lru_next;
 
-	struct dm_io_client *io_client;	
+	struct dm_io_client *io_client;
 	sector_t size;
 	unsigned int assoc;
 	unsigned int block_size;
@@ -116,7 +116,7 @@ struct cache_context {
 	unsigned long uncached_reads;
 	unsigned long uncached_writes;
 	unsigned long cache_reads, cache_writes;
-	unsigned long disk_reads, disk_writes;	
+	unsigned long disk_reads, disk_writes;
 
 	char cache_devname[DEV_PATHLEN];
 	char disk_devname[DEV_PATHLEN];
@@ -124,14 +124,14 @@ struct cache_context {
 
 /* Cache block metadata structure */
 struct cache_block {
-	sector_t dbn;			/* Sector number of the cached block */
+	sector_t dbn;		/* Sector number of the cached block */
 };
 
 /* Structure for a kcached job */
 struct kcached_job {
 	struct list_head list;
 	struct cache_context *dmc;
-	struct bio *bio;		/* Original bio */
+	struct bio *bio;	/* Original bio */
 	struct dm_io_region disk;
 	struct dm_io_region cache;
 	int index;
@@ -146,18 +146,17 @@ static mempool_t *job_pool;
 static DEFINE_SPINLOCK(job_lock);
 static LIST_HEAD(complete_jobs);
 static LIST_HEAD(io_jobs);
-static void cache_read_miss(struct cache_context *dmc, struct bio* bio, int index);
-static void cache_write(struct cache_context *dmc, struct bio* bio);
-static int cache_invalidate_blocks(struct cache_context *dmc, struct bio *bio);
-static void rxc_uncached_io_callback(unsigned long error, void *context);
-static void rxc_start_uncached_io(struct cache_context *dmc, struct bio *bio);
+static void cache_read_miss(struct cache_context *, struct bio *, int);
+static void cache_write(struct cache_context *, struct bio *);
+static int cache_invalidate_blocks(struct cache_context *, struct bio *);
+static void rxc_uncached_io_callback(unsigned long, void *);
+static void rxc_start_uncached_io(struct cache_context *, struct bio *);
 
-
-int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where, 
+int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-		int rw, struct bio *bio, io_notify_fn fn, void *context)
+		     int rw, struct bio *bio, io_notify_fn fn, void *context)
 #else
-		int rw, struct bio_vec *bvec, io_notify_fn fn, void *context)
+		     int rw, struct bio_vec *bvec, io_notify_fn fn, void *context)
 #endif
 {
 	struct kcached_job *job = (struct kcached_job *)context;
@@ -182,12 +181,14 @@ int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where,
 static int jobs_init(void)
 {
 	job_cache = kmem_cache_create("kcached-jobs-wt",
-		sizeof(struct kcached_job), __alignof__(struct kcached_job), 0, NULL);
+				      sizeof(struct kcached_job),
+				      __alignof__(struct kcached_job),
+				      0, NULL);
 	if (!job_cache)
 		return -ENOMEM;
 
 	job_pool = mempool_create(WT_MIN_JOBS, mempool_alloc_slab,
-		mempool_free_slab, job_cache);
+				  mempool_free_slab, job_cache);
 	if (!job_pool) {
 		kmem_cache_destroy(job_cache);
 		return -ENOMEM;
@@ -231,14 +232,14 @@ static inline void push(struct list_head *jobs, struct kcached_job *job)
 
 void rxc_io_callback(unsigned long error, void *context)
 {
-	struct kcached_job *job = (struct kcached_job *) context;
+	struct kcached_job *job = (struct kcached_job *)context;
 	struct cache_context *dmc = job->dmc;
 	struct bio *bio;
 	int invalid = 0;
-	
-	ASSERT(job != NULL);
+
+	ASSERT(job);
 	bio = job->bio;
-	ASSERT(bio != NULL);
+	ASSERT(bio);
 	if (error)
 		DMERR("%s: io error %ld", __func__, error);
 	if (job->rw == READSOURCE || job->rw == WRITESOURCE) {
@@ -252,15 +253,23 @@ void rxc_io_callback(unsigned long error, void *context)
 			if (invalid)
 				DMERR("%s: cache fill invalidation, sector %lu, size %u",
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-					__func__, (unsigned long)bio->bi_iter.bi_sector, bio->bi_iter.bi_size);
+				      __func__,
+				      (unsigned long)bio->bi_iter.bi_sector,
+				      bio->bi_iter.bi_size);
 #else
-					__func__, (unsigned long)bio->bi_sector, bio->bi_size);
+				      __func__, (unsigned long)bio->bi_sector,
+				      bio->bi_size);
 #endif
-				bio_endio(bio, error);
-				spin_lock_bh(&dmc->cache_spin_lock);
-				dmc->cache_state[job->index] = INVALID;
-				spin_unlock_bh(&dmc->cache_spin_lock);
-				goto out;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+			bio_endio(bio, error);
+#else
+			bio->bi_error = error;
+			bio_io_error(bio);
+#endif
+			spin_lock_bh(&dmc->cache_spin_lock);
+			dmc->cache_state[job->index] = INVALID;
+			spin_unlock_bh(&dmc->cache_spin_lock);
+			goto out;
 		} else {
 			job->rw = WRITECACHE;
 			push(&io_jobs, job);
@@ -270,12 +279,16 @@ void rxc_io_callback(unsigned long error, void *context)
 	} else if (job->rw == READCACHE) {
 		spin_lock_bh(&dmc->cache_spin_lock);
 		ASSERT(dmc->cache_state[job->index] == INPROG_INVALID ||
-			dmc->cache_state[job->index] ==  CACHEREADINPROG);
+		       dmc->cache_state[job->index] ==  CACHEREADINPROG);
 		if (dmc->cache_state[job->index] == INPROG_INVALID)
 			invalid++;
 		spin_unlock_bh(&dmc->cache_spin_lock);
 		if (!invalid && !error) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 			bio_endio(bio, 0);
+#else
+			bio_endio(bio);
+#endif
 			spin_lock_bh(&dmc->cache_spin_lock);
 			dmc->cache_state[job->index] = VALID;
 			spin_unlock_bh(&dmc->cache_spin_lock);
@@ -288,10 +301,14 @@ void rxc_io_callback(unsigned long error, void *context)
 		return;
 	} else {
 		ASSERT(job->rw == WRITECACHE);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 		bio_endio(bio, 0);
+#else
+		bio_endio(bio);
+#endif
 		spin_lock_bh(&dmc->cache_spin_lock);
 		ASSERT((dmc->cache_state[job->index] == INPROG) ||
-			(dmc->cache_state[job->index] == INPROG_INVALID));
+		       (dmc->cache_state[job->index] == INPROG_INVALID));
 		if (error || dmc->cache_state[job->index] == INPROG_INVALID) {
 			dmc->cache_state[job->index] = INVALID;
 		} else {
@@ -305,6 +322,7 @@ out:
 	if (atomic_dec_and_test(&dmc->nr_jobs))
 		wake_up(&dmc->destroyq);
 }
+EXPORT_SYMBOL(rxc_io_callback);
 
 static int do_io(struct kcached_job *job)
 {
@@ -319,7 +337,7 @@ static int do_io(struct kcached_job *job)
 #else
 	r = dm_io_async_bvec(1, &job->cache, WRITE, bio->bi_io_vec + bio->bi_idx, rxc_io_callback, job);
 #endif
-	ASSERT(r == 0); /* In our case, dm_io_async_bvec() must always return 0 */
+	ASSERT(r == 0); /* dm_io_async_bvec() must always return 0 */
 	return r;
 }
 
@@ -340,8 +358,10 @@ int rxc_do_complete(struct kcached_job *job)
 	rxc_start_uncached_io(dmc, bio);
 	return 0;
 }
+EXPORT_SYMBOL(rxc_do_complete);
 
-static void process_jobs(struct list_head *jobs, int (*fn) (struct kcached_job *))
+static void process_jobs(struct list_head *jobs,
+			 int (*fn)(struct kcached_job *))
 {
 	struct kcached_job *job;
 
@@ -376,16 +396,17 @@ static unsigned long hash_block(struct cache_context *dmc, sector_t dbn)
 	return set_number;
 }
 
-static int find_valid_dbn(struct cache_context *dmc, sector_t dbn, int start_index, int *index)
+static int find_valid_dbn(struct cache_context *dmc, sector_t dbn,
+			  int start_index, int *index)
 {
 	int i;
 	int end_index = start_index + dmc->assoc;
 
 	for (i = start_index ; i < end_index ; i++) {
-		if (dbn == dmc->cache[i].dbn && \
-			(dmc->cache_state[i] == VALID || \
-			dmc->cache_state[i] == CACHEREADINPROG || \
-			dmc->cache_state[i] == INPROG)) {
+		if (dbn == dmc->cache[i].dbn &&
+		    (dmc->cache_state[i] == VALID ||
+		    dmc->cache_state[i] == CACHEREADINPROG ||
+		    dmc->cache_state[i] == INPROG)) {
 			*index = i;
 			return dmc->cache_state[i];
 		}
@@ -393,7 +414,8 @@ static int find_valid_dbn(struct cache_context *dmc, sector_t dbn, int start_ind
 	return GENERIC_ERROR;
 }
 
-static void find_invalid_dbn(struct cache_context *dmc, int start_index, int *index)
+static void find_invalid_dbn(struct cache_context *dmc,
+			     int start_index, int *index)
 {
 	int i;
 	int end_index = start_index + dmc->assoc;
@@ -407,13 +429,14 @@ static void find_invalid_dbn(struct cache_context *dmc, int start_index, int *in
 	}
 }
 
-static void find_reclaim_dbn(struct cache_context *dmc, int start_index, int *index)
+static void find_reclaim_dbn(struct cache_context *dmc,
+			     int start_index, int *index)
 {
 	int i;
 	int end_index = start_index + dmc->assoc;
 	int set = start_index / dmc->assoc;
 	int slots_searched = 0;
-	
+
 	/* Find the "oldest" VALID slot to recycle. For each set, we keep
 	 * track of the next "lru" slot to pick off. Each time we pick off
 	 * a VALID entry to recycle we advance this pointer. So  we sweep
@@ -430,7 +453,7 @@ static void find_reclaim_dbn(struct cache_context *dmc, int start_index, int *in
 		slots_searched++;
 		i++;
 		if (i == end_index)
-		i = start_index;
+			i = start_index;
 	}
 	i++;
 	if (i == end_index)
@@ -460,29 +483,30 @@ static int cache_lookup(struct cache_context *dmc, struct bio *bio, int *index)
 	ASSERT(ret == -1);
 	find_invalid_dbn(dmc, start_index, &invalid);
 	if (invalid == -1) {
-		/* We didn't find an invalid entry, search for oldest valid entry */
+		/* We didn't find an invalid entry,
+		 * search for oldest valid entry */
 		find_reclaim_dbn(dmc, start_index, &oldest_clean);
 	}
-	/* Cache miss : We can't choose an entry marked INPROG, but choose the oldest
-	 * INVALID or the oldest VALID entry. */
+	/* Cache miss : We can't choose an entry marked INPROG,
+	 * but choose the oldest INVALID or the oldest VALID entry. */
 	*index = start_index + dmc->assoc;
-	if (invalid != -1) {
+	if (invalid != -1)
 		*index = invalid;
-	} else if (oldest_clean != -1) {
+	else if (oldest_clean != -1)
 		*index = oldest_clean;
-	}
 	if (*index < (start_index + dmc->assoc))
 		return INVALID;
 	else
 		return GENERIC_ERROR;
 }
 
-static struct kcached_job *new_kcached_job(struct cache_context *dmc, struct bio* bio, int index)
+static struct kcached_job *new_kcached_job(struct cache_context *dmc,
+					   struct bio *bio, int index)
 {
 	struct kcached_job *job;
-	
+
 	job = mempool_alloc(job_pool, GFP_NOIO);
-	if (job == NULL)
+	if (!job)
 		return NULL;
 	job->disk.bdev = dmc->disk_dev->bdev;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
@@ -510,26 +534,33 @@ static struct kcached_job *new_kcached_job(struct cache_context *dmc, struct bio
 	return job;
 }
 
-static void cache_read_miss(struct cache_context *dmc, struct bio* bio, int index)
+static void cache_read_miss(struct cache_context *dmc,
+			    struct bio *bio, int index)
 {
 	struct kcached_job *job;
 
 	job = new_kcached_job(dmc, bio, index);
-	if (unlikely(job == NULL)) {
+	if (unlikely(!job)) {
 		DMERR("%s: Cannot allocate job\n", __func__);
 		spin_lock_bh(&dmc->cache_spin_lock);
 		dmc->cache_state[index] = INVALID;
 		spin_unlock_bh(&dmc->cache_spin_lock);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 		bio_endio(bio, -EIO);
+#else
+		bio->bi_error = -EIO;
+		bio_io_error(bio);
+#endif
 	} else {
 		job->rw = READSOURCE;
 		atomic_inc(&dmc->nr_jobs);
 		dmc->disk_reads++;
 		dm_io_async_bvec(1, &job->disk, READ,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-			bio, rxc_io_callback, job);
+				 bio, rxc_io_callback, job);
 #else
-			bio->bi_io_vec + bio->bi_idx, rxc_io_callback, job);
+				 bio->bi_io_vec + bio->bi_idx,
+				 rxc_io_callback, job);
 #endif
 	}
 }
@@ -542,9 +573,11 @@ static void cache_read(struct cache_context *dmc, struct bio *bio)
 	spin_lock_bh(&dmc->cache_spin_lock);
 	res = cache_lookup(dmc, bio, &index);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-	if ((res == VALID) && (dmc->cache[index].dbn == bio->bi_iter.bi_sector)) {
+	if ((res == VALID) &&
+	    (dmc->cache[index].dbn == bio->bi_iter.bi_sector)) {
 #else
-	if ((res == VALID) && (dmc->cache[index].dbn == bio->bi_sector)) {
+	if ((res == VALID) &&
+	    (dmc->cache[index].dbn == bio->bi_sector)) {
 #endif
 		struct kcached_job *job;
 
@@ -552,20 +585,28 @@ static void cache_read(struct cache_context *dmc, struct bio *bio)
 		dmc->cache_hits++;
 		spin_unlock_bh(&dmc->cache_spin_lock);
 		job = new_kcached_job(dmc, bio, index);
-		if (unlikely(job == NULL)) {
+		if (unlikely(!job)) {
 			DMERR("cache_read(_hit): Cannot allocate job\n");
 			spin_lock_bh(&dmc->cache_spin_lock);
 			dmc->cache_state[index] = VALID;
 			spin_unlock_bh(&dmc->cache_spin_lock);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 			bio_endio(bio, -EIO);
+#else
+			bio->bi_error = -EIO;
+			bio_io_error(bio);
+#endif
 		} else {
 			job->rw = READCACHE;
 			atomic_inc(&dmc->nr_jobs);
 			dmc->cache_reads++;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-			dm_io_async_bvec(1, &job->cache, READ, bio, rxc_io_callback, job);
+			dm_io_async_bvec(1, &job->cache, READ, bio,
+					 rxc_io_callback, job);
 #else
-			dm_io_async_bvec(1, &job->cache, READ, bio->bi_io_vec + bio->bi_idx, rxc_io_callback, job);
+			dm_io_async_bvec(1, &job->cache, READ,
+					 bio->bi_io_vec + bio->bi_idx,
+					 rxc_io_callback, job);
 #endif
 		}
 		return;
@@ -577,8 +618,9 @@ static void cache_read(struct cache_context *dmc, struct bio *bio)
 		return;
 	}
 	if (res == -1 || res >= INPROG) {
-		/* We either didn't find a cache slot in the set we were looking at or
-		 * the block we are trying to read is being refilled into cache. */
+		/* We either didn't find a cache slot in the set we were
+		 * looking at or the block we are trying to read is being
+		 * refilled into cache. */
 		spin_unlock_bh(&dmc->cache_spin_lock);
 		rxc_start_uncached_io(dmc, bio);
 		return;
@@ -600,34 +642,37 @@ static void cache_read(struct cache_context *dmc, struct bio *bio)
 }
 
 static int cache_invalidate_block_set(struct cache_context *dmc, int set,
-	sector_t io_start, sector_t io_end, int rw, int *inprog_inval)
+				      sector_t io_start, sector_t io_end,
+				      int rw, int *inprog_inval)
 {
 	int start_index, end_index, i;
 	int invalidations = 0;
-	
+
 	start_index = dmc->assoc * set;
 	end_index = start_index + dmc->assoc;
 	for (i = start_index ; i < end_index ; i++) {
 		sector_t start_dbn = dmc->cache[i].dbn;
 		sector_t end_dbn = start_dbn + dmc->block_size;
-		
-		if (dmc->cache_state[i] == INVALID || dmc->cache_state[i] == INPROG_INVALID)
+
+		if (dmc->cache_state[i] == INVALID ||
+		    dmc->cache_state[i] == INPROG_INVALID)
 			continue;
 		if ((io_start >= start_dbn && io_start < end_dbn) ||
-			(io_end >= start_dbn && io_end < end_dbn)) {
+		    (io_end >= start_dbn && io_end < end_dbn)) {
 			if (rw == WRITE)
 				dmc->wr_invalidates++;
 			else
 				dmc->rd_invalidates++;
 			invalidations++;
 			if (dmc->cache_state[i] == VALID) {
-				dmc->cached_blocks--;			
+				dmc->cached_blocks--;
 				dmc->cache_state[i] = INVALID;
 			} else if (dmc->cache_state[i] >= INPROG) {
 				(*inprog_inval)++;
 				dmc->cache_state[i] = INPROG_INVALID;
-				DMERR("%s: sector %lu, size %lu, rw %d", __func__,
-					(unsigned long)io_start, (unsigned long)io_end - (unsigned long)io_start, rw);
+				DMERR("%s: sector %lu, size %lu, rw %d",
+				      __func__, (unsigned long)io_start,
+				      (unsigned long)io_end - (unsigned long)io_start, rw);
 			}
 		}
 	}
@@ -645,17 +690,19 @@ static int cache_invalidate_blocks(struct cache_context *dmc, struct bio *bio)
 #endif
 	int start_set, end_set;
 	int inprog_inval_start = 0, inprog_inval_end = 0;
-	
+
 	start_set = hash_block(dmc, io_start);
 	end_set = hash_block(dmc, io_end);
-	cache_invalidate_block_set(dmc, start_set, io_start, io_end,  
-		bio_data_dir(bio), &inprog_inval_start);
+	cache_invalidate_block_set(dmc, start_set, io_start, io_end,
+				   bio_data_dir(bio), &inprog_inval_start);
 	if (start_set != end_set)
-		cache_invalidate_block_set(dmc, end_set, io_start, io_end, bio_data_dir(bio), &inprog_inval_end);
+		cache_invalidate_block_set(dmc, end_set, io_start, io_end,
+					   bio_data_dir(bio),
+					   &inprog_inval_end);
 	return (inprog_inval_start + inprog_inval_end);
 }
 
-static void cache_write(struct cache_context *dmc, struct bio* bio)
+static void cache_write(struct cache_context *dmc, struct bio *bio)
 {
 	int index;
 	int res;
@@ -687,12 +734,17 @@ static void cache_write(struct cache_context *dmc, struct bio* bio)
 #endif
 	spin_unlock_bh(&dmc->cache_spin_lock);
 	job = new_kcached_job(dmc, bio, index);
-	if (unlikely(job == NULL)) {
+	if (unlikely(!job)) {
 		DMERR("%s: Cannot allocate job\n", __func__);
 		spin_lock_bh(&dmc->cache_spin_lock);
 		dmc->cache_state[index] = INVALID;
 		spin_unlock_bh(&dmc->cache_spin_lock);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 		bio_endio(bio, -EIO);
+#else
+		bio->bi_error = -EIO;
+		bio_io_error(bio);
+#endif
 		return;
 	}
 	job->rw = WRITESOURCE;
@@ -703,7 +755,6 @@ static void cache_write(struct cache_context *dmc, struct bio* bio)
 #else
 	dm_io_async_bvec(1, &job->disk, WRITE, bio->bi_io_vec + bio->bi_idx, rxc_io_callback, job);
 #endif
-	return;
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
@@ -724,7 +775,7 @@ int rxc_map(struct dm_target *ti, struct bio *bio)
 int rxc_map(struct dm_target *ti, struct bio *bio, union map_info *map_context)
 #endif
 {
-	struct cache_context *dmc = (struct cache_context *) ti->private;
+	struct cache_context *dmc = (struct cache_context *)ti->private;
 
 	if (bio_barrier(bio))
 		return -EOPNOTSUPP;
@@ -737,7 +788,7 @@ int rxc_map(struct dm_target *ti, struct bio *bio, union map_info *map_context)
 	if (bio_data_dir(bio) == READ)
 		dmc->reads++;
 	else
-		dmc->writes++;		
+		dmc->writes++;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 	if (to_sector(bio->bi_iter.bi_size) != dmc->block_size) {
@@ -756,20 +807,30 @@ int rxc_map(struct dm_target *ti, struct bio *bio, union map_info *map_context)
 	}
 	return DM_MAPIO_SUBMITTED;
 }
+EXPORT_SYMBOL(rxc_map);
 
 static void rxc_uncached_io_callback(unsigned long error, void *context)
 {
-	struct kcached_job *job = (struct kcached_job *) context;
+	struct kcached_job *job = (struct kcached_job *)context;
 	struct cache_context *dmc = job->dmc;
 
 	spin_lock_bh(&dmc->cache_spin_lock);
 	if (bio_data_dir(job->bio) == READ)
 		dmc->uncached_reads++;
 	else
-		dmc->uncached_writes++;		
+		dmc->uncached_writes++;
 	(void)cache_invalidate_blocks(dmc, job->bio);
 	spin_unlock_bh(&dmc->cache_spin_lock);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 	bio_endio(job->bio, error);
+#else
+	if (error) {
+		job->bio->bi_error = error;
+		bio_io_error(job->bio);
+	} else {
+		bio_endio(job->bio);
+	}
+#endif
 	mempool_free(job, job_pool);
 	if (atomic_dec_and_test(&dmc->nr_jobs))
 		wake_up(&dmc->destroyq);
@@ -779,27 +840,33 @@ static void rxc_start_uncached_io(struct cache_context *dmc, struct bio *bio)
 {
 	int is_write = (bio_data_dir(bio) == WRITE);
 	struct kcached_job *job;
-	
+
 	job = new_kcached_job(dmc, bio, -1);
-	if (unlikely(job == NULL)) {
+	if (unlikely(!job)) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 		bio_endio(bio, -EIO);
+#else
+		bio->bi_error = -EIO;
+		bio_io_error(bio);
+#endif
 		return;
 	}
 	atomic_inc(&dmc->nr_jobs);
 	if (bio_data_dir(job->bio) == READ)
 		dmc->disk_reads++;
 	else
-		dmc->disk_writes++;			
+		dmc->disk_writes++;
 	dm_io_async_bvec(1, &job->disk, ((is_write) ? WRITE : READ),
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-		bio, rxc_uncached_io_callback, job);
+			 bio, rxc_uncached_io_callback, job);
 #else
-		bio->bi_io_vec + bio->bi_idx, rxc_uncached_io_callback, job);
+			 bio->bi_io_vec + bio->bi_idx, rxc_uncached_io_callback, job);
 #endif
 }
 
-static int inline rxc_get_dev(struct dm_target *ti, char *pth, struct dm_dev **dmd,
-		char *dmc_dname, sector_t tilen)
+static inline int rxc_get_dev(struct dm_target *ti, char *pth,
+			      struct dm_dev **dmd, char *dmc_dname,
+			      sector_t tilen)
 {
 	int rc;
 
@@ -836,7 +903,7 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	}
 
 	dmc = kzalloc(sizeof(*dmc), GFP_KERNEL);
-	if (dmc == NULL) {
+	if (!dmc) {
 		ti->error = "rxc: Failed to allocate cache context";
 		r = -ENOMEM;
 		goto construct_fail;
@@ -844,12 +911,14 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
 	dmc->tgt = ti;
 
-	if (rxc_get_dev(ti, argv[0], &dmc->disk_dev, dmc->disk_devname, ti->len)) {
+	if (rxc_get_dev(ti, argv[0], &dmc->disk_dev,
+	    dmc->disk_devname, ti->len)) {
 		ti->error = "rxc: Disk device lookup failed";
 		goto construct_fail1;
 	}
-	if (strncmp(argv[1], "/dev/rxd", 8) != 0){
-		pr_err("%s: %s is not a valid cache device for rxcache.", DM_MSG_PREFIX, argv[1]);
+	if (strncmp(argv[1], "/dev/rxd", 8) != 0) {
+		pr_err("%s: %s is not a valid cache device for rxcache.",
+		       DM_MSG_PREFIX, argv[1]);
 		ti->error = "rxc: Invalid cache device. Not an rxdsk volume.";
 		goto construct_fail2;
 	}
@@ -885,7 +954,7 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	dmc->block_mask = dmc->block_size - 1;
 
 	if (argc >= 3) {
-		if (sscanf(argv[2], "%lu", (unsigned long *)&dmc->size) != 1) {
+		if (kstrtoul(argv[2], 10, (unsigned long *)&dmc->size)) {
 			ti->error = "rxc: Invalid cache size";
 			r = -EINVAL;
 			goto construct_fail5;
@@ -895,21 +964,23 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	}
 
 	if (argc >= 4) {
-		if (sscanf(argv[3], "%u", &dmc->assoc) != 1) {
+		if (kstrtoint(argv[3], 10, &dmc->assoc)) {
 			ti->error = "rxc: Invalid cache associativity";
 			r = -EINVAL;
 			goto construct_fail5;
 		}
-		if (!dmc->assoc || (dmc->assoc & (dmc->assoc - 1)) || dmc->size < dmc->assoc) {
+		if (!dmc->assoc || (dmc->assoc & (dmc->assoc - 1)) ||
+		    dmc->size < dmc->assoc) {
 			ti->error = "rxc: Invalid cache associativity";
 			r = -EINVAL;
 			goto construct_fail5;
 		}
-	} else
+	} else {
 		dmc->assoc = DEFAULT_CACHE_ASSOC;
+	}
 
-	/* Convert size (in sectors) to blocks. Then round size (in blocks now) down to a
-	 * multiple of associativity */
+	/* Convert size (in sectors) to blocks. Then round size
+	 * (in blocks now) down to a multiple of associativity */
 	do_div(dmc->size, dmc->block_size);
 	tmpsize = dmc->size;
 	do_div(tmpsize, dmc->assoc);
@@ -918,8 +989,8 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	dev_size = to_sector(dmc->cache_dev->bdev->bd_inode->i_size);
 	data_size = dmc->size * dmc->block_size;
 	if (data_size > dev_size) {
-		DMERR("Requested cache size exeeds the cache device's capacity (%lu>%lu)",
-			(unsigned long)data_size, (unsigned long)dev_size);
+		DMERR("Requested cache size exceeds the cache device's capacity (%lu>%lu)",
+		      (unsigned long)data_size, (unsigned long)dev_size);
 		ti->error = "rxc: Invalid cache size";
 		r = -EINVAL;
 		goto construct_fail5;
@@ -929,25 +1000,25 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	dmc->consecutive_shift = ffs(consecutive_blocks) - 1;
 
 	order = dmc->size * sizeof(struct cache_block);
-	DMINFO("Allocate %luKB (%luB per) mem for %lu-entry cache" \
+	DMINFO("Allocate %luKB (%luB per) mem for %lu-entry cache"
 		"(capacity:%luMB, associativity:%u, block size:%u sectors(%uKB))",
-		(unsigned long)order >> 10, (unsigned long)sizeof(struct cache_block),
-		(unsigned long)dmc->size, (unsigned long)data_size >> (20-SECTOR_SHIFT),
-		dmc->assoc, dmc->block_size, dmc->block_size >> (10-SECTOR_SHIFT));
+		(unsigned long)order >> 10,
+		(unsigned long)sizeof(struct cache_block),
+		(unsigned long)dmc->size,
+		(unsigned long)data_size >> (20 - SECTOR_SHIFT),
+		dmc->assoc, dmc->block_size,
+		dmc->block_size >> (10 - SECTOR_SHIFT));
 	dmc->cache = vmalloc(order);
-	if (!dmc->cache) {
+	if (!dmc->cache)
 		goto construct_fail6;
-	}
-	dmc->cache_state = (u_int8_t *)vmalloc(dmc->size);
-	if (!dmc->cache_state) {
+	dmc->cache_state = vmalloc(dmc->size);
+	if (!dmc->cache_state)
 		goto construct_fail7;
-	}		
-	
-	order = (dmc->size >> dmc->consecutive_shift) * sizeof(u_int32_t);
-	dmc->set_lru_next = (u_int32_t *)vmalloc(order);
-	if (!dmc->set_lru_next) {
+
+	order = (dmc->size >> dmc->consecutive_shift) * sizeof(u32);
+	dmc->set_lru_next = vmalloc(order);
+	if (!dmc->set_lru_next)
 		goto construct_fail8;
-	}				
 
 	for (i = 0; i < dmc->size ; i++) {
 		dmc->cache[i].dbn = 0;
@@ -973,7 +1044,7 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	ti->split_io = dmc->block_size;
 #else
 	r = dm_set_target_max_io_len(ti, dmc->block_size);
-	if(r)
+	if (r)
 		goto construct_fail8;
 #endif
 	ti->private = dmc;
@@ -1006,18 +1077,20 @@ construct_fail:
 static void cache_dtr(struct dm_target *ti)
 {
 	struct cache_context *dmc = (struct cache_context *) ti->private;
+
 	kcached_client_destroy(dmc);
 
 	if (dmc->reads + dmc->writes > 0) {
-		DMINFO("stats: \n\treads(%lu), writes(%lu)\n", dmc->reads, dmc->writes);
-		DMINFO("\tcache hits(%lu),replacement(%lu), write replacement(%lu)\n" \
+		DMINFO("stats:\n\treads(%lu), writes(%lu)\n",
+		       dmc->reads, dmc->writes);
+		DMINFO("\tcache hits(%lu),replacement(%lu), write replacement(%lu)\n"
 			"\tread invalidates(%lu), write invalidates(%lu)\n",
 			dmc->cache_hits, dmc->replace, dmc->cache_wr_replace,
 			dmc->rd_invalidates, dmc->wr_invalidates);
-		DMINFO("conf:\n\tcapacity(%luM), associativity(%u), block size(%uK)\n" \
+		DMINFO("conf:\n\tcapacity(%luM), associativity(%u), block size(%uK)\n"
 			"\ttotal blocks(%lu), cached blocks(%lu)\n",
-			(unsigned long)dmc->size*dmc->block_size>>11, dmc->assoc,
-			dmc->block_size>>(10-SECTOR_SHIFT), 
+			(unsigned long)dmc->size * dmc->block_size >> 11,
+			dmc->assoc, dmc->block_size >> (10 - SECTOR_SHIFT),
 			(unsigned long)dmc->size, dmc->cached_blocks);
 	}
 
@@ -1034,59 +1107,59 @@ static void cache_dtr(struct dm_target *ti)
 }
 
 static void rxc_status_info(struct cache_context *dmc, status_type_t type,
-		char *result, unsigned int maxlen)
+			    char *result, unsigned int maxlen)
 {
 	int sz = 0;
 
-	DMEMIT("stats: \n\treads(%lu), writes(%lu)\n", dmc->reads, dmc->writes);
-
-	DMEMIT("\tcache hits(%lu) replacement(%lu), write replacement(%lu)\n" \
-		"\tread invalidates(%lu), write invalidates(%lu)\n" \
-		"\tuncached reads(%lu), uncached writes(%lu)\n" \
-		"\tdisk reads(%lu), disk writes(%lu)\n"	\
+	DMEMIT("stats:\n\treads(%lu), writes(%lu)\n", dmc->reads, dmc->writes);
+	DMEMIT("\tcache hits(%lu) replacement(%lu), write replacement(%lu)\n"
+		"\tread invalidates(%lu), write invalidates(%lu)\n"
+		"\tuncached reads(%lu), uncached writes(%lu)\n"
+		"\tdisk reads(%lu), disk writes(%lu)\n"
 		"\tcache reads(%lu), cache writes(%lu)\n",
 		dmc->cache_hits, dmc->replace, dmc->cache_wr_replace,
-		dmc->rd_invalidates, dmc->wr_invalidates, 
+		dmc->rd_invalidates, dmc->wr_invalidates,
 		dmc->uncached_reads, dmc->uncached_writes,
 		dmc->disk_reads, dmc->disk_writes,
 		dmc->cache_reads, dmc->cache_writes);
 }
 
 static void rxc_status_table(struct cache_context *dmc, status_type_t type,
-		char *result, unsigned int maxlen)
+			     char *result, unsigned int maxlen)
 {
 	int sz = 0;
 
-	DMEMIT("conf:\n\trxd dev (%s), disk dev (%s) mode (%s)\n" \
-		"\tcapacity(%luM), associativity(%u), block size(%uK)\n" \
+	DMEMIT("conf:\n\trxd dev (%s), disk dev (%s) mode (%s)\n"
+		"\tcapacity(%luM), associativity(%u), block size(%uK)\n"
 		"\ttotal blocks(%lu), cached blocks(%lu)\n",
 		dmc->cache_devname, dmc->disk_devname, "WRITETHROUGH",
-		(unsigned long)dmc->size*dmc->block_size>>11, dmc->assoc,
-		dmc->block_size>>(10-SECTOR_SHIFT), 
+		(unsigned long)dmc->size * dmc->block_size >> 11, dmc->assoc,
+		dmc->block_size >> (10 - SECTOR_SHIFT),
 		(unsigned long)dmc->size, dmc->cached_blocks);
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
 static int
 #else
-static void 
+static void
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,6,0)
-cache_status(struct dm_target *ti, status_type_t type, char *result, unsigned int maxlen)
+cache_status(struct dm_target *ti, status_type_t type, char *result,
+	     unsigned int maxlen)
 #else
-cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags, char *result,
-	unsigned int maxlen)
+cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
+	     char *result, unsigned int maxlen)
 #endif
 {
-	struct cache_context *dmc = (struct cache_context *) ti->private;
-	
+	struct cache_context *dmc = (struct cache_context *)ti->private;
+
 	switch (type) {
-		case STATUSTYPE_INFO:
-			rxc_status_info(dmc, type, result, maxlen);
-			break;
-		case STATUSTYPE_TABLE:
-			rxc_status_table(dmc, type, result, maxlen);
-			break;
+	case STATUSTYPE_INFO:
+		rxc_status_info(dmc, type, result, maxlen);
+		break;
+	case STATUSTYPE_TABLE:
+		rxc_status_table(dmc, type, result, maxlen);
+		break;
 	}
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
 	return 0;
@@ -1094,13 +1167,13 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags, ch
 }
 
 static struct target_type cache_target = {
-	.name   = "rxcache",
-	.version= {3, 2, 0},
-	.module = THIS_MODULE,
-	.ctr	= cache_ctr,
-	.dtr	= cache_dtr,
-	.map	= rxc_map,
-	.status = cache_status,
+	.name    = "rxcache",
+	.version = {3, 3, 0},
+	.module  = THIS_MODULE,
+	.ctr	 = cache_ctr,
+	.dtr	 = cache_dtr,
+	.map	 = rxc_map,
+	.status  = cache_status,
 };
 
 int __init rxc_init(void)
@@ -1130,13 +1203,8 @@ void rxc_exit(void)
 	destroy_workqueue(kcached_wq);
 }
 
-
 module_init(rxc_init);
 module_exit(rxc_exit);
-
-EXPORT_SYMBOL(rxc_io_callback);
-EXPORT_SYMBOL(rxc_do_complete);
-EXPORT_SYMBOL(rxc_map);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Petros Koutoupis <petros@petroskoutoupis.com>");

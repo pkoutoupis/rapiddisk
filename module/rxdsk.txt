@@ -24,19 +24,19 @@ None.
 
 RapidDisk
 ---------
-It is advised to utilize the userland utility, rxadm, but this is essentially what is written to the /proc/rxctl proc file to manage rxdsk volumes: 
+It is advised to utilize the userland utility, rxadm, but this is essentially what is written to the /proc/rxctl proc file to manage rxdsk volumes:
 
 Attach a new rxdsk volume by typing (size in sectors):
-    # echo "rxdsk attach 0 8192" > /proc/rxctl 
+    # echo "rxdsk attach 0 8192" > /proc/rxctl
 
 Attach a non-volatile rxdsk volume by typing (starting / ending addresses in decimal format):
-    # echo "rxdsk attach-nv 0 1234 56789" > /proc/rxctl 
+    # echo "rxdsk attach-nv 0 1234 56789" > /proc/rxctl
 
 Detach an existing rxdsk volume by typing:
-    # echo "rxdsk detach 0" > /proc/rxctl 
+    # echo "rxdsk detach 0" > /proc/rxctl
 
 Resize an existing rxdsk volume by typing (size in sectors):
-    # echo "rxdsk resize 0 65536" > /proc/rxctl 
+    # echo "rxdsk resize 0 65536" > /proc/rxctl
 
 
 Note - the integer after the "rxdsk <command>" is the RapidDisk volume number. "0" would signify "rxd0."

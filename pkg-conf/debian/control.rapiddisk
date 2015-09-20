@@ -1,0 +1,13 @@
+Package: rapiddisk
+Version: 3.3-1
+Section: base
+Priority: optional
+Architecture: amd64
+Depends: dkms, gcc, zlib1g, cryptsetup-luks, php5, apache2
+Maintainer: Petros Koutoupis <petros@petroskoutoupis.com>
+Description: RapidDisk
+ The RapidDisk software defined advanced RAM drive and storage
+ caching solution. This suite includes a collection of modules,
+ configuration files, and command line utilities, and a RESTful
+ API for managing RapidDisk enabled storage volumes.
+

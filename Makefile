@@ -18,11 +18,7 @@ clean:
 
 .PHONY: dkms
 dkms:
-	sudo mkdir -pv /usr/src/rapiddisk-3.2/
-	sudo cp -v module/* /usr/src/rapiddisk-3.2/
-	sudo dkms add -m rapiddisk -v 3.2
-	sudo dkms build -m rapiddisk -v 3.2
-	sudo dkms install -m rapiddisk -v 3.2
+	cd module; make dkms; cd ..
 
 .PHONY: tools-install
 tools-install:

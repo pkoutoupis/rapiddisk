@@ -1,3 +1,9 @@
+*** Release 3.3 ***
+
+- Updated code for the 4.3 kernel.
+- Cleaned up the main Makefile.
+- Cleaned up entire driver code. Adjusted formatting.
+
 *** Release 3.2 ***
 
 - Replaced procfs management to sysfs.

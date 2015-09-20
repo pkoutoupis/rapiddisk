@@ -1,0 +1,38 @@
+#!/bin/sh
+# postinst script for webpy-example
+#
+# see: dh_installdeb(1)
+
+set -e
+
+# source debconf library
+. /usr/share/debconf/confmodule
+
+# Source dbconfig-common functions
+if [ -f /usr/share/dbconfig-common/dpkg/postinst.pgsql  ]; then
+  . /usr/share/dbconfig-common/dpkg/postinst.pgsql
+fi
+
+case "$1" in
+
+  configure)
+    dkms add -m rapiddisk -v 3.3
+    dkms build -m rapiddisk -v 3.3
+    dkms install -m rapiddisk -v 3.3
+    echo "rxdsk max_sectors=2048 nr_requests=1024" >> /etc/modules
+    echo "rxcache" >> /etc/modules
+    echo "dm-crypt" >> /etc/modules
+  ;;
+
+  abort-upgrade|abort-remove|abort-deconfigure)
+    exit 0
+  ;;
+
+  *)
+    echo "postinst called with unknown argument \`$1'" >&2
+    exit 1
+  ;;
+
+esac
+
+exit 0
