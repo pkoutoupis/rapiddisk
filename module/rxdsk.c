@@ -4,8 +4,7 @@
  **
  ** filename: rdsk.c
  ** description: RapidDisk is an enhanced Linux RAM disk module to dynamically
- **	 create, remove, and resize RAM drives. RapidDisk supports both volatile
- **	 and non-volatile memory.
+ **	 create, remove, and resize non-persistent RAM drives.
  ** created: 1Jun11, petros@petroskoutoupis.com
  **
  ** This file is licensed under GPLv2.
@@ -30,7 +29,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"3.3"
+#define VERSION_STR		"3.4"
 #define RDPREFIX		"rxd"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -41,10 +40,7 @@
 #define FREE_BATCH		16
 #define SECTOR_SHIFT		9
 #define PAGE_SECTORS_SHIFT	(PAGE_SHIFT - SECTOR_SHIFT)
-#define PAGE_SECTORS		(1 << PAGE_SECTORS_SHIFT)
-
-#define NON_VOLATILE_MEMORY	0
-#define VOLATILE_MEMORY		1
+#define PAGE_SECTORS		BIT(PAGE_SECTORS_SHIFT)
 
 /* ioctls */
 #define INVALID_CDQUERY_IOCTL	0x5331
@@ -55,31 +51,42 @@ static DEFINE_MUTEX(rxioctl_mutex);
 
 struct rdsk_device {
 	int num;
-	bool volatile_memory;
 	struct request_queue *rdsk_queue;
 	struct gendisk *rdsk_disk;
 	struct list_head rdsk_list;
 	unsigned long long max_blk_alloc;	/* rdsk: to keep track of highest sector write	*/
-	unsigned long long start_addr;		/* rdsk-nv: start of physical address		*/
-	unsigned long long end_addr;		/* rdsk-nv: end of physical address		*/
 	unsigned long long size;
 	unsigned long error_cnt;
 	spinlock_t rdsk_lock;
 	struct radix_tree_root rdsk_pages;
 };
 
-static int rdsk_ma_no, rxcnt; /* no. of attached devices */
-static int max_rxcnt = MAX_RDSKS;
+static int rd_ma_no, rd_total; /* no. of attached devices */
+static int rd_max_nr = MAX_RDSKS;
 static int max_sectors = DEFAULT_MAX_SECTS, nr_requests = DEFAULT_REQUESTS;
 static LIST_HEAD(rdsk_devices);
 static struct kobject *rdsk_kobj;
+#if CONFIG_BLK_DEV_RAM_COUNT
+static int rd_nr = CONFIG_BLK_DEV_RAM_COUNT;
+#else
+static int rd_nr = 0;
+#endif
+#if CONFIG_BLK_DEV_RAM_SIZE
+int rd_size = CONFIG_BLK_DEV_RAM_SIZE;
+#else
+int rd_size = 0;
+#endif
 
-module_param(max_rxcnt, int, S_IRUGO);
-MODULE_PARM_DESC(max_rxcnt, " Maximum number of RAM Disks. (Default = 128)");
 module_param(max_sectors, int, S_IRUGO);
 MODULE_PARM_DESC(max_sectors, " Maximum sectors (in KB) for the request queue. (Default = 127)");
 module_param(nr_requests, int, S_IRUGO);
 MODULE_PARM_DESC(nr_requests, " Number of requests at a given time for the request queue. (Default = 128)");
+module_param(rd_nr, int, S_IRUGO);
+MODULE_PARM_DESC(rd_nr, " Maximum number of RapidDisk devices to load on insertion. (Default = 0)");
+module_param(rd_size, int, S_IRUGO);
+MODULE_PARM_DESC(rd_size, " Size of each RAM disk (in KB) loaded on insertion. (Default = 0)");
+module_param(rd_max_nr, int, S_IRUGO);
+MODULE_PARM_DESC(rd_max_nr, " Maximum number of RAM Disks. (Default = 128)");
 
 static int rdsk_do_bvec(struct rdsk_device *, struct page *,
 			unsigned int, unsigned int, int, sector_t);
@@ -91,8 +98,6 @@ static void rdsk_make_request(struct request_queue *, struct bio *);
 static int rdsk_make_request(struct request_queue *, struct bio *);
 #endif
 static int attach_device(int, int); /* disk num, disk size */
-static int attach_nv_device(int, unsigned long long,
-			    unsigned long long); /* disk num, start / end addr */
 static int detach_device(int);	  /* disk num */
 static int resize_device(int, int); /* disk num, disk size */
 static ssize_t mgmt_show(struct kobject *, struct kobj_attribute *, char *);
@@ -106,18 +111,11 @@ static ssize_t mgmt_show(struct kobject *kobj, struct kobj_attribute *attr,
 	struct rdsk_device *rdsk;
 
 	len = sprintf(buf, "RapidDisk (rxdsk) %s\n\nMaximum Number of Attachable Devices: %d\nNumber of Attached Devices: %d\nMax Sectors (KB): %d\nNumber of Requests: %d\n\n",
-		      VERSION_STR, max_rxcnt, rxcnt, max_sectors, nr_requests);
+		      VERSION_STR, rd_max_nr, rd_total, max_sectors, nr_requests);
 	list_for_each_entry(rdsk, &rdsk_devices, rdsk_list) {
-		if (rdsk->volatile_memory == VOLATILE_MEMORY) {
-			len += sprintf(buf + len, "rxd%d\tSize: %llu MBs\tErrors: %lu\n",
-				      rdsk->num, (rdsk->size / 1024 / 1024),
-				      rdsk->error_cnt);
-		} else {
-			len += sprintf(buf + len, "rxd%d\tSize: %llu MBs\tErrors: %lu\tStart Address: %llu\tEnd Address: %llu\n",
-				      rdsk->num, (rdsk->size / 1024 / 1024),
-				      rdsk->error_cnt, rdsk->start_addr,
-				      rdsk->end_addr);
-		}
+		len += sprintf(buf + len, "rxd%d\tSize: %llu MBs\tErrors: %lu\n",
+			       rdsk->num, (rdsk->size / 1024 / 1024),
+			       rdsk->error_cnt);
 	}
 	return len;
 }
@@ -127,7 +125,6 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	int num, size, err = (int)count;
 	char *ptr, *buf;
-	unsigned long long start_addr, end_addr;
 
 	if (!buffer || count > PAGE_SIZE)
 		return -EINVAL;
@@ -146,17 +143,6 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 		size = simple_strtoul(ptr + 1, &ptr, 0);
 
 		if (attach_device(num, size) != 0) {
-			pr_err("%s: Unable to attach rxd%d\n", RDPREFIX, num);
-			err = -EINVAL;
-		}
-	} else if (!strncmp("rxdsk attach-nv ", buffer, 16)) {
-		/* "rdsk attach-nv num start end" */
-		ptr = buf + 16;
-		num = simple_strtoul(ptr, &ptr, 0);
-		start_addr = simple_strtoull(ptr + 1, &ptr, 0);
-		end_addr = simple_strtoull(ptr + 1, &ptr, 0);
-
-		if (attach_nv_device(num, start_addr, end_addr) != 0) {
 			pr_err("%s: Unable to attach rxd%d\n", RDPREFIX, num);
 			err = -EINVAL;
 		}
@@ -431,31 +417,11 @@ static int rdsk_do_bvec(struct rdsk_device *rdsk, struct page *page,
 			sector_t sector){
 	void *mem;
 	int err = 0;
-	void __iomem *vaddr = NULL;
-	resource_size_t phys_addr = (rdsk->start_addr +
-				    (sector * BYTES_PER_SECTOR));
 
-	if (rdsk->volatile_memory == VOLATILE_MEMORY) {
-		if (rw != READ) {
-			err = copy_to_rdsk_setup(rdsk, sector, len);
-			if (err)
-				goto out;
-		}
-	} else {
-		if (((sector * BYTES_PER_SECTOR) + len) > rdsk->size) {
-			pr_err("%s: Beyond rxd%d boundary (offset: %llu len: %u).\n",
-			       RDPREFIX, rdsk->num,
-			       (unsigned long long)phys_addr, len);
-			return -EFAULT;
-		}
-
-		vaddr = ioremap_nocache(phys_addr, len);
-		if (!vaddr) {
-			pr_err("%s: Unable to map memory at address %llu of size %lu\n",
-			       RDPREFIX, (unsigned long long)phys_addr,
-			       (unsigned long)len);
-			return -EFAULT;
-		}
+	if (rw != READ) {
+		err = copy_to_rdsk_setup(rdsk, sector, len);
+		if (err)
+			goto out;
 	}
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 	mem = kmap_atomic(page);
@@ -463,27 +429,17 @@ static int rdsk_do_bvec(struct rdsk_device *rdsk, struct page *page,
 	mem = kmap_atomic(page, KM_USER0);
 #endif
 	if (rw == READ) {
-		if (rdsk->volatile_memory == VOLATILE_MEMORY) {
-			copy_from_rdsk(mem + off, rdsk, sector, len);
-			flush_dcache_page(page);
-		} else {
-			memcpy(mem, vaddr, len);
-		}
+		copy_from_rdsk(mem + off, rdsk, sector, len);
+		flush_dcache_page(page);
 	} else {
-		if (rdsk->volatile_memory == VOLATILE_MEMORY) {
-			flush_dcache_page(page);
-			copy_to_rdsk(rdsk, mem + off, sector, len);
-		} else {
-			memcpy(vaddr, mem, len);
-		}
+		flush_dcache_page(page);
+		copy_to_rdsk(rdsk, mem + off, sector, len);
 	}
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 	kunmap_atomic(mem);
 #else
 	kunmap_atomic(mem, KM_USER0);
 #endif
-	if (rdsk->volatile_memory == NON_VOLATILE_MEMORY)
-		iounmap(vaddr);
 out:
 	return err;
 }
@@ -594,8 +550,6 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 			&bdev->bd_inode->i_size,
 			sizeof(bdev->bd_inode->i_size)) ? -EFAULT : 0;
 	case BLKFLSBUF:
-		if (rdsk->volatile_memory == NON_VOLATILE_MEMORY)
-			return 0;
 		/* We are killing the RAM disk data. */
 		mutex_lock(&rxioctl_mutex);
 		mutex_lock(&bdev->bd_mutex);
@@ -641,7 +595,7 @@ static int attach_device(int num, int size)
 	struct rdsk_device *rdsk, *rxtmp;
 	struct gendisk *disk;
 
-	if (rxcnt > max_rxcnt) {
+	if (rd_total > rd_max_nr) {
 		pr_warn("%s: Reached maximum number of attached disks.\n",
 			RDPREFIX);
 		goto out;
@@ -660,10 +614,8 @@ static int attach_device(int num, int size)
 		goto out;
 	rdsk->num = num;
 	rdsk->error_cnt = 0;
-	rdsk->volatile_memory = VOLATILE_MEMORY;
 	rdsk->max_blk_alloc = 0;
-	rdsk->end_addr = rdsk->size = (size * BYTES_PER_SECTOR);
-	rdsk->start_addr = 0;
+	rdsk->size = ((unsigned long long)size * BYTES_PER_SECTOR);
 	spin_lock_init(&rdsk->rdsk_lock);
 	INIT_RADIX_TREE(&rdsk->rdsk_pages, GFP_ATOMIC);
 
@@ -690,7 +642,7 @@ static int attach_device(int num, int size)
 	disk = rdsk->rdsk_disk = alloc_disk(1);
 	if (!disk)
 		goto out_free_queue;
-	disk->major = rdsk_ma_no;
+	disk->major = rd_ma_no;
 	disk->first_minor = num;
 	disk->fops = &rdsk_fops;
 	disk->private_data = rdsk;
@@ -701,9 +653,9 @@ static int attach_device(int num, int size)
 
 	add_disk(rdsk->rdsk_disk);
 	list_add_tail(&rdsk->rdsk_list, &rdsk_devices);
-	rxcnt++;
-	pr_info("%s: Attached rxd%d of %llu bytes in size.\n", RDPREFIX, num,
-		(unsigned long long)(size * BYTES_PER_SECTOR));
+	rd_total++;
+	pr_info("%s: Attached rxd%d of %llu bytes in size.\n", RDPREFIX,
+		num, rdsk->size);
 	return 0;
 
 out_free_queue:
@@ -711,96 +663,6 @@ out_free_queue:
 out_free_dev:
 	kfree(rdsk);
 out:
-	return GENERIC_ERROR;
-}
-
-static int attach_nv_device(int num, unsigned long long start_addr,
-			    unsigned long long end_addr)
-{
-	struct rdsk_device *rdsk, *rxtmp;
-	struct gendisk *disk;
-	unsigned long size = ((end_addr - start_addr) / BYTES_PER_SECTOR);
-
-	if (rxcnt > max_rxcnt) {
-		pr_warn("%s: Reached maximum number of attached disks.\n",
-			RDPREFIX);
-		goto out_nv;
-	}
-
-	list_for_each_entry(rxtmp, &rdsk_devices, rdsk_list) {
-		if(rxtmp->num == num){
-			pr_warn("%s: rdsk device %d already exists.\n",
-				RDPREFIX, num);
-			goto out_nv;
-		}
-	}
-	if (!request_mem_region(start_addr, (end_addr - start_addr), "RapidDisk-NV")) {
-		pr_err("%s: Failed to request memory region (address: %llu size: %llu).\n",
-		       RDPREFIX, start_addr, (end_addr - start_addr));
-		goto out_nv;
-	}
-
-	rdsk = kzalloc(sizeof(*rdsk), GFP_KERNEL);
-	if (!rdsk)
-		goto out_nv;
-	rdsk->num = num;
-	rdsk->error_cnt = 0;
-	rdsk->start_addr = start_addr;
-	rdsk->end_addr = end_addr;
-	rdsk->size = end_addr - start_addr;
-	rdsk->volatile_memory = NON_VOLATILE_MEMORY;
-	rdsk->max_blk_alloc = (rdsk->size / BYTES_PER_SECTOR);
-
-	/* TODO: check if it crosses boundaries with another rdsk */
-	spin_lock_init(&rdsk->rdsk_lock);
-
-	rdsk->rdsk_queue = blk_alloc_queue(GFP_KERNEL);
-	if(!rdsk->rdsk_queue)
-		goto out_free_dev_nv;
-	blk_queue_make_request(rdsk->rdsk_queue, rdsk_make_request);
-	blk_queue_logical_block_size(rdsk->rdsk_queue, BYTES_PER_SECTOR);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
-	blk_queue_flush(rdsk->rdsk_queue, REQ_FLUSH);
-#else
-	blk_queue_ordered(rdsk->rdsk_queue, QUEUE_ORDERED_TAG, NULL);
-#endif
-
-	rdsk->rdsk_queue->limits.max_sectors = (max_sectors * 2);
-	rdsk->rdsk_queue->nr_requests = nr_requests;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-	rdsk->rdsk_queue->limits.discard_granularity = PAGE_SIZE;
-	rdsk->rdsk_queue->limits.discard_zeroes_data = 1;
-	rdsk->rdsk_queue->limits.max_discard_sectors = UINT_MAX;
-	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, rdsk->rdsk_queue);
-#endif
-
-	disk = rdsk->rdsk_disk = alloc_disk(1);
-	if (!disk)
-		goto out_free_queue_nv;
-	disk->major = rdsk_ma_no;
-	disk->first_minor = num;
-	disk->fops = &rdsk_fops;
-	disk->private_data = rdsk;
-	disk->queue = rdsk->rdsk_queue;
-	disk->flags |= GENHD_FL_SUPPRESS_PARTITION_INFO;
-	sprintf(disk->disk_name, "%s%d", RDPREFIX, num);
-	set_capacity(disk, size);
-
-	add_disk(rdsk->rdsk_disk);
-	list_add_tail(&rdsk->rdsk_list, &rdsk_devices);
-	rxcnt++;
-	pr_info("%s: Attached rxd%d of %llu bytes in size.\n", RDPREFIX, num,
-		(unsigned long long)(size * BYTES_PER_SECTOR));
-
-	return 0;
-
-out_free_queue_nv:
-	blk_cleanup_queue(rdsk->rdsk_queue);
-
-out_free_dev_nv:
-	release_mem_region(rdsk->start_addr, rdsk->size);
-	kfree(rdsk);
-out_nv:
 	return GENERIC_ERROR;
 }
 
@@ -816,12 +678,9 @@ static int detach_device(int num)
 	del_gendisk(rdsk->rdsk_disk);
 	put_disk(rdsk->rdsk_disk);
 	blk_cleanup_queue(rdsk->rdsk_queue);
-	if (rdsk->volatile_memory == VOLATILE_MEMORY)
-		rdsk_free_pages(rdsk);
-	else
-		release_mem_region(rdsk->start_addr, rdsk->size);
+	rdsk_free_pages(rdsk);
 	kfree(rdsk);
-	rxcnt--;
+	rd_total--;
 	pr_info("%s: Detached rxd%d.\n", RDPREFIX, num);
 
 	return 0;
@@ -835,11 +694,6 @@ static int resize_device(int num, int size)
 		if (rdsk->num == num)
 			break;
 
-	if (rdsk->volatile_memory == NON_VOLATILE_MEMORY) {
-		pr_warn("%s: Resizing unsupported for non-volatile mappings.\n",
-			RDPREFIX);
-		return GENERIC_ERROR;
-	}
 	if (size <= get_capacity(rdsk->rdsk_disk)) {
 		pr_warn("%s: Please specify a larger size for resizing.\n",
 			RDPREFIX);
@@ -854,28 +708,37 @@ static int resize_device(int num, int size)
 
 static int __init init_rxd(void)
 {
-	int retval;
+	int retval, i;
 
-	rxcnt = 0;
-	rdsk_ma_no = register_blkdev(rdsk_ma_no, RDPREFIX);
-	if (rdsk_ma_no < 0) {
+	rd_total = 0;
+	rd_ma_no = register_blkdev(rd_ma_no, RDPREFIX);
+	if (rd_ma_no < 0) {
 		pr_err("%s: Failed registering rdsk, returned %d\n",
-		       RDPREFIX, rdsk_ma_no);
-		return rdsk_ma_no;
+		       RDPREFIX, rd_ma_no);
+		return rd_ma_no;
 	}
 
 	rdsk_kobj = kobject_create_and_add("rapiddisk", kernel_kobj);
 	if (!rdsk_kobj)
 		goto init_failure;
 	retval = sysfs_create_group(rdsk_kobj, &attr_group);
-	if (retval) {
-		kobject_put(rdsk_kobj);
-		goto init_failure;
+	if (retval)
+		goto init_failure2;
+
+	for (i = 0; i < rd_nr; i++) {
+		retval = attach_device(i, (rd_size * 2));
+		if (retval) {
+			pr_err("%s: Failed to load RapidDisk volume rxd%d.\n",
+			       RDPREFIX, i);
+			goto init_failure2;
+		}
 	}
 	return 0;
 
+init_failure2:
+	kobject_put(rdsk_kobj);
 init_failure:
-	unregister_blkdev(rdsk_ma_no, RDPREFIX);
+	unregister_blkdev(rd_ma_no, RDPREFIX);
 	return -ENOMEM;
 }
 
@@ -886,7 +749,7 @@ static void __exit exit_rxd(void)
 	kobject_put(rdsk_kobj);
 	list_for_each_entry_safe(rdsk, next, &rdsk_devices, rdsk_list)
 		detach_device(rdsk->num);
-	unregister_blkdev(rdsk_ma_no, RDPREFIX);
+	unregister_blkdev(rd_ma_no, RDPREFIX);
 }
 
 module_init(init_rxd);

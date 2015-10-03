@@ -22,7 +22,6 @@ void online_menu(char *);
 int list_devices(struct RxD_PROFILE *, struct RxC_PROFILE *);
 int short_list_devices(struct RxD_PROFILE *, struct RxC_PROFILE *);
 int detach_device(struct RxD_PROFILE *, struct RxC_PROFILE *, unsigned char *);
-int attach_nv_device(struct RxD_PROFILE *, unsigned long long, unsigned long long);
 int attach_device(struct RxD_PROFILE *, unsigned long);
 int resize_device(struct RxD_PROFILE *, unsigned char *, unsigned long);
 int rxcache_map(struct RxD_PROFILE *, struct RxC_PROFILE *, unsigned char *, unsigned char *);
@@ -48,7 +47,6 @@ void online_menu(char *string)
 		"\t(rxcache) kernel module.\n\n", string);
 	printf("Function:\n"
 		"\t--attach\t\tAttach RAM disk device.\n"
-		"\t--attach-nv\t\tAttach RAM disk device.\n"
 		"\t--detach\t\tDetach RAM disk device.\n"
 		"\t--list\t\t\tList all attached RAM disk devices.\n"
 		"\t--short-list\t\tList all attached RAM disk devices in script friendly format.\n"
@@ -64,8 +62,6 @@ void online_menu(char *string)
 		"\t--deactivate-crypt\tDeactivate an encryption volume.\n\n");
 	printf("Parameters:\n\t[size]\t\t\tSpecify desired size of attaching RAM disk device in MBytes.\n"
 		"\t[unit]\t\t\tSpecify unit number of RAM disk device to detach.\n"
-		"\t[start]\t\t\tStarting address of Non-Volatile memory.\n"
-		"\t[end]\t\t\tEnding address of Non-Volatile memory.\n"
 		"\t[src]\t\t\tSource path for archive/restore options.\n"
 		"\t[dest]\t\t\tDestination path for arcive/restore options.\n"
 		"\t[cache]\t\t\tSpecify rxd node to use as caching volume.\n"
@@ -124,9 +120,6 @@ int parse_input(int argcin, char *argvin[])
 	if (strcmp(argvin[1], "--attach") == 0) {
 		if (argcin != 3) goto invalid_out;
 		err = attach_device(rxd, strtoul(argvin[2], (char **)NULL, 10));
-	} else if (strcmp(argvin[1], "--attach-nv") == 0) {
-		if (argcin != 4) goto invalid_out;
-		err = attach_nv(rxd, strtoull(argvin[2], (char **)NULL, 16), strtoull(argvin[3], (char **)NULL, 16));
 	} else if (strcmp(argvin[1], "--detach") == 0) {
 		if (argcin != 3) goto invalid_out;
 		if (rxd == NULL) {

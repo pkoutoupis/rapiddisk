@@ -27,7 +27,7 @@
 
 #define UTIL			"rapiddisk"
 #define COPYRIGHT		"Copyright 2011-2015 Petros Koutoupis"
-#define VERSION_NUM	  	"3.3"
+#define VERSION_NUM	  	"3.4"
 #define BYTES_PER_SECTOR	512	/* Traditional sector size */
 #define BUFSZ			65536
 #define DES_KEY			"05291983"

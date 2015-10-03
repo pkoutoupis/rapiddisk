@@ -1,3 +1,10 @@
+*** Release 3.4 ***
+
+- Added ability to autoload RapidDisk volumes during module insertion.
+- Fixed bug in RapidDisk (volatile) volume size definition across 32 to 64 bit types.
+- Making use of BIT() macro in the driver.
+- Removed RapidDisk-NV support. It was redundant with the recently kernel integrated pmem code.
+
 *** Release 3.3 ***
 
 - Updated code for the 4.3 kernel.

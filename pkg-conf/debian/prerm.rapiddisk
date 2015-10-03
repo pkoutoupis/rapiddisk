@@ -14,7 +14,7 @@ fi
 
 case "$1" in
   remove|upgrade|deconfigure)
-    dkms remove -m rapiddisk -v 3.3 --all
+    dkms remove -m rapiddisk -v 3.4 --all
   ;;
 
   failed-upgrade)

@@ -11,9 +11,12 @@ RapidCache or rxcache is designed to leverage the high speed performing technolo
 
 RapidDisk
 ---------
-max_rxcnt: Total RAM Disk devices available for use. (Default = 128 = MAX) (int)
 max_sectors: Maximum sectors (in KB) for the request queue. (Default = 127) (int)
 nr_requests: Number of requests at a given time for the request queue. (Default = 128) (int)
+rd_nr: Maximum number of RapidDisk devices to load on insertion. (Default = 0) (int)
+rd_size: Size of each RAM disk (in KB) loaded on insertion. (Default = 0) (int)
+rd_max_nr: Maximum number of RAM Disks. (Default = 128) (int)
+
 
 RapidCache
 ---------
@@ -27,16 +30,13 @@ RapidDisk
 It is advised to utilize the userland utility, rxadm, but this is essentially what is written to the /proc/rxctl proc file to manage rxdsk volumes:
 
 Attach a new rxdsk volume by typing (size in sectors):
-    # echo "rxdsk attach 0 8192" > /proc/rxctl
-
-Attach a non-volatile rxdsk volume by typing (starting / ending addresses in decimal format):
-    # echo "rxdsk attach-nv 0 1234 56789" > /proc/rxctl
+    # echo "rxdsk attach 0 8192" > /sys/kernel/rapiddisk/mgmt
 
 Detach an existing rxdsk volume by typing:
-    # echo "rxdsk detach 0" > /proc/rxctl
+    # echo "rxdsk detach 0" > /sys/kernel/rapiddisk/mgmt
 
 Resize an existing rxdsk volume by typing (size in sectors):
-    # echo "rxdsk resize 0 65536" > /proc/rxctl
+    # echo "rxdsk resize 0 65536" > /sys/kernel/rapiddisk/mgmt
 
 
 Note - the integer after the "rxdsk <command>" is the RapidDisk volume number. "0" would signify "rxd0."
@@ -46,14 +46,13 @@ RapidCache
 It is advised to utilize the userland utility, rxadm, but this is essentially what is sent to the dmsetup command:
 
 Map an existing rxdsk volume to a block device by typing:
-    # echo 0 4194303 rxcache /dev/sdb /dev/rxd0 0 8 196608|dmsetup create rxc0
+    # echo 0 4194303 rxcache /dev/sdb /dev/rxd0 196608|dmsetup create rxc0
 
 Parameter 1: Start block of source volume (in sectors).
 Parameter 2: End block of source volume (in sectors).
 Parameter 4: Source volume.
 Parameter 5: Cache volume.
-Parameter 7: Caching block size.
-Parameter 8: Cache size (in sectors).
+Parameter 6: Cache size (in sectors).
 
 Unmap an rxdsk volume:
 

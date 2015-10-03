@@ -181,8 +181,8 @@ int list_devices(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE *rxc_prof)
 	printf("List of RapidDisk device(s):\n\n");
 
 	while (rxd_prof != NULL) {
-		printf(" RapidDisk Device %d: %s\tSize (MB): %llu\n", num, rxd_prof->device,
-			(rxd_prof->size / 1024 / 1024));
+		printf(" RapidDisk Device %d: %s\tSize (KB): %llu\n", num, rxd_prof->device,
+			(rxd_prof->size / 1024));
 		num++;
 		rxd_prof = rxd_prof->next;
 	}
@@ -264,43 +264,6 @@ int attach_device(struct RxD_PROFILE *prof, unsigned long size)
 	}
 	printf("Attached device rxd%d of size %lu Mbytes\n", dsk, size);
 	fclose(fp);
-	return 0;
-}
-
-int attach_nv(struct RxD_PROFILE *rxd, unsigned long long start_addr, unsigned long long end_addr)
-{
-	int dsk, err = -1;
-	FILE *fp;
-	unsigned char string[BUFSZ], name[16];
-
-	/* echo "rxdsk attach-nv 1 4276097024 4294705152" > /sys/kernel/rapiddisk/mgmt <- in sectors*/
-	for (dsk = 0; rxd != NULL; dsk++) {
-		sprintf(string, "%s,%s", string, rxd->device);
-		rxd = rxd->next;
-	}
-	while (dsk >= 0) {
-		sprintf(name, "rxd%d", dsk);
-		if (strstr(string, (const char *)name) == NULL) {
-			break;
-		}
-		dsk--;
-	}
-
-	if ((fp = fopen(sys_rdsk, "w")) == NULL) {
-		printf("%s: fopen: %s: %s\n", __func__, sys_rdsk, strerror(errno));
-		printf("Please ensure that the RapidDisk module is loaded and retry.\n");
-		return -1;
-	}
-
-	if ((err = fprintf(fp, "rxdsk attach-nv %d %llu %llu\n", dsk, start_addr, end_addr)) < 0) {
-		printf("%s: fprintf: %s\n", __func__, strerror(errno));
-		fclose(fp);
-		return err;
-	}
-
-	fclose(fp);
-	printf("Created (non-volatile) RapidDisk volume /dev/rxd%d.\n", dsk);
-	syslog(LOG_INFO, "Created (non-volatile) RapidDisk volume /dev/rxd%d.\n", dsk);
 	return 0;
 }
 
@@ -396,7 +359,6 @@ int resize_device(struct RxD_PROFILE *prof, unsigned char *string, unsigned long
 		return err;
 	}
 	printf("Resized device %s to %lu Mbytes\n", string, size);
-	printf("Note - if non-volatile mapping, resize was not done.\n");
 	fclose(fp);
 
 	return 0;
@@ -485,10 +447,10 @@ int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof, uns
 	sprintf(name, "rxc_%s", str);
 
 	memset(string, 0x0, BUFSZ);
-	/* echo 0 4194303 rxcache /dev/sdb /dev/rxd0  0 8 196608|dmsetup create rxc0 */
+	/* echo 0 4194303 rxcache /dev/sdb /dev/rxd0 0 196608|dmsetup create rxc0 */
 	/* Param after echo 0 & 1: starting and ending offsets of source device      *
 	 * Param 3: always rxcache; Param 4 & 5: path to source device and rxdsk dev *
-	 * Param 6: caching block size in sectors; Param 7 is the size of the cache  */
+	 * Param 6: is the size of the cache  */
 	sprintf(string, "echo 0 %llu rxcache %s /dev/%s %llu|dmsetup create %s\n",
 		source_sz, source, cache, cache_sz, name);
 
@@ -601,7 +563,6 @@ int rxdsk_flush(struct RxD_PROFILE *rxd_prof, RxC_PROFILE *rxc_prof, unsigned ch
 	}
 	close(fd);
 	printf("Flushed all data from device %s\n", string);
-	printf("Note - if non-volatile mapping, flushing was not done.\n");
 
 	return err;
 }

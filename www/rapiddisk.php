@@ -37,7 +37,7 @@ class RapidDisk {
                 print json_encode($rtn);
         }
 
-	/* @POST: Create a (non-volatile) RapidDisk Volume (size in MBs). */
+	/* @POST: Create a (volatile) RapidDisk Volume (size in MBs). */
 	public function createRapidDisk($JSONRequest) {
                 $nameObject = json_decode($JSONRequest, true);
 		$size = $nameObject['size'];
@@ -48,7 +48,7 @@ class RapidDisk {
 		print json_encode($rtn);
 	}
 
-        /* @PUT: Resize an existing (non-volatile) RapidDisk Volume (size in MBs). */
+        /* @PUT: Resize an existing (volatile) RapidDisk Volume (size in MBs). */
         public function resizeRapidDisk($JSONRequest) {
                 $nameObject = json_decode($JSONRequest, true);
                 $name = $nameObject['rapidDisk'];

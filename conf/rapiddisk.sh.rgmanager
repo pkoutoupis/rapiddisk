@@ -18,8 +18,8 @@ metadata()
 {
         cat <<EOT
 <?xml version="1.0" ?>
-<resource-agent name="rstor" version="rgmanager 2.0">
-    <version>1.0</version>
+<resource-agent name="rapiddisk" version="rgmanager 2.0">
+    <version>1.1</version>
 
     <longdesc lang="en">
         This defines a standard RapidDisk HA failover.

@@ -4,7 +4,7 @@ rapiddisk \- An administration tool to manage the RapidDisk (rxdsk) RAM disk dev
 .SH SYNOPSIS
 rapiddisk [ -h | -v ] function [parameters: unit | size | src & dest | cache & source & block size ]
 .SH DESCRIPTION
-rapiddisk is a RapidDisk (rxdsk) module management tool. The tool allows the user to list all attached rxdsk devices, with the ability to dynamically attach a new rxdsk block devices and detach existing ones. It also is capable of mapping and unmapping a rxd volume to any block device via the RapidCache (rxcache) kernel module.
+rapiddisk is a RapidDisk (rxdsk) module management tool. The tool allows the user to list all attached rxdsk devices, with the ability to dynamically attach a new rxdsk block devices and detach existing ones. It also is capable of mapping and unmapping an rxd volume to any block device via the RapidCache (rxcache) kernel module.
 .SS Options
 .TP
 -h
@@ -16,9 +16,6 @@ Display the version number.
 .TP
 --attach
 Dynamically attach new rxdsk devices.
-.TP
---attach-nv
-Dynamically attach an rxdsk device over a non-volatile region of memory.
 .TP
 --detach
 Dynamically detach rxdsk devices.
@@ -33,7 +30,7 @@ List all attached rxdsk devices in script friendly format.
 Erase all data to a specified rxdsk device (dangerous).
 .TP
 --resize
-Dynamically grow the size of an existing rxdsk device. Not supported with non-volatile memory.
+Dynamically grow the size of an existing rxdsk device.
 .TP
 --archive
 Using zlib, archive an rxdsk device to a data file.
@@ -85,8 +82,6 @@ Specify cache block size in KBytes (multiples of 4).
 rapiddisk --list
 .TP
 rapiddisk --attach 64
-.TP
-rapiddisk --attach-nv fee01000 fffbffff
 .TP
 rapiddisk --detach rxd2
 .TP
