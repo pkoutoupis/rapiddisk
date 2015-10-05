@@ -7,75 +7,70 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
 export PATH
 
-: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
-. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs || exit 1
+: ${OCF_FUNCTIONS_DIR=/usr/lib/ocf/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
 
-declare RDSK_bin="/sbin/rapiddisk"
+
+RDSK_bin="/sbin/rapiddisk"
+
+#######################################################################
 
 metadata()
 {
-        cat <<EOT
-<?xml version="1.0" ?>
-<resource-agent name="rapiddisk">
-    <version>1.1</version>
+        cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="rapiddisk.sh" version="1.1">
+<version>1.1</version>
 
-    <longdesc lang="en">
-        This defines a standard RapidDisk HA failover.
-    </longdesc>
+<longdesc lang="en">
+This defines a standard RapidDisk HA failover.
+</longdesc>
 
-    <shortdesc lang="en">
-        Defines a standard RapidDisk HA failover.
-    </shortdesc>
+<shortdesc lang="en">
+Defines a standard RapidDisk HA failover.
+</shortdesc>
 
-    <parameters>
-        <parameter name="name" primary="1">
-            <longdesc lang="en">
-                This is the name of the resource rule.
-            </longdesc>
-            <shortdesc lang="en">
-                Name
-            </shortdesc>
-            <content type="string"/>
-        </parameter>
+<parameters>
+<parameter name="name" unique="0" required="0">
+<longdesc lang="en">
+This is the name of the resource rule.
+</longdesc>
+<shortdesc lang="en">Name</shortdesc>
+<content type="string"/>
+</parameter>
 
-        <parameter name="volume" unique="1" required="1">
-            <longdesc lang="en">
-                This is the absolute path of the storage device to map with RapidCache.
-            </longdesc>
-            <shortdesc lang="en">
-                Path of storage device for RapidCache.
-            </shortdesc>
-            <content type="string"/>
-        </parameter>
+<parameter name="volume" unique="0" required="0">
+<longdesc lang="en">
+This is the absolute path of the storage device to map with RapidCache.
+</longdesc>
+<shortdesc lang="en">Path of storage device for RapidCache.</shortdesc>
+<content type="string"/>
+</parameter>
 
-        <parameter name="size" unique="1" required="1">
-            <longdesc lang="en">
-                This is the size of the RapidDisk (and cache for RapidCache) volume.
-            </longdesc>
-            <shortdesc lang="en">
-                RapidDisk size.
-            </shortdesc>
-            <content type="string"/>
-        </parameter>
-    </parameters>
+<parameter name="size" unique="0" required="0">
+<longdesc lang="en">
+This is the size of the RapidDisk (and cache for RapidCache) volume.
+</longdesc>
+<shortdesc lang="en">
+RapidDisk size.
+</shortdesc>
+<content type="string"/>
+</parameter>
+</parameters>
 
-    <actions>
-        <action name="start" timeout="300"/>
-        <action name="stop" timeout="30"/>
-        
-        <action name="status" timeout="10" interval="30"/>
-        <action name="monitor" timeout="10" interval="30"/>
-
-        <!-- depth 10 calls the status_program -->
-        <action name="status" depth="10" timeout="20" interval="30"/>
-        <action name="monitor" depth="10" timeout="20" interval="30"/>
-
-        <action name="meta-data" timeout="5"/>
-        <action name="validate-all" timeout="5"/>
-
-    </actions>
+<actions>
+<action name="start" timeout="300"/>
+<action name="stop" timeout="30"/>
+<action name="status" depth="10" timeout="20" interval="30"/>
+<action name="monitor" depth="10" timeout="20" interval="30"/>
+<action name="meta-data" timeout="5"/>
+<action name="validate-all" timeout="5"/>
+</actions>
 </resource-agent>
-EOT
+END
+
+        exit $OCF_SUCCESS
 }
 
 
@@ -126,7 +121,7 @@ do_start()
 		volume="$OCF_RESKEY_volume"
 	fi
 	rxdsk=`echo $output|sed -e 's/^.*rxd/rxd/' -e 's/ .*$//'`
-	$RDSK_bin --rxc-map $rxdsk $volume 4
+	$RDSK_bin --rxc-map $rxdsk $volume
 
         return $OCF_SUCCESS
 }
@@ -160,12 +155,13 @@ do_status()
 	verify_all || exit $?
 
 	volume=`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
-	if [ -e "/dev/$mapper/$volume" ]; then
+	if [ -e "/dev/mapper/rxc_$volume" ] || [ -e "/dev/mapper/rxc_rxcrypt-$volume" ]; then
 		return $OCF_SUCCESS
 	fi
 	ocf_log debug "RapidDisk resource for $OCF_RESKEY_volume is not running."
-	return $OCF_ERR_GENERIC
+	return $OCF_NOT_RUNNING
 }
+
 
 #
 #
@@ -199,6 +195,6 @@ case $1 in
 		;;
 	*)
 		echo "usage: $0 {start|stop|restart|status|meta-data|validate-all}"
-		exit 1
+		exit $OCF_ERR_UNIMPLEMENTED
 		;;
 esac

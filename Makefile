@@ -22,8 +22,8 @@ dkms:
 
 .PHONY: tools-install
 tools-install:
-	cd bin; make; make install; cd ../doc; make install; cd ../www; make install; cd ..
+	cd bin; make; make install; cd ../conf; make install; cd ../doc; make install; cd ../www; make install; cd ..
 
 .PHONY: tools-uninstall
 tools-uninstall:
-	cd bin; make uninstall; cd ../doc; make uninstall; cd ../www; make install; cd ..
+	cd bin; make uninstall; cd ../conf; make uninstall; cd ../doc; make uninstall; cd ../www; make install; cd ..

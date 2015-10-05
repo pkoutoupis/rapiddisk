@@ -1,3 +1,8 @@
+*** Release 3.4-2 ***
+
+- Updated Makefile for tools install to add HA scripts.
+- Fixed bugs with HA scripts (both rgmanager and pacemaker).
+
 *** Release 3.4 ***
 
 - Added ability to autoload RapidDisk volumes during module insertion.

@@ -40,7 +40,7 @@ metadata()
             <content type="string"/>
         </parameter>
 
-        <parameter name="volume" unique="1" required="1">
+        <parameter name="volume" unique="0" required="0">
             <longdesc lang="en">
                 This is the absolute path of the storage device to map with RapidCache.
             </longdesc>
@@ -50,7 +50,7 @@ metadata()
             <content type="string"/>
         </parameter>
 
-        <parameter name="size" unique="1" required="1">
+        <parameter name="size" unique="0" required="0">
             <longdesc lang="en">
                 This is the size of the RapidDisk (and cache for RapidCache) volume.
             </longdesc>
@@ -140,7 +140,7 @@ do_start()
 		volume="$OCF_RESKEY_volume"
 	fi
 	rxdsk=`echo $output|sed -e 's/^.*rxd/rxd/' -e 's/ .*$//'`
-	$RDSK_bin --rxc-map $rxdsk $volume 4
+	$RDSK_bin --rxc-map $rxdsk $volume
 
 	clog_service_start $CLOG_SUCCEED
         return $OCF_SUCCESS
@@ -178,8 +178,7 @@ do_status()
 	clog_service_status $CLOG_INIT
 
 	volume=`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
-
-	if [ -e "/dev/$mapper/$volume" ]; then
+	if [ -e "/dev/mapper/rxc_$volume" ] || [ -e "/dev/mapper/rxc_rxcrypt-$volume" ]; then
 		clog_service_status $CLOG_SUCCEED
 		return 0
 	fi
