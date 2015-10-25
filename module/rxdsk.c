@@ -29,7 +29,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"3.4"
+#define VERSION_STR		"3.5"
 #define RDPREFIX		"rxd"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -66,14 +66,19 @@ static int rd_max_nr = MAX_RDSKS;
 static int max_sectors = DEFAULT_MAX_SECTS, nr_requests = DEFAULT_REQUESTS;
 static LIST_HEAD(rdsk_devices);
 static struct kobject *rdsk_kobj;
+#ifndef NOTMAINLINE
 #if CONFIG_BLK_DEV_RAM_COUNT
 static int rd_nr = CONFIG_BLK_DEV_RAM_COUNT;
 #else
 static int rd_nr = 0;
 #endif
-#if CONFIG_BLK_DEV_RAM_SIZE
+#if CONFIG_BLK_DEV_RAM_SIZE 
 int rd_size = CONFIG_BLK_DEV_RAM_SIZE;
 #else
+int rd_size = 0;
+#endif
+#else
+static int rd_nr = 0;
 int rd_size = 0;
 #endif
 
@@ -97,7 +102,7 @@ static void rdsk_make_request(struct request_queue *, struct bio *);
 #else
 static int rdsk_make_request(struct request_queue *, struct bio *);
 #endif
-static int attach_device(int, int); /* disk num, disk size */
+static int attach_device(int);    /* disk size */
 static int detach_device(int);	  /* disk num */
 static int resize_device(int, int); /* disk num, disk size */
 static ssize_t mgmt_show(struct kobject *, struct kobj_attribute *, char *);
@@ -139,11 +144,10 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 	if (!strncmp("rxdsk attach ", buffer, 13)) {
 		ptr = buf + 13;
-		num = simple_strtoul(ptr, &ptr, 0);
-		size = simple_strtoul(ptr + 1, &ptr, 0);
+		size = (simple_strtoul(ptr, &ptr, 0) * 2);
 
-		if (attach_device(num, size) != 0) {
-			pr_err("%s: Unable to attach rxd%d\n", RDPREFIX, num);
+		if (attach_device(size) != 0) {
+			pr_err("%s: Unable to attach a new rxdsk device.\n", RDPREFIX);
 			err = -EINVAL;
 		}
 	} else if (!strncmp("rxdsk detach ", buffer, 13)) {
@@ -156,7 +160,7 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 	} else if (!strncmp("rxdsk resize ", buffer, 13)) {
 		ptr = buf + 13;
 		num = simple_strtoul(ptr, &ptr, 0);
-		size = simple_strtoul(ptr + 1, &ptr, 0);
+		size = (simple_strtoul(ptr + 1, &ptr, 0) * 2);
 
 		if (resize_device(num, size) != 0) {
 			pr_err("%s: Unable to resize rxd%d\n", RDPREFIX, num);
@@ -590,24 +594,35 @@ static const struct block_device_operations rdsk_fops = {
 	.ioctl = rdsk_ioctl,
 };
 
-static int attach_device(int num, int size)
+static int attach_device(int size)
 {
+	int num = 0;
 	struct rdsk_device *rdsk, *rxtmp;
 	struct gendisk *disk;
+	unsigned char *string, name[16];
 
-	if (rd_total > rd_max_nr) {
+	if (rd_total >= rd_max_nr) {
 		pr_warn("%s: Reached maximum number of attached disks.\n",
 			RDPREFIX);
 		goto out;
 	}
 
+	string = kzalloc(PAGE_SIZE, GFP_KERNEL);
+	if (!string)
+		goto out;
 	list_for_each_entry(rxtmp, &rdsk_devices, rdsk_list) {
-		if (rxtmp->num == num) {
-			pr_warn("%s: rdsk device %d already exists.\n",
-				RDPREFIX, num);
-			goto out;
-		}
+		sprintf(string, "%s,rxd%d", string, rxtmp->num);
+		num++;
 	}
+	while (num >= 0) {
+		memset(name, 0x0, sizeof(name));
+		sprintf(name, "rxd%d", num);
+                if (strstr(string, (const char *)name) == NULL) {
+                        break;
+                }
+                num--;
+        }
+	kfree(string);
 
 	rdsk = kzalloc(sizeof(*rdsk), GFP_KERNEL);
 	if (!rdsk)
@@ -710,7 +725,7 @@ static int __init init_rxd(void)
 {
 	int retval, i;
 
-	rd_total = 0;
+	rd_total = rd_ma_no = 0;
 	rd_ma_no = register_blkdev(rd_ma_no, RDPREFIX);
 	if (rd_ma_no < 0) {
 		pr_err("%s: Failed registering rdsk, returned %d\n",
@@ -726,7 +741,7 @@ static int __init init_rxd(void)
 		goto init_failure2;
 
 	for (i = 0; i < rd_nr; i++) {
-		retval = attach_device(i, (rd_size * 2));
+		retval = attach_device(rd_size * 2);
 		if (retval) {
 			pr_err("%s: Failed to load RapidDisk volume rxd%d.\n",
 			       RDPREFIX, i);

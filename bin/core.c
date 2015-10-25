@@ -26,7 +26,6 @@ struct RxD_PROFILE *end =   (struct RxD_PROFILE *) NULL;
 struct RxC_PROFILE *chead = (struct RxC_PROFILE *) NULL;
 struct RxC_PROFILE *cend =  (struct RxC_PROFILE *) NULL;
 
-unsigned char *sys_rdsk	  = "/sys/kernel/rapiddisk/mgmt";
 unsigned char *sys_block  = "/sys/block";
 unsigned char *etc_mtab   = "/etc/mtab";
 unsigned char *dev_mapper = "/dev/mapper";
@@ -240,7 +239,7 @@ int attach_device(struct RxD_PROFILE *prof, unsigned long size)
 	FILE *fp;
 	unsigned char string[BUFSZ], name[16];
 
-	/* echo "rxdsk attach 1 65536" > /sys/kernel/rapiddisk/mgmt <- in sectors*/
+	/* echo "rxdsk attach 64" > /sys/kernel/rapiddisk/mgmt <- in sectors*/
 	for (dsk = 0; prof != NULL; dsk++) {
 		sprintf(string, "%s,%s", string, prof->device);
 		prof = prof->next;
@@ -253,12 +252,12 @@ int attach_device(struct RxD_PROFILE *prof, unsigned long size)
 		}
 		dsk--;
 	}
-	if ((fp = fopen(sys_rdsk, "w")) == NULL) {
-		printf("%s: fopen: %s: %s\n", __func__, sys_rdsk, strerror(errno));
+	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
+		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
 		return -1;
 	}
-	if ((err = fprintf(fp, "rxdsk attach %d %llu\n", dsk,
-		(((unsigned long long)size * 1024 * 1024) / BYTES_PER_SECTOR))) < 0) {	/* module supports sector input */
+	if ((err = fprintf(fp, "rxdsk attach %llu\n",
+		((unsigned long long)size * 1024))) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
 		return err;
 	}
@@ -311,8 +310,8 @@ int detach_device(struct RxD_PROFILE *rxd_prof, RxC_PROFILE * rxc_prof, unsigned
 	}
 
 	/* This is where we begin to detach the block device */
-	if ((fp = fopen(sys_rdsk, "w")) == NULL) {
-		printf("%s: fopen: %s: %s\n", __func__, sys_rdsk, strerror(errno));
+	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
+		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
 		return -1;
 	}
 
@@ -334,8 +333,8 @@ int resize_device(struct RxD_PROFILE *prof, unsigned char *string, unsigned long
 	/* echo "rxdsk resize 1 128" > /sys/kernel/rapiddisk/mgmt */
 	while (prof != NULL) {
 		if (strcmp(string, prof->device) == 0) {
-			if (((unsigned long long)size * 1024 * 1024) <= prof->size) {
-				printf("Error. Please specify a size larger than %llu Mbytes\n", prof->size);
+			if (((unsigned long long)size * 1024) <= (prof->size / 1024)) {
+				printf("Error. Please specify a size larger than %lu Mbytes\n", size);
 				return -1;
 			}
 			err = 0;
@@ -348,13 +347,13 @@ int resize_device(struct RxD_PROFILE *prof, unsigned char *string, unsigned long
 	}
 
 	/* This is where we begin to detach the block device */
-	if ((fp = fopen(sys_rdsk, "w")) == NULL) {
-		printf("%s: fopen: %s: %s\n", __func__, sys_rdsk, strerror(errno));
+	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
+		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
 		return -1;
 	}
 
 	if ((err = fprintf(fp, "rxdsk resize %s %llu\n", string + 3,
-		(((unsigned long long)size * 1024 * 1024) / BYTES_PER_SECTOR))) < 0) {
+		((unsigned long long)size * 1024))) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
 		return err;
 	}

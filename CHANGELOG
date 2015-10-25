@@ -1,3 +1,11 @@
+*** Release 3.5 ***
+
+- Forcing rxdsk driver to do the drive enumeration. Removed functionality from administration utility.
+- Appropriately initializing major number variable to 0 before registering block device module.
+- Administration utility now checks for sysfs entry of rxdsk and not module name in /proc/modules.
+- Converted sector size input in rxdsk module to KB input. Modified administration utility to this.
+- Fixed bug in check for total rxdsk devices in module.
+
 *** Release 3.4-2 ***
 
 - Updated Makefile for tools install to add HA scripts.

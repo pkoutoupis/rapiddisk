@@ -27,11 +27,12 @@
 
 #define UTIL			"rapiddisk"
 #define COPYRIGHT		"Copyright 2011-2015 Petros Koutoupis"
-#define VERSION_NUM	  	"3.4"
+#define VERSION_NUM	  	"3.5"
 #define BYTES_PER_SECTOR	512	/* Traditional sector size */
 #define BUFSZ			65536
 #define DES_KEY			"05291983"
 #define NAMELEN			256
+#define SYS_RDSK		"/sys/kernel/rapiddisk/mgmt"
 
 typedef struct RxD_PROFILE{		/* For rxdsk device list   */
 	unsigned char device[16];

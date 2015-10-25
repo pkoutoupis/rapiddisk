@@ -1,4 +1,4 @@
-VERSION = 3.4
+VERSION = 3.5
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build
@@ -12,7 +12,7 @@ obj-m += rxdsk.o
 obj-m += rxcache.o
 
 all:
-	$(MAKE) -C$(KSRC) M=$(PWD)
+	KCPPFLAGS="-DNOTMAINLINE" $(MAKE) -C$(KSRC) M=$(PWD)
 
 install:
 	install -o root -g root -m 0755 rxdsk.ko $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/

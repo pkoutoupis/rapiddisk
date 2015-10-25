@@ -183,6 +183,10 @@ int main(int argc, char *argv[])
 			"application. technically you shouldn't be running as root anyway.\n\n");
 		return -1;
 	}
+	if (access(SYS_RDSK, F_OK) == -1) {
+		printf("Please ensure that the RapidDisk module is loaded and retry.\n");
+		return -1;
+	}
 
 	if ((fp = fopen(proc_mod, "r")) == NULL) {
 		printf("%s: fopen: %s\n", __func__, strerror(errno));
@@ -190,9 +194,8 @@ int main(int argc, char *argv[])
 	}
 	fread(string, BUFSZ, 1, fp);
 	fclose(fp);
-	if ((strstr(string, "rxdsk") == NULL) || (strstr(string, "rxcache") == NULL) || \
-		(strstr(string, "dm_crypt") == NULL)) {
-		printf("Please ensure that the RapidDisk, RapidCache, and dm_crypt modules are loaded and retry.\n");
+	if ((strstr(string, "rxcache") == NULL) || (strstr(string, "dm_crypt") == NULL)) {
+		printf("Please ensure that the RapidCache and dm_crypt modules are loaded and retry.\n");
 		return -1;
 	}
 
