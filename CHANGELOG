@@ -1,3 +1,11 @@
+*** Release 3.6 ***
+
+- Updated RapidDisk modules for Linux kernel version 4.4.
+
+*** Release 3.5-2 ***
+
+- Updated kernel documentation.
+
 *** Release 3.5 ***
 
 - Forcing rxdsk driver to do the drive enumeration. Removed functionality from administration utility.

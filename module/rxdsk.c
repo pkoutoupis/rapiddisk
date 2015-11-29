@@ -29,7 +29,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"3.5"
+#define VERSION_STR		"3.6"
 #define RDPREFIX		"rxd"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -98,7 +98,11 @@ static int rdsk_do_bvec(struct rdsk_device *, struct page *,
 static int rdsk_ioctl(struct block_device *, fmode_t,
 		      unsigned int, unsigned long);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+static blk_qc_t rdsk_make_request(struct request_queue *, struct bio *);
+#else
 static void rdsk_make_request(struct request_queue *, struct bio *);
+#endif
 #else
 static int rdsk_make_request(struct request_queue *, struct bio *);
 #endif
@@ -449,7 +453,11 @@ out:
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+static blk_qc_t
+#else
 static void
+#endif
 #else
 static int
 #endif
@@ -525,10 +533,17 @@ out:
 	bio_endio(bio, err);
 #else
 	bio_endio(bio);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+	return BLK_QC_T_NONE;
+#else
 	return;
+#endif
 io_error:
 	bio->bi_error = err;
 	bio_io_error(bio);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+	return BLK_QC_T_NONE;
+#endif
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
 	return 0;
