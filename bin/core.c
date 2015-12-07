@@ -95,7 +95,7 @@ struct RxD_PROFILE *search_targets(void)
 			end = prof;
 			prof->next = NULL;
 		}
-		free(list[n]);
+		if (list[n] != NULL) free(list[n]);
 	}
 	return head;
 }
@@ -154,11 +154,10 @@ struct RxC_PROFILE *search_cache(void)
 								else
 									strcpy(prof->source, (unsigned char *)maps[z]->d_name);
 							}
-							free(maps[z]);
+							if (maps[z] != NULL) free(maps[z]);
 						}
 					}
 				}
-				/* free(nodes[i]);*/ //TODO: Figure out while this is faulting.
 			}
 			if (chead == NULL) {
 				chead = prof;
@@ -168,8 +167,9 @@ struct RxC_PROFILE *search_cache(void)
 			cend = prof;
 			prof->next = NULL;
 		}
-		free(list[n]);
+		if (list[n] != NULL) free(list[n]);
 	}
+	for (i = 0;i < num2; i++) if (nodes[i] != NULL) free(nodes[i]);
 	return chead;
 }
 

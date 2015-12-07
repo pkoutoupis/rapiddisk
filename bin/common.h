@@ -23,11 +23,10 @@
 #include <errno.h>
 #include <unistd.h>
 #include <syslog.h>
-#include <dirent.h>
 
 #define UTIL			"rapiddisk"
 #define COPYRIGHT		"Copyright 2011-2015 Petros Koutoupis"
-#define VERSION_NUM	  	"3.6"
+#define VERSION_NUM	  	"3.6-2"
 #define BYTES_PER_SECTOR	512	/* Traditional sector size */
 #define BUFSZ			65536
 #define DES_KEY			"05291983"
