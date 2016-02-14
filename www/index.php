@@ -3,7 +3,7 @@
 /* insantiate f3 object */
 $f3 = require('./lib/base.php');
 
-/* instantiate rapidstor and set on f3 to be visable to the callback funtions */
+/* instantiate rapiddisk and set on f3 to be visable to the callback funtions */
 $f3->set('rapidDisk', new \rapiddisk);
 
 $f3->route('GET /v1/listAllRapidDiskVolumes','rapidDisk->listAllRapidDiskVolumes');

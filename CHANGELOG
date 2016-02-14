@@ -1,3 +1,7 @@
+*** Release 3.6-3 ***
+
+- Updated/corrected documentation in manual page and in source.
+
 *** Release 3.6-2 ***
 
 - Fixed a memory leak in administration utility.

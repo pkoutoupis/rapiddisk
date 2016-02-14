@@ -2,12 +2,12 @@
  ** Copyright (c) 2015 Petros Koutoupis
  ** All rights reserved.
  **
- ** @project: rapidstor
+ ** @project: rapiddisk
  **
  ** @filename: crypt.c
- ** @description: File for rapidstor.
+ ** @description: File for rapiddisk.
  **
- ** @date: 21Nov14, pkoutoupis@inverness-data.com
+ ** @date: 21Nov14, petros@petroskoutoupis.com
  ********************************************************************************/
 
 #include "common.h"

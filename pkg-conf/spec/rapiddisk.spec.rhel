@@ -1,7 +1,7 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 3.5
-Release: 1
+Version: 3.6
+Release: 3
 License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
@@ -26,7 +26,7 @@ configuration files, command line utilities, and a RESTful API
 for managing RapidDisk enabled storage volumes.
 
 %prep
-%setup -T -D -n rxdsk
+%setup -T -D -n rapiddisk
 
 %build
 make
@@ -85,6 +85,8 @@ rm -rf %{buildroot}
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %changelog
+* Tue Feb 10 2016 Petros Koutoupis <petros@petroskoutoupis.com>
+- Fixed errors in documentation.
 * Tue Aug 13 2015 Petros Koutoupis <petros@petroskoutoupis.com>
 - Adding a separate utils only build.
 * Tue Jul 7 2015 Petros Koutoupis <petros@petroskoutoupis.com>

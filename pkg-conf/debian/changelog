@@ -1,0 +1,11 @@
+rapiddisk (3.6-3) released; urgency=medium
+
+* Fixed errors in documentation.
+
+rapiddisk (3.6-2) released; urgency=medium
+
+* Fixed a memory leak in administration utility.
+* Placed better checks before deallocating memory in administration utility.
+
+
+-- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
