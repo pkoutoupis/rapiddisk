@@ -1,3 +1,7 @@
+rapiddisk (3.7-1) released; urgency=medium
+
+* Cleaned up the module code.
+
 rapiddisk (3.6-3) released; urgency=medium
 
 * Fixed errors in documentation.

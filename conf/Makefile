@@ -1,6 +1,6 @@
 CP := cp
-RM := rm
-MKDIR := mkdir -p
+RM := rm -rf
+MKDIR := mkdir -pv
 CHMOD := chmod
 DIR := /etc/rapiddisk/
 
@@ -18,7 +18,7 @@ install: all
 .PHONY: uninstall
 uninstall: 
 	@echo Uninstalling rapiddisk cluster files.
-	$(RM) -f $(DESTDIR)$(DIR)
+	$(RM) $(DESTDIR)$(DIR)
 
 .PHONY: clean
 clean:

@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright (c) 2015 Petros Koutoupis
+ ** Copyright (c) 2011-2016 Petros Koutoupis
  ** All rights reserved.
  **
  ** @project: rapiddisk
@@ -25,22 +25,26 @@ int format_crypt(unsigned char *device)
 		return err;
 	}
 	printf("Device %s will be formatted to LUKS device after 5 seconds.\n"
-			"Press CTRL+C now if you want to cancel this operation.\n", device);
+	       "Press CTRL+C now if you want to cancel this operation.\n", device);
 	sleep(5);
 
 	params.hash = "sha1";
 	params.data_alignment = 0;
+	params.data_device = NULL;
 
 	if ((err = crypt_format(cd, CRYPT_LUKS1, "aes", "xts-plain64", NULL, NULL, 256 / 8, &params)) < 0) {
 		printf("%s: crypt_format: %s\n", __func__, strerror(errno));
-		syslog(LOG_ERR, "%s: crypt_format: %s\n", __func__, strerror(errno));
+		syslog(LOG_ERR, "%s: crypt_format: %s\n",
+		       __func__, strerror(errno));
 		crypt_free(cd);
 		return err;
 	}
 
 	if ((err = crypt_keyslot_add_by_volume_key(cd, CRYPT_ANY_SLOT, NULL, 0, DES_KEY, 8)) < 0) {
-		printf("%s: crypt_keyslot_add_by_volume_key: %s\n", __func__, strerror(errno));
-		syslog(LOG_ERR, "%s: crypt_keyslot_add_by_volume_key: %s\n", __func__, strerror(errno));
+		printf("%s: crypt_keyslot_add_by_volume_key: %s\n",
+		       __func__, strerror(errno));
+		syslog(LOG_ERR, "%s: crypt_keyslot_add_by_volume_key: %s\n",
+		       __func__, strerror(errno));
 		crypt_free(cd);
 		return err;
 	}
@@ -88,14 +92,18 @@ int activate_crypt(unsigned char *device)
 	}
 
 	if ((err = crypt_activate_by_passphrase(cd, device_name, CRYPT_ANY_SLOT, DES_KEY, 8, 0)) < 0) {
-		printf("%s: crypt_activate_by_passphrase: %s\n", __func__, strerror(errno));
-		syslog(LOG_ERR, "%s: crypt_activate_by_passphrase: %s\n", __func__, strerror(errno));
+		printf("%s: crypt_activate_by_passphrase: %s\n", __func__,
+		       strerror(errno));
+		syslog(LOG_ERR, "%s: crypt_activate_by_passphrase: %s\n",
+		       __func__, strerror(errno));
 		crypt_free(cd);
 		return err;
 	}
 
-	printf("Device %s is now activated as /dev/mapper/%s.\n", device, device_name);
-	syslog(LOG_INFO, "Device %s is now activated as /dev/mapper/%s.\n", device, device_name);
+	printf("Device %s is now activated as /dev/mapper/%s.\n",
+	       device, device_name);
+	syslog(LOG_INFO, "Device %s is now activated as /dev/mapper/%s.\n",
+	       device, device_name);
 	crypt_free(cd);
 	return 0;
 }
@@ -106,8 +114,10 @@ int deactivate_crypt(unsigned char *device_name)
 	int err;
 
 	if ((err = crypt_init_by_name(&cd, device_name)) < 0) {
-		printf("%s: crypt_init_by_name: %s\n", __func__, strerror(errno));
-		syslog(LOG_ERR, "%s: crypt_init_by_name: %s\n", __func__, strerror(errno));
+		printf("%s: crypt_init_by_name: %s\n", __func__,
+		       strerror(errno));
+		syslog(LOG_ERR, "%s: crypt_init_by_name: %s\n",
+		       __func__, strerror(errno));
 		return err;
 	}
 
@@ -119,8 +129,10 @@ int deactivate_crypt(unsigned char *device_name)
 	}
 
 	if ((err = crypt_deactivate(cd, device_name)) < 0) {
-		printf("%s: crypt_deactivate: %s\n", __func__, strerror(errno));
-		syslog(LOG_ERR, "%s: crypt_deactivate: %s\n", __func__, strerror(errno));
+		printf("%s: crypt_deactivate: %s\n", __func__,
+		       strerror(errno));
+		syslog(LOG_ERR, "%s: crypt_deactivate: %s\n",
+		        __func__, strerror(errno));
 		crypt_free(cd);
 		return err;
 	}

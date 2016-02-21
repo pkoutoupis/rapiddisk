@@ -1,4 +1,4 @@
-SUBDIRS = bin conf doc module www
+SUBDIRS = src conf doc module test www
 
 .PHONY: all
 all:

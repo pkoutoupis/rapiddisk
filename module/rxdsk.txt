@@ -27,23 +27,22 @@ None.
 
 RapidDisk
 ---------
-It is advised to utilize the userland utility, rxadm, but this is essentially what is written to the /proc/rxctl proc file to manage rxdsk volumes:
+It is advised to utilize the userland utility, rapiddisk, but this is essentially what is written to the /sys/kernel/rapiddisk/mgmt sysfs file to manage rxdsk volumes:
 
-Attach a new rxdsk volume by typing (size in sectors):
-    # echo "rxdsk attach 0 8192" > /sys/kernel/rapiddisk/mgmt
+Attach a new rxdsk volume by typing (size in KB):
+    # echo "rxdsk attach 8192" > /sys/kernel/rapiddisk/mgmt
 
 Detach an existing rxdsk volume by typing:
     # echo "rxdsk detach 0" > /sys/kernel/rapiddisk/mgmt
 
-Resize an existing rxdsk volume by typing (size in sectors):
-    # echo "rxdsk resize 0 65536" > /sys/kernel/rapiddisk/mgmt
+Resize an existing rxdsk volume by typing (size in KB):
+    # echo "rxdsk resize 65536" > /sys/kernel/rapiddisk/mgmt
 
 
-Note - the integer after the "rxdsk <command>" is the RapidDisk volume number. "0" would signify "rxd0."
 
 RapidCache
 ---------
-It is advised to utilize the userland utility, rxadm, but this is essentially what is sent to the dmsetup command:
+It is advised to utilize the userland utility, rapiddisk, but this is essentially what is sent to the dmsetup command:
 
 Map an existing rxdsk volume to a block device by typing:
     # echo 0 4194303 rxcache /dev/sdb /dev/rxd0 196608|dmsetup create rxc0

@@ -1,3 +1,12 @@
+*** Release 3.7 ***
+
+- Cleaned up kernel module code.
+- Fixed stack overflow bug in administration utility.
+- Fixed error print statement in administration utility.
+- Updated copyright years.
+- Cleaned up build environment, including Makefiles.
+- Fixed bug in configuring encryption on device.
+
 *** Release 3.6-3 ***
 
 - Updated/corrected documentation in manual page and in source.

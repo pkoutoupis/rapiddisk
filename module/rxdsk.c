@@ -1,5 +1,5 @@
 /*******************************************************************************
- ** Copyright (c) 2011-2015 Petros Koutoupis
+ ** Copyright (c) 2011-2016 Petros Koutoupis
  ** All rights reserved.
  **
  ** filename: rdsk.c
@@ -29,8 +29,8 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"3.6"
-#define RDPREFIX		"rxd"
+#define VERSION_STR		"3.7"
+#define PREFIX			"rxd"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
 #define DEFAULT_MAX_SECTS	127
@@ -151,14 +151,14 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 		size = (simple_strtoul(ptr, &ptr, 0) * 2);
 
 		if (attach_device(size) != 0) {
-			pr_err("%s: Unable to attach a new rxdsk device.\n", RDPREFIX);
+			pr_err("%s: Unable to attach a new rxdsk device.\n", PREFIX);
 			err = -EINVAL;
 		}
 	} else if (!strncmp("rxdsk detach ", buffer, 13)) {
 		ptr = buf + 13;
 		num = simple_strtoul(ptr, &ptr, 0);
 		if (detach_device(num) != 0) {
-			pr_err("%s: Unable to detach rxd%d\n", RDPREFIX, num);
+			pr_err("%s: Unable to detach rxd%d\n", PREFIX, num);
 			err = -EINVAL;
 		}
 	} else if (!strncmp("rxdsk resize ", buffer, 13)) {
@@ -167,11 +167,11 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 		size = (simple_strtoul(ptr + 1, &ptr, 0) * 2);
 
 		if (resize_device(num, size) != 0) {
-			pr_err("%s: Unable to resize rxd%d\n", RDPREFIX, num);
+			pr_err("%s: Unable to resize rxd%d\n", PREFIX, num);
 			err = -EINVAL;
 		}
 	} else {
-		pr_err("%s: Unsupported command: %s\n", RDPREFIX, buffer);
+		pr_err("%s: Unsupported command: %s\n", PREFIX, buffer);
 		err = -EINVAL;
 	}
 
@@ -600,7 +600,7 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 			sizeof(size)) ? -EFAULT : 0;
 	}
 
-	pr_warn("%s: 0x%x invalid ioctl.\n", RDPREFIX, cmd);
+	pr_warn("%s: 0x%x invalid ioctl.\n", PREFIX, cmd);
 	return -ENOTTY;		/* unknown command */
 }
 
@@ -612,26 +612,26 @@ static const struct block_device_operations rdsk_fops = {
 static int attach_device(int size)
 {
 	int num = 0;
-	struct rdsk_device *rdsk, *rxtmp;
+	struct rdsk_device *rdsk, *tmp;
 	struct gendisk *disk;
 	unsigned char *string, name[16];
 
 	if (rd_total >= rd_max_nr) {
 		pr_warn("%s: Reached maximum number of attached disks.\n",
-			RDPREFIX);
+			PREFIX);
 		goto out;
 	}
 
 	string = kzalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!string)
 		goto out;
-	list_for_each_entry(rxtmp, &rdsk_devices, rdsk_list) {
-		sprintf(string, "%s,rxd%d", string, rxtmp->num);
+	list_for_each_entry(tmp, &rdsk_devices, rdsk_list) {
+		sprintf(string, "%srxd%d,", string, tmp->num);
 		num++;
 	}
 	while (num >= 0) {
 		memset(name, 0x0, sizeof(name));
-		sprintf(name, "rxd%d", num);
+		sprintf(name, "rxd%d,", num);
                 if (strstr(string, (const char *)name) == NULL) {
                         break;
                 }
@@ -678,13 +678,13 @@ static int attach_device(int size)
 	disk->private_data = rdsk;
 	disk->queue = rdsk->rdsk_queue;
 	disk->flags |= GENHD_FL_SUPPRESS_PARTITION_INFO;
-	sprintf(disk->disk_name, "%s%d", RDPREFIX, num);
+	sprintf(disk->disk_name, "%s%d", PREFIX, num);
 	set_capacity(disk, size);
 
 	add_disk(rdsk->rdsk_disk);
 	list_add_tail(&rdsk->rdsk_list, &rdsk_devices);
 	rd_total++;
-	pr_info("%s: Attached rxd%d of %llu bytes in size.\n", RDPREFIX,
+	pr_info("%s: Attached rxd%d of %llu bytes in size.\n", PREFIX,
 		num, rdsk->size);
 	return 0;
 
@@ -711,7 +711,7 @@ static int detach_device(int num)
 	rdsk_free_pages(rdsk);
 	kfree(rdsk);
 	rd_total--;
-	pr_info("%s: Detached rxd%d.\n", RDPREFIX, num);
+	pr_info("%s: Detached rxd%d.\n", PREFIX, num);
 
 	return 0;
 }
@@ -726,12 +726,12 @@ static int resize_device(int num, int size)
 
 	if (size <= get_capacity(rdsk->rdsk_disk)) {
 		pr_warn("%s: Please specify a larger size for resizing.\n",
-			RDPREFIX);
+			PREFIX);
 		return GENERIC_ERROR;
 	}
 	set_capacity(rdsk->rdsk_disk, size);
 	rdsk->size = (size * BYTES_PER_SECTOR);
-	pr_info("%s: Resized rxd%d of %lu bytes in size.\n", RDPREFIX, num,
+	pr_info("%s: Resized rxd%d of %lu bytes in size.\n", PREFIX, num,
 	        (unsigned long)(size * BYTES_PER_SECTOR));
 	return 0;
 }
@@ -741,10 +741,10 @@ static int __init init_rxd(void)
 	int retval, i;
 
 	rd_total = rd_ma_no = 0;
-	rd_ma_no = register_blkdev(rd_ma_no, RDPREFIX);
+	rd_ma_no = register_blkdev(rd_ma_no, PREFIX);
 	if (rd_ma_no < 0) {
 		pr_err("%s: Failed registering rdsk, returned %d\n",
-		       RDPREFIX, rd_ma_no);
+		       PREFIX, rd_ma_no);
 		return rd_ma_no;
 	}
 
@@ -759,7 +759,7 @@ static int __init init_rxd(void)
 		retval = attach_device(rd_size * 2);
 		if (retval) {
 			pr_err("%s: Failed to load RapidDisk volume rxd%d.\n",
-			       RDPREFIX, i);
+			       PREFIX, i);
 			goto init_failure2;
 		}
 	}
@@ -768,7 +768,7 @@ static int __init init_rxd(void)
 init_failure2:
 	kobject_put(rdsk_kobj);
 init_failure:
-	unregister_blkdev(rd_ma_no, RDPREFIX);
+	unregister_blkdev(rd_ma_no, PREFIX);
 	return -ENOMEM;
 }
 
@@ -779,7 +779,7 @@ static void __exit exit_rxd(void)
 	kobject_put(rdsk_kobj);
 	list_for_each_entry_safe(rdsk, next, &rdsk_devices, rdsk_list)
 		detach_device(rdsk->num);
-	unregister_blkdev(rd_ma_no, RDPREFIX);
+	unregister_blkdev(rd_ma_no, PREFIX);
 }
 
 module_init(init_rxd);

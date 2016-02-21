@@ -1,6 +1,6 @@
-CP := cp
-RM := rm
-MKDIR := mkdir -p
+CP := cp -rf
+RM := rm -rf
+MKDIR := mkdir -pv
 CHMOD := chmod
 
 .PHONY: all
@@ -11,13 +11,13 @@ all:
 install: all
 	@echo Installing the RapidDisk RESTful API.
 	$(MKDIR) $(DESTDIR)/var/www/html/rapiddisk
-	$(CP) -rf * $(DESTDIR)/var/www/html/rapiddisk/
+	$(CP) * $(DESTDIR)/var/www/html/rapiddisk/
 	$(CHMOD) 755 -R $(DESTDIR)/var/www/html/rapiddisk/*
 
 .PHONY: uninstall
 uninstall: 
 	@echo Uninstalling the RapidDisk RESTful API.
-	$(RM) -rf $(DESTDIR)/var/www/html/rapiddisk/
+	$(RM) $(DESTDIR)/var/www/html/rapiddisk/
 
 .PHONY: clean
 clean:

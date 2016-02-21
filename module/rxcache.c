@@ -1,5 +1,5 @@
 /*******************************************************************************
- ** Copyright (c) 2011-2015 Petros Koutoupis
+ ** Copyright (c) 2011-2016 Petros Koutoupis
  ** All rights reserved.
  **
  ** filename: rxcache.c
@@ -47,7 +47,7 @@
 	} \
 } while (0)
 
-#define VERSION_STR	"3.6"
+#define VERSION_STR	"3.7"
 #define DM_MSG_PREFIX	"rxc"
 
 #define READCACHE	1
@@ -1168,7 +1168,7 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 
 static struct target_type cache_target = {
 	.name    = "rxcache",
-	.version = {3, 6, 0},
+	.version = {3, 7, 0},
 	.module  = THIS_MODULE,
 	.ctr	 = cache_ctr,
 	.dtr	 = cache_dtr,

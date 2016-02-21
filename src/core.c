@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright (c) 2011-2015 Petros Koutoupis
+ ** Copyright (c) 2011-2016 Petros Koutoupis
  ** All rights reserved.
  **
  ** @project: rapiddisk
@@ -136,7 +136,8 @@ struct RxC_PROFILE *search_cache(void)
 			for (i = 0;i < num2; i++) {
 				if (strncmp(nodes[i]->d_name, "dm-", 3) == 0) {
 					sprintf(file, "%s/%s", sys_block, nodes[i]->d_name);
-					if (strncmp(read_info(file, "dm/name"), prof->device, sizeof(prof->device)) == 0) {
+					if (strncmp(read_info(file, "dm/name"), prof->device,
+					    sizeof(prof->device)) == 0) {
 						sprintf(file, "%s/%s/slaves", sys_block, nodes[i]->d_name);
 						if ((num3 = scandir(file, &maps, NULL, NULL)) < 0) {
 							if (ENOENT) {
@@ -203,7 +204,7 @@ int list_devices(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE *rxc_prof)
 
 int stat_rxcache_mapping(struct RxC_PROFILE *rxc_prof, unsigned char *cache)
 {
-	unsigned char cmd[32] = {0};
+	unsigned char cmd[NAMELEN] = {0};
 
 	if (rxc_prof == NULL) {
 		printf("  No RapidCache Mappings exist.\n\n");
@@ -363,13 +364,13 @@ int resize_device(struct RxD_PROFILE *prof, unsigned char *string, unsigned long
 	return 0;
 }
 
-int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof, unsigned char *cache,
-			unsigned char *source)
+int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof,
+	        unsigned char *cache, unsigned char *source)
 {
 	int err = -1, node, fd;
 	unsigned long long source_sz = 0, cache_sz = 0;
 	FILE *fp;
-	unsigned char *buf, string[BUFSZ], name[64] = {0}, str[64] = {0}, *dup, *token;
+	unsigned char *buf, string[BUFSZ], name[NAMELEN] = {0}, str[NAMELEN] = {0}, *dup, *token;
 
 	while (rxd_prof != NULL) {
 		if (strcmp(cache, rxd_prof->device) == 0) {
@@ -390,7 +391,8 @@ int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof, uns
 	}
 	/* Check to make sure that cache/source devices are not in a mapping already */
 	while (rxc_prof != NULL) {
-		if ((strcmp(cache, rxc_prof->cache) == 0) || (strcmp(source+5, rxc_prof->source) == 0)) {
+		if ((strcmp(cache, rxc_prof->cache) == 0) || \
+		    (strcmp(source+5, rxc_prof->source) == 0)) {
 			printf("Error. At least one of your cache/source devices is currently mapped to %s.\n\n",
 				rxc_prof->device);
 			return -1;
@@ -409,7 +411,11 @@ int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof, uns
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, cache) != NULL)) {
-		printf("%s is currently mounted. Please \"umount\" and retry.\n", string);
+		printf("%s is currently mounted. Please \"umount\" and retry.\n", cache);
+		return -1;
+	}
+	if ((strstr(buf, source) != NULL)) {
+		printf("%s is currently mounted. Please \"umount\" and retry.\n", source);
 		return -1;
 	}
 
@@ -435,7 +441,7 @@ int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof, uns
 		return errno;
 	}
 	close(fd);
-	memset(name, 0x0, 16);
+	memset(name, 0x0, sizeof(name));
 
 	dup = strdup(source);
 	token = strtok((char *)dup, "/");
@@ -467,7 +473,7 @@ int rxcache_unmap(struct RxC_PROFILE *prof, unsigned char *string)
 	int err = -1;
 	FILE *fp;
 	unsigned char *buf;
-	unsigned char cmd[32] = {0};
+	unsigned char cmd[NAMELEN] = {0};
 
 	/* dmsetup remove rxc0 */
 	while (prof != NULL) {
@@ -510,7 +516,7 @@ int rxcache_unmap(struct RxC_PROFILE *prof, unsigned char *string)
 int rxdsk_flush(struct RxD_PROFILE *rxd_prof, RxC_PROFILE *rxc_prof, unsigned char *string)
 {
 	int fd, err = -1;
-	unsigned char file[16] = {0}, *buf;
+	unsigned char file[NAMELEN] = {0}, *buf;
 	FILE *fp;
 
 	while (rxd_prof != NULL) {

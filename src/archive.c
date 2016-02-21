@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright (c) 2011-2015 Petros Koutoupis
+ ** Copyright (c) 2011-2016 Petros Koutoupis
  ** All rights reserved.
  **
  ** @project: rapiddisk
@@ -17,7 +17,8 @@
 
 #define RXD_GET_STATS	 0x0529
 
-int archive_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src, unsigned char *dest)
+int archive_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src,
+		       unsigned char *dest)
 {
 	int err, flush, fd;
 	unsigned long long max_sect, cnt;
@@ -82,7 +83,8 @@ int archive_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src, unsigned ch
 			(void)deflateEnd(&strm);
 			return Z_ERRNO;
 		}
-		flush = (feof(fin) || cnt >= (max_sect * BYTES_PER_SECTOR)) ? Z_FINISH : Z_NO_FLUSH;
+		flush = (feof(fin) || cnt >= (max_sect * BYTES_PER_SECTOR)) \
+			 ? Z_FINISH : Z_NO_FLUSH;
 		strm.next_in = in;
 
 		do {
@@ -109,7 +111,8 @@ int archive_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src, unsigned ch
 	return Z_OK;
 }
 
-int restore_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src, unsigned char *dest)
+int restore_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src,
+		       unsigned char *dest)
 {
 	int err;
 	unsigned int have;

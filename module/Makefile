@@ -1,4 +1,4 @@
-VERSION = 3.5
+VERSION = 3.7
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build
@@ -8,6 +8,8 @@ ifeq ($(KVER),)
         KVER := $(shell uname -r)
 endif
 
+MKDIR := mkdir -pv
+
 obj-m += rxdsk.o
 obj-m += rxcache.o
 
@@ -15,6 +17,7 @@ all:
 	KCPPFLAGS="-DNOTMAINLINE" $(MAKE) -C$(KSRC) M=$(PWD)
 
 install:
+	$(MKDIR) $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
 	install -o root -g root -m 0755 rxdsk.ko $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
 	install -o root -g root -m 0755 rxcache.ko $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
 	depmod -a

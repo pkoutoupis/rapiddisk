@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright (c) 2011-2015 Petros Koutoupis
+ ** Copyright (c) 2011-2016 Petros Koutoupis
  ** All rights reserved.
  **
  ** @project: rapiddisk
@@ -25,8 +25,8 @@
 #include <syslog.h>
 
 #define UTIL			"rapiddisk"
-#define COPYRIGHT		"Copyright 2011-2015 Petros Koutoupis"
-#define VERSION_NUM	  	"3.6-3"
+#define COPYRIGHT		"Copyright 2011-2016 Petros Koutoupis"
+#define VERSION_NUM	  	"3.7"
 #define BYTES_PER_SECTOR	512	/* Traditional sector size */
 #define BUFSZ			65536
 #define DES_KEY			"05291983"
@@ -40,9 +40,9 @@ typedef struct RxD_PROFILE{		/* For rxdsk device list   */
 }RxD_PROFILE;
 
 typedef struct RxC_PROFILE{		/* For rxcache node list   */
-	unsigned char device[64];
+	unsigned char device[NAMELEN];
 	unsigned char cache[16];
-	unsigned char source[64];
+	unsigned char source[NAMELEN];
 	struct RxC_PROFILE *next;
 }RxC_PROFILE;
 

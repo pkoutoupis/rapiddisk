@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright (c) 2011-2015 Petros Koutoupis
+ ** Copyright (c) 2011-2016 Petros Koutoupis
  ** All rights reserved.
  **
  ** @project: rapiddisk
@@ -179,8 +179,9 @@ int main(int argc, char *argv[])
 	unsigned char string[BUFSZ];
 
 	if (getuid() != 0) {
-		printf("\nYou must be root or contain sudo permissions to initiate this\n"
-			"application. technically you shouldn't be running as root anyway.\n\n");
+		printf("\nYou must be root or contain sudo permissions to "
+		       "initiate this\napplication. technically you shouldn't "
+		       "be running as root anyway.\n\n");
 		return -1;
 	}
 	if (access(SYS_RDSK, F_OK) == -1) {
@@ -195,7 +196,8 @@ int main(int argc, char *argv[])
 	fread(string, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(string, "rxcache") == NULL) || (strstr(string, "dm_crypt") == NULL)) {
-		printf("Please ensure that the RapidCache and dm_crypt modules are loaded and retry.\n");
+		printf("Please ensure that the RapidCache and dm_crypt modules "
+		       "are loaded and retry.\n");
 		return -1;
 	}
 
