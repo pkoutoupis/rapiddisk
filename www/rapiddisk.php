@@ -11,13 +11,13 @@ class RapidDisk {
 	public function listAllRapidDiskVolumes() {
                 $command = implode(' ', array($this->RDISK_CMD, '--short-list'));
                 exec($command, $output, $retval);
-		$list = $dsk = $cache = $tmp = [];
+		$list = $tmp = [];
 		foreach ($output as &$volume) {
 			$var = explode(':', $volume);
-			if (strstr($var[0], 'rxd') != False) {
+			if (strstr($var[0], 'rd') != False) {
 				$tmp = array('rapidDisk' => $var[0], 'size' => intval($var[1]));
 				array_push($list, $tmp);
-			} elseif (strstr($var[0], 'rxc') != False) {
+			} elseif (strstr($var[0], 'rc') != False) {
 				$tmp = array('rapidCache' => $var[0], 'cache' => explode(',', $var[1])[0], 'source' => explode(',', $var[1])[1]);
 				array_push($list, $tmp);
 			}
@@ -74,7 +74,7 @@ class RapidDisk {
                 $nameObject = json_decode($JSONRequest, true);
                 $rdsk = $nameObject['rapidDisk'];
                 $source = $nameObject['sourceDrive'];
-                $command = implode(' ', array($this->RDISK_CMD, '--rxc-map', $rdsk, $source, "8"));
+                $command = implode(' ', array($this->RDISK_CMD, '--cache-map', $rdsk, $source, "8"));
                 exec($command, $output, $retval);
                 $rtn = array('errorCode' => $retval, 'message' => implode(' ', $output));
                 http_response_code(200); /* OK */
@@ -83,7 +83,7 @@ class RapidDisk {
 
         /* @DELETE: Remove an existing RapidCache Mapping. */
         public function removeRapidCacheMapping($disk) {
-		$command = implode(' ', array($this->RDISK_CMD, '--rxc-unmap', $disk));
+		$command = implode(' ', array($this->RDISK_CMD, '--cache-unmap', $disk));
 		exec($command, $output, $retval);
                 $rtn = array('errorCode' => $retval, 'message' => implode(' ', $output));
                 http_response_code(200); /* OK */

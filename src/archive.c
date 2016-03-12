@@ -5,7 +5,7 @@
  ** @project: rapiddisk
  **
  ** @filename: archive.c
- ** @description: This is the main file for the rxadm userland tool.
+ ** @description: This is the main file for the rapiddisk userland tool.
  **
  ** @date: 15Nov11, petros@petroskoutoupis.com
  ********************************************************************************/
@@ -15,9 +15,9 @@
 #include <sys/ioctl.h>
 #include <zlib.h>
 
-#define RXD_GET_STATS	 0x0529
+#define RD_GET_STATS	 0x0529
 
-int archive_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src,
+int archive_rd_volume(struct RD_PROFILE *prof, unsigned char *src,
 		       unsigned char *dest)
 {
 	int err, flush, fd;
@@ -34,7 +34,7 @@ int archive_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src,
 	}
 	if (err != 0) {
 		printf("Error. Device %s does not exist.\n", src);
-		return -1;
+		return -ENOENT;
 	}
 
 	sprintf(file, "/dev/%s", src);
@@ -43,30 +43,30 @@ int archive_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src,
 
 	if ((in == '\0') || (out == '\0')) {
 		printf("Error. Unable to acquire memory space.\n");
-		return -1;
+		return -ENOMEM;
 	}
 
-	if ((fd= open(file, O_RDONLY | O_NONBLOCK)) < 0) {
+	if ((fd = open(file, O_RDONLY | O_NONBLOCK)) < 0) {
 		printf("fdin: %s\n", strerror(errno));
-		return errno;
+		return -errno;
 	}
 	/* This ioctl will obtain the last sector allocate as to not   *
 	 * archive the unallocated pages which will just return zeroes.*
 	 * This will allow for a restoration utilizing less pages.     */
-	if (ioctl(fd, RXD_GET_STATS, &max_sect) < 0) {
+	if (ioctl(fd, RD_GET_STATS, &max_sect) < 0) {
 		printf("ioctl: %s\n", strerror(errno));
-		return errno;
+		return -errno;
 	}
 	close(fd);
 
 	if ((fin = fopen((char *)file, "r")) == NULL) {
 		printf("%s: fopen: %s\n", __func__, strerror(errno));
-		return errno;
+		return -errno;
 	}
 
 	if ((fout = fopen((char *)dest, "w")) == NULL) {
 		printf("%s: fopen: %s\n", __func__, strerror(errno));
-		return errno;
+		return -errno;
 	}
 
 	strm.zalloc = Z_NULL;
@@ -111,7 +111,7 @@ int archive_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src,
 	return Z_OK;
 }
 
-int restore_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src,
+int restore_rd_volume(struct RD_PROFILE *prof, unsigned char *src,
 		       unsigned char *dest)
 {
 	int err;
@@ -128,7 +128,7 @@ int restore_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src,
 	}
 	if (err != 0) {
 			printf("Error. Device %s does not exist.\n", dest);
-			return -1;
+			return -ENOENT;
 	}
 
 	sprintf(file, "/dev/%s", dest);
@@ -137,17 +137,17 @@ int restore_rxd_volume(struct RxD_PROFILE *prof, unsigned char *src,
 
 	if ((in == '\0') || (out == '\0')) {
 		printf("Error. Unable to acquire memory space.\n");
-		return -1;
+		return -ENOMEM;
 	}
 
 	if ((fin = fopen((char *)src, "r")) == NULL) {
 		printf("%s: fopen: %s\n", __func__, strerror(errno));
-		return errno;
+		return -errno;
 	}
 
 	if ((fout = fopen((char *)file, "w")) == NULL) {
 		printf("%s: fopen: %s\n", __func__, strerror(errno));
-		return errno;
+		return -errno;
 	}
 
 	strm.zalloc = Z_NULL;

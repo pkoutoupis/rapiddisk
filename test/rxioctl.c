@@ -30,7 +30,7 @@
 #include <string.h>
 #include <malloc.h>
 
-#define RXD_GET_STATS     0x0529
+#define RD_GET_STATS     0x0529
 
 int main (){
     int fd, max_sectors;
@@ -40,7 +40,7 @@ int main (){
         return errno;
     }
 
-    if(ioctl(fd, RXD_GET_STATS, &max_sectors) == -1){
+    if(ioctl(fd, RD_GET_STATS, &max_sectors) == -1){
         printf("%s\n", strerror(errno));
         return errno;
     }else{

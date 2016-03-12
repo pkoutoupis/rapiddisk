@@ -2,7 +2,7 @@
  ** Copyright (c) 2011-2016 Petros Koutoupis
  ** All rights reserved.
  **
- ** filename: rxcache.c
+ ** filename: rapiddisk-cache.c
  ** description: Device mapper target for block-level disk write-through and
  **	 read-ahead caching. This module is based on Flashcache-wt:
  **	  Copyright 2010 Facebook, Inc.
@@ -47,8 +47,8 @@
 	} \
 } while (0)
 
-#define VERSION_STR	"3.7"
-#define DM_MSG_PREFIX	"rxc"
+#define VERSION_STR	"4.0"
+#define DM_MSG_PREFIX	"rapiddisk-cache"
 
 #define READCACHE	1
 #define WRITECACHE	2
@@ -149,8 +149,8 @@ static LIST_HEAD(io_jobs);
 static void cache_read_miss(struct cache_context *, struct bio *, int);
 static void cache_write(struct cache_context *, struct bio *);
 static int cache_invalidate_blocks(struct cache_context *, struct bio *);
-static void rxc_uncached_io_callback(unsigned long, void *);
-static void rxc_start_uncached_io(struct cache_context *, struct bio *);
+static void rc_uncached_io_callback(unsigned long, void *);
+static void rc_start_uncached_io(struct cache_context *, struct bio *);
 
 int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
@@ -230,7 +230,7 @@ static inline void push(struct list_head *jobs, struct kcached_job *job)
 	spin_unlock_irqrestore(&job_lock, flags);
 }
 
-void rxc_io_callback(unsigned long error, void *context)
+void rc_io_callback(unsigned long error, void *context)
 {
 	struct kcached_job *job = (struct kcached_job *)context;
 	struct cache_context *dmc = job->dmc;
@@ -322,7 +322,7 @@ out:
 	if (atomic_dec_and_test(&dmc->nr_jobs))
 		wake_up(&dmc->destroyq);
 }
-EXPORT_SYMBOL(rxc_io_callback);
+EXPORT_SYMBOL(rc_io_callback);
 
 static int do_io(struct kcached_job *job)
 {
@@ -333,15 +333,15 @@ static int do_io(struct kcached_job *job)
 	ASSERT(job->rw == WRITECACHE);
 	dmc->cache_writes++;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-	r = dm_io_async_bvec(1, &job->cache, WRITE, bio, rxc_io_callback, job);
+	r = dm_io_async_bvec(1, &job->cache, WRITE, bio, rc_io_callback, job);
 #else
-	r = dm_io_async_bvec(1, &job->cache, WRITE, bio->bi_io_vec + bio->bi_idx, rxc_io_callback, job);
+	r = dm_io_async_bvec(1, &job->cache, WRITE, bio->bi_io_vec + bio->bi_idx, rc_io_callback, job);
 #endif
 	ASSERT(r == 0); /* dm_io_async_bvec() must always return 0 */
 	return r;
 }
 
-int rxc_do_complete(struct kcached_job *job)
+int rc_do_complete(struct kcached_job *job)
 {
 	struct bio *bio = job->bio;
 	struct cache_context *dmc = job->dmc;
@@ -355,10 +355,10 @@ int rxc_do_complete(struct kcached_job *job)
 	if (atomic_dec_and_test(&dmc->nr_jobs))
 		wake_up(&dmc->destroyq);
 	/* Kick this IO back to the source bdev */
-	rxc_start_uncached_io(dmc, bio);
+	rc_start_uncached_io(dmc, bio);
 	return 0;
 }
-EXPORT_SYMBOL(rxc_do_complete);
+EXPORT_SYMBOL(rc_do_complete);
 
 static void process_jobs(struct list_head *jobs,
 			 int (*fn)(struct kcached_job *))
@@ -371,7 +371,7 @@ static void process_jobs(struct list_head *jobs,
 
 static void do_work(struct work_struct *work)
 {
-	process_jobs(&complete_jobs, rxc_do_complete);
+	process_jobs(&complete_jobs, rc_do_complete);
 	process_jobs(&io_jobs, do_io);
 }
 
@@ -557,10 +557,10 @@ static void cache_read_miss(struct cache_context *dmc,
 		dmc->disk_reads++;
 		dm_io_async_bvec(1, &job->disk, READ,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-				 bio, rxc_io_callback, job);
+				 bio, rc_io_callback, job);
 #else
 				 bio->bi_io_vec + bio->bi_idx,
-				 rxc_io_callback, job);
+				 rc_io_callback, job);
 #endif
 	}
 }
@@ -602,11 +602,11 @@ static void cache_read(struct cache_context *dmc, struct bio *bio)
 			dmc->cache_reads++;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 			dm_io_async_bvec(1, &job->cache, READ, bio,
-					 rxc_io_callback, job);
+					 rc_io_callback, job);
 #else
 			dm_io_async_bvec(1, &job->cache, READ,
 					 bio->bi_io_vec + bio->bi_idx,
-					 rxc_io_callback, job);
+					 rc_io_callback, job);
 #endif
 		}
 		return;
@@ -614,7 +614,7 @@ static void cache_read(struct cache_context *dmc, struct bio *bio)
 	if (cache_invalidate_blocks(dmc, bio) > 0) {
 		/* A non zero return indicates an inprog invalidation */
 		spin_unlock_bh(&dmc->cache_spin_lock);
-		rxc_start_uncached_io(dmc, bio);
+		rc_start_uncached_io(dmc, bio);
 		return;
 	}
 	if (res == -1 || res >= INPROG) {
@@ -622,7 +622,7 @@ static void cache_read(struct cache_context *dmc, struct bio *bio)
 		 * looking at or the block we are trying to read is being
 		 * refilled into cache. */
 		spin_unlock_bh(&dmc->cache_spin_lock);
-		rxc_start_uncached_io(dmc, bio);
+		rc_start_uncached_io(dmc, bio);
 		return;
 	}
 	/* (res == INVALID) Cache Miss And we found cache blocks to replace
@@ -712,14 +712,14 @@ static void cache_write(struct cache_context *dmc, struct bio *bio)
 	if (cache_invalidate_blocks(dmc, bio) > 0) {
 		/* A non zero return indicates an inprog invalidation */
 		spin_unlock_bh(&dmc->cache_spin_lock);
-		rxc_start_uncached_io(dmc, bio);
+		rc_start_uncached_io(dmc, bio);
 		return;
 	}
 	res = cache_lookup(dmc, bio, &index);
 	ASSERT(res == -1 || res == INVALID);
 	if (res == -1) {
 		spin_unlock_bh(&dmc->cache_spin_lock);
-		rxc_start_uncached_io(dmc, bio);
+		rc_start_uncached_io(dmc, bio);
 		return;
 	}
 	if (dmc->cache_state[index] == VALID) {
@@ -751,9 +751,9 @@ static void cache_write(struct cache_context *dmc, struct bio *bio)
 	atomic_inc(&job->dmc->nr_jobs);
 	dmc->disk_writes++;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-	dm_io_async_bvec(1, &job->disk, WRITE, bio, rxc_io_callback, job);
+	dm_io_async_bvec(1, &job->disk, WRITE, bio, rc_io_callback, job);
 #else
-	dm_io_async_bvec(1, &job->disk, WRITE, bio->bi_io_vec + bio->bi_idx, rxc_io_callback, job);
+	dm_io_async_bvec(1, &job->disk, WRITE, bio->bi_io_vec + bio->bi_idx, rc_io_callback, job);
 #endif
 }
 
@@ -770,9 +770,9 @@ static void cache_write(struct cache_context *dmc, struct bio *bio)
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0)
-int rxc_map(struct dm_target *ti, struct bio *bio)
+int rc_map(struct dm_target *ti, struct bio *bio)
 #else
-int rxc_map(struct dm_target *ti, struct bio *bio, union map_info *map_context)
+int rc_map(struct dm_target *ti, struct bio *bio, union map_info *map_context)
 #endif
 {
 	struct cache_context *dmc = (struct cache_context *)ti->private;
@@ -798,7 +798,7 @@ int rxc_map(struct dm_target *ti, struct bio *bio, union map_info *map_context)
 		spin_lock_bh(&dmc->cache_spin_lock);
 		(void)cache_invalidate_blocks(dmc, bio);
 		spin_unlock_bh(&dmc->cache_spin_lock);
-		rxc_start_uncached_io(dmc, bio);
+		rc_start_uncached_io(dmc, bio);
 	} else {
 		if (bio_data_dir(bio) == READ)
 			cache_read(dmc, bio);
@@ -807,9 +807,9 @@ int rxc_map(struct dm_target *ti, struct bio *bio, union map_info *map_context)
 	}
 	return DM_MAPIO_SUBMITTED;
 }
-EXPORT_SYMBOL(rxc_map);
+EXPORT_SYMBOL(rc_map);
 
-static void rxc_uncached_io_callback(unsigned long error, void *context)
+static void rc_uncached_io_callback(unsigned long error, void *context)
 {
 	struct kcached_job *job = (struct kcached_job *)context;
 	struct cache_context *dmc = job->dmc;
@@ -836,7 +836,7 @@ static void rxc_uncached_io_callback(unsigned long error, void *context)
 		wake_up(&dmc->destroyq);
 }
 
-static void rxc_start_uncached_io(struct cache_context *dmc, struct bio *bio)
+static void rc_start_uncached_io(struct cache_context *dmc, struct bio *bio)
 {
 	int is_write = (bio_data_dir(bio) == WRITE);
 	struct kcached_job *job;
@@ -858,13 +858,13 @@ static void rxc_start_uncached_io(struct cache_context *dmc, struct bio *bio)
 		dmc->disk_writes++;
 	dm_io_async_bvec(1, &job->disk, ((is_write) ? WRITE : READ),
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-			 bio, rxc_uncached_io_callback, job);
+			 bio, rc_uncached_io_callback, job);
 #else
-			 bio->bi_io_vec + bio->bi_idx, rxc_uncached_io_callback, job);
+			 bio->bi_io_vec + bio->bi_idx, rc_uncached_io_callback, job);
 #endif
 }
 
-static inline int rxc_get_dev(struct dm_target *ti, char *pth,
+static inline int rc_get_dev(struct dm_target *ti, char *pth,
 			      struct dm_dev **dmd, char *dmc_dname,
 			      sector_t tilen)
 {
@@ -898,32 +898,32 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	int r = -EINVAL;
 
 	if (argc < 2) {
-		ti->error = "rxc: Need at least 2 arguments";
+		ti->error = "rapiddisk-cache: Need at least 2 arguments";
 		goto construct_fail;
 	}
 
 	dmc = kzalloc(sizeof(*dmc), GFP_KERNEL);
 	if (!dmc) {
-		ti->error = "rxc: Failed to allocate cache context";
+		ti->error = "rapiddisk-cache: Failed to allocate cache context";
 		r = -ENOMEM;
 		goto construct_fail;
 	}
 
 	dmc->tgt = ti;
 
-	if (rxc_get_dev(ti, argv[0], &dmc->disk_dev,
+	if (rc_get_dev(ti, argv[0], &dmc->disk_dev,
 	    dmc->disk_devname, ti->len)) {
-		ti->error = "rxc: Disk device lookup failed";
+		ti->error = "rapiddisk-cache: Disk device lookup failed";
 		goto construct_fail1;
 	}
-	if (strncmp(argv[1], "/dev/rxd", 8) != 0) {
-		pr_err("%s: %s is not a valid cache device for rxcache.",
+	if (strncmp(argv[1], "/dev/rd", 7) != 0) {
+		pr_err("%s: %s is not a valid cache device for rapiddisk-cache.",
 		       DM_MSG_PREFIX, argv[1]);
-		ti->error = "rxc: Invalid cache device. Not an rxdsk volume.";
+		ti->error = "rapiddisk-cache: Invalid cache device. Not a RapidDisk volume.";
 		goto construct_fail2;
 	}
-	if (rxc_get_dev(ti, argv[1], &dmc->cache_dev, dmc->cache_devname, 0)) {
-		ti->error = "rxc: Cache device lookup failed";
+	if (rc_get_dev(ti, argv[1], &dmc->cache_dev, dmc->cache_devname, 0)) {
+		ti->error = "rapiddisk-cache: Cache device lookup failed";
 		goto construct_fail2;
 	}
 
@@ -955,7 +955,7 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
 	if (argc >= 3) {
 		if (kstrtoul(argv[2], 10, (unsigned long *)&dmc->size)) {
-			ti->error = "rxc: Invalid cache size";
+			ti->error = "rapiddisk-cache: Invalid cache size";
 			r = -EINVAL;
 			goto construct_fail5;
 		}
@@ -965,13 +965,13 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
 	if (argc >= 4) {
 		if (kstrtoint(argv[3], 10, &dmc->assoc)) {
-			ti->error = "rxc: Invalid cache associativity";
+			ti->error = "rapiddisk-cache: Invalid cache associativity";
 			r = -EINVAL;
 			goto construct_fail5;
 		}
 		if (!dmc->assoc || (dmc->assoc & (dmc->assoc - 1)) ||
 		    dmc->size < dmc->assoc) {
-			ti->error = "rxc: Invalid cache associativity";
+			ti->error = "rapiddisk-cache: Invalid cache associativity";
 			r = -EINVAL;
 			goto construct_fail5;
 		}
@@ -991,7 +991,7 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	if (data_size > dev_size) {
 		DMERR("Requested cache size exceeds the cache device's capacity (%lu>%lu)",
 		      (unsigned long)data_size, (unsigned long)dev_size);
-		ti->error = "rxc: Invalid cache size";
+		ti->error = "rapiddisk-cache: Invalid cache size";
 		r = -EINVAL;
 		goto construct_fail5;
 	}
@@ -1106,7 +1106,7 @@ static void cache_dtr(struct dm_target *ti)
 	kfree(dmc);
 }
 
-static void rxc_status_info(struct cache_context *dmc, status_type_t type,
+static void rc_status_info(struct cache_context *dmc, status_type_t type,
 			    char *result, unsigned int maxlen)
 {
 	int sz = 0;
@@ -1124,12 +1124,12 @@ static void rxc_status_info(struct cache_context *dmc, status_type_t type,
 		dmc->cache_reads, dmc->cache_writes);
 }
 
-static void rxc_status_table(struct cache_context *dmc, status_type_t type,
+static void rc_status_table(struct cache_context *dmc, status_type_t type,
 			     char *result, unsigned int maxlen)
 {
 	int sz = 0;
 
-	DMEMIT("conf:\n\trxd dev (%s), disk dev (%s) mode (%s)\n"
+	DMEMIT("conf:\n\tRapidDisk dev (%s), disk dev (%s) mode (%s)\n"
 		"\tcapacity(%luM), associativity(%u), block size(%uK)\n"
 		"\ttotal blocks(%lu), cached blocks(%lu)\n",
 		dmc->cache_devname, dmc->disk_devname, "WRITETHROUGH",
@@ -1155,10 +1155,10 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 
 	switch (type) {
 	case STATUSTYPE_INFO:
-		rxc_status_info(dmc, type, result, maxlen);
+		rc_status_info(dmc, type, result, maxlen);
 		break;
 	case STATUSTYPE_TABLE:
-		rxc_status_table(dmc, type, result, maxlen);
+		rc_status_table(dmc, type, result, maxlen);
 		break;
 	}
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
@@ -1167,16 +1167,16 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 }
 
 static struct target_type cache_target = {
-	.name    = "rxcache",
-	.version = {3, 7, 0},
+	.name    = "rapiddisk-cache",
+	.version = {4, 0, 0},
 	.module  = THIS_MODULE,
 	.ctr	 = cache_ctr,
 	.dtr	 = cache_dtr,
-	.map	 = rxc_map,
+	.map	 = rc_map,
 	.status  = cache_status,
 };
 
-int __init rxc_init(void)
+int __init rc_init(void)
 {
 	int ret;
 
@@ -1196,18 +1196,18 @@ int __init rxc_init(void)
 	return 0;
 }
 
-void rxc_exit(void)
+void rc_exit(void)
 {
 	dm_unregister_target(&cache_target);
 	jobs_exit();
 	destroy_workqueue(kcached_wq);
 }
 
-module_init(rxc_init);
-module_exit(rxc_exit);
+module_init(rc_init);
+module_exit(rc_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Petros Koutoupis <petros@petroskoutoupis.com>");
-MODULE_DESCRIPTION("RapidCache (rxc) DM target is a write-through caching target with RapidDisk volumes.");
+MODULE_DESCRIPTION("RapidDisk-Cache DM target is a write-through caching target with RapidDisk volumes.");
 MODULE_VERSION(VERSION_STR);
 MODULE_INFO(Copyright, "Copyright 2010 - 2015 Petros Koutoupis");

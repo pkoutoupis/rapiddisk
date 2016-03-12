@@ -1,0 +1,65 @@
+RapidDisk RAM disk and RapidDisk-Cache Linux modules
+
+== Description ==
+
+RapidDisk was designed to be used in high performing environments and has been designed with simplicity in mind. Utilizing a user land binary, the system administrator is capable of dynamically adding new RAM based block devices of varying sizes, removing existing ones to even listing all existing RAM block devices. The rapiddisk module has been designed to allocate from the system's memory pages and is capable of addressing memory to support Gigabytes if not a Terabyte of available Random Access Memory.
+
+RapidDisk-Cache is designed to leverage the high speed performing technologies of the RapidDisk RAM disk and utilizing the Device Mapper framework, map an RapidDisk volume to act as a block device's Write/Read-through cache. This can significantly boost the performance of a local or remote disk device.
+
+
+== Module Parameters ==
+
+RapidDisk
+---------
+max_sectors: Maximum sectors (in KB) for the request queue. (Default = 127) (int)
+nr_requests: Number of requests at a given time for the request queue. (Default = 128) (int)
+rd_nr: Maximum number of RapidDisk devices to load on insertion. (Default = 0) (int)
+rd_size: Size of each RAM disk (in KB) loaded on insertion. (Default = 0) (int)
+rd_max_nr: Maximum number of RAM Disks. (Default = 128) (int)
+
+
+RapidCache
+---------
+None.
+
+
+== Usage ==
+
+RapidDisk
+---------
+It is advised to utilize the userland utility, rapiddisk, but this is essentially what is written to the /sys/kernel/rapiddisk/mgmt sysfs file to manage RapidDisk volumes:
+
+Attach a new RapidDisk volume by typing (size in KB):
+    # echo "rapiddisk attach 8192" > /sys/kernel/rapiddisk/mgmt
+
+Detach an existing RapidDisk volume by typing:
+    # echo "rapiddisk detach 0" > /sys/kernel/rapiddisk/mgmt
+
+Resize an existing RapidDisk volume by typing (size in KB):
+    # echo "rapiddisk resize 65536" > /sys/kernel/rapiddisk/mgmt
+
+
+
+RapidCache
+---------
+It is advised to utilize the userland utility, rapiddisk, but this is essentially what is sent to the dmsetup command:
+
+Map an existing RapidDisk-Cache volume to a block device by typing:
+    # echo 0 4194303 rapiddisk-cache /dev/sdb /dev/rd0 196608|dmsetup create rc_sdb
+
+Parameter 1: Start block of source volume (in sectors).
+Parameter 2: End block of source volume (in sectors).
+Parameter 4: Source volume.
+Parameter 5: Cache volume.
+Parameter 6: Cache size (in sectors).
+
+Unmap an RapidDisk volume:
+
+    # dmsetup remove rc_sdb
+
+
+== Design ==
+
+The memory management of the RapidDisk module was inspired by the brd Linux RAM disk module.
+
+The functionality of the RapidDisk-Cache module was inspired by Flashcache-wt and dm-cache.

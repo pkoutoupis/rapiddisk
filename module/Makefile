@@ -1,4 +1,4 @@
-VERSION = 3.7
+VERSION = 4.0
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build
@@ -10,21 +10,21 @@ endif
 
 MKDIR := mkdir -pv
 
-obj-m += rxdsk.o
-obj-m += rxcache.o
+obj-m += rapiddisk.o
+obj-m += rapiddisk-cache.o
 
 all:
 	KCPPFLAGS="-DNOTMAINLINE" $(MAKE) -C$(KSRC) M=$(PWD)
 
 install:
 	$(MKDIR) $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
-	install -o root -g root -m 0755 rxdsk.ko $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
-	install -o root -g root -m 0755 rxcache.ko $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
+	install -o root -g root -m 0755 rapiddisk.ko $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
+	install -o root -g root -m 0755 rapiddisk-cache.ko $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
 	depmod -a
 
 uninstall:
-	rm -f $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/rxdsk.ko
-	rm -f $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/rxcache.ko
+	rm -f $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/rapiddisk.ko
+	rm -f $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/rapiddisk-cache.ko
 	depmod -a
 
 clean:

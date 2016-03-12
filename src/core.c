@@ -5,7 +5,7 @@
  ** @project: rapiddisk
  **
  ** @filename: core.c
- ** @description: This file contains the core routines of rxadm.
+ ** @description: This file contains the core routines of rapiddisk.
  **
  ** @date: 15Oct10, petros@petroskoutoupis.com
  ********************************************************************************/
@@ -16,23 +16,22 @@
 #include <linux/fs.h>
 #include <sys/ioctl.h>
 
-#define NAMELEN		256
-#define FILEDATA	64
-#define DEFAULT_SIZE	32	/* In MBytes */
+#define FILEDATA	0x40
+#define DEFAULT_SIZE	0x20	/* In MBytes */
 
 
-struct RxD_PROFILE *head =  (struct RxD_PROFILE *) NULL;
-struct RxD_PROFILE *end =   (struct RxD_PROFILE *) NULL;
-struct RxC_PROFILE *chead = (struct RxC_PROFILE *) NULL;
-struct RxC_PROFILE *cend =  (struct RxC_PROFILE *) NULL;
+struct RD_PROFILE *head =  (struct RD_PROFILE *) NULL;
+struct RD_PROFILE *end =   (struct RD_PROFILE *) NULL;
+struct RC_PROFILE *chead = (struct RC_PROFILE *) NULL;
+struct RC_PROFILE *cend =  (struct RC_PROFILE *) NULL;
 
 unsigned char *sys_block  = "/sys/block";
 unsigned char *etc_mtab   = "/etc/mtab";
 unsigned char *dev_mapper = "/dev/mapper";
 
 unsigned char *read_info(unsigned char *, unsigned char *);
-struct RxD_PROFILE *search_targets(void);
-struct RxC_PROFILE *search_cache(void);
+struct RD_PROFILE *search_targets(void);
+struct RC_PROFILE *search_cache(void);
 
 unsigned char *read_info(unsigned char *name, unsigned char *string)
 {
@@ -60,38 +59,32 @@ unsigned char *read_info(unsigned char *name, unsigned char *string)
 	return obuf;
 }
 
-struct RxD_PROFILE *search_targets(void)
+struct RD_PROFILE *search_targets(void)
 {
 	int err, n = 0;
 	unsigned char file[NAMELEN] = {0};
 	struct dirent **list;
-	struct RxD_PROFILE *prof;
+	struct RD_PROFILE *prof;
 
 	if ((err = scandir(sys_block, &list, NULL, NULL)) < 0) {
-		if (ENOENT) {
-			printf("There are no listed block devices.\n\n");
-			exit(0);
-		} else {
-			printf("%s: scandir: %s\n", __func__, strerror(errno));
-			exit(err);
-		}
+		printf("%s: scandir: %s\n", __func__, strerror(errno));
+		return NULL;
 	}
 	for (;n < err; n++) {
-		if (strncmp(list[n]->d_name, "rxd", 3) == 0) {
-			prof = (struct RxD_PROFILE *)calloc(1, sizeof(struct RxD_PROFILE));
+		if (strncmp(list[n]->d_name, "rd", 2) == SUCCESS) {
+			prof = (struct RD_PROFILE *)calloc(1, sizeof(struct RD_PROFILE));
 			if (prof == NULL) {
 				printf("%s: calloc: %s\n", __func__, strerror(errno));
-				exit(-1);
+				return NULL;
 			}
 			strcpy(prof->device, (unsigned char *)list[n]->d_name);
 			sprintf(file, "%s/%s", sys_block, list[n]->d_name);
 			prof->size = (BYTES_PER_SECTOR * strtoull(read_info(file, "size"), NULL, 10));
 
-			if (head == NULL) {
+			if (head == NULL)
 				head = prof;
-			} else {
+			else
 				end->next = prof;
-			}
 			end = prof;
 			prof->next = NULL;
 		}
@@ -100,57 +93,42 @@ struct RxD_PROFILE *search_targets(void)
 	return head;
 }
 
-struct RxC_PROFILE *search_cache(void)
+struct RC_PROFILE *search_cache(void)
 {
 	int num, num2, num3, n = 0, i, z;
 	struct dirent **list, **nodes, **maps;
 	unsigned char file[NAMELEN] = {0};
-	struct RxC_PROFILE *prof;
+	struct RC_PROFILE *prof;
 
-	if ((num = scandir(dev_mapper, &list, NULL, NULL)) < 0) {
-		if (ENOENT) {
-			return NULL;
-		} else {
-			printf("%s: scandir: %s\n", __func__, strerror(errno));
-			exit(num);
-		}
-	}
+	if ((num = scandir(dev_mapper, &list, NULL, NULL)) < 0) return NULL;
 	if ((num2 = scandir(sys_block, &nodes, NULL, NULL)) < 0) {
-		if (ENOENT) {
-			printf("There are no listed block devices.\n\n");
-			exit(0);
-		} else {
-			printf("%s: scandir: %s\n", __func__, strerror(errno));
-			exit(num);
-		}
+		printf("%s: scandir: %s\n", __func__, strerror(errno));
+		return NULL;
 	}
 
 	for (;n < num; n++) {
-		if ((strncmp(list[n]->d_name, "rxc", 3) == 0) && (strncmp(list[n]->d_name, "rxcrypt", 7) != 0)) {
-			prof = (struct RxC_PROFILE *)calloc(1, sizeof(struct RxC_PROFILE));
+		if ((strncmp(list[n]->d_name, "rc", 2) == SUCCESS) && \
+		    (strncmp(list[n]->d_name, "crypt", 5) != SUCCESS)) {
+			prof = (struct RC_PROFILE *)calloc(1, sizeof(struct RC_PROFILE));
 			if (prof == NULL) {
 				printf("%s: calloc: %s\n", __func__, strerror(errno));
-				exit(-1);
+				return NULL;
 			}
 			strcpy(prof->device, (unsigned char *)list[n]->d_name);
 			for (i = 0;i < num2; i++) {
-				if (strncmp(nodes[i]->d_name, "dm-", 3) == 0) {
+				if (strncmp(nodes[i]->d_name, "dm-", 3) == SUCCESS) {
 					sprintf(file, "%s/%s", sys_block, nodes[i]->d_name);
 					if (strncmp(read_info(file, "dm/name"), prof->device,
 					    sizeof(prof->device)) == 0) {
 						sprintf(file, "%s/%s/slaves", sys_block, nodes[i]->d_name);
 						if ((num3 = scandir(file, &maps, NULL, NULL)) < 0) {
-							if (ENOENT) {
-								printf("There are no listed block devices.\n\n");
-								exit(-1);
-							} else {
-								printf("%s: scandir: %s\n", __func__, strerror(errno));
-								exit(num);
-							}
+							printf("%s: scandir: %s\n", __func__,
+							       strerror(errno));
+							return NULL;
 						}
 						for (z=0;z < num3; z++) {
-							if (strncmp(maps[z]->d_name, ".", 1) != 0) {
-								if (strncmp(maps[z]->d_name, "rxd", 3) == 0)
+							if (strncmp(maps[z]->d_name, ".", 1) != SUCCESS) {
+								if (strncmp(maps[z]->d_name, "rd", 2) == SUCCESS)
 									strcpy(prof->cache, (unsigned char *)maps[z]->d_name);
 								else
 									strcpy(prof->source, (unsigned char *)maps[z]->d_name);
@@ -160,11 +138,10 @@ struct RxC_PROFILE *search_cache(void)
 					}
 				}
 			}
-			if (chead == NULL) {
+			if (chead == NULL)
 				chead = prof;
-			} else {
+			else
 				cend->next = prof;
-			}
 			cend = prof;
 			prof->next = NULL;
 		}
@@ -174,80 +151,82 @@ struct RxC_PROFILE *search_cache(void)
 	return chead;
 }
 
-int list_devices(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE *rxc_prof)
+int list_devices(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 {
 	int num = 1;
 
 	printf("List of RapidDisk device(s):\n\n");
 
-	while (rxd_prof != NULL) {
-		printf(" RapidDisk Device %d: %s\tSize (KB): %llu\n", num, rxd_prof->device,
-			(rxd_prof->size / 1024));
+	while (rd_prof != NULL) {
+		printf(" RapidDisk Device %d: %s\tSize (KB): %llu\n", num,
+		       rd_prof->device, (rd_prof->size / 1024));
 		num++;
-		rxd_prof = rxd_prof->next;
+		rd_prof = rd_prof->next;
 	}
 	printf("\nList of RapidCache mapping(s):\n\n");
-	if (rxc_prof == NULL) {
-		printf("  None\n\n");
-		return 0;
+	if (rc_prof == NULL) {
+		printf("  None\n");
+		goto list_out;
 	}
 	num = 1;
-	while (rxc_prof != NULL) {
+	while (rc_prof != NULL) {
 	printf(" RapidCache Target %d: %s\tCache: %s  Target: %s (WRITETHROUGH)\n",
-			num, rxc_prof->device, rxc_prof->cache, rxc_prof->source);
+			num, rc_prof->device, rc_prof->cache, rc_prof->source);
 		num++;
-		rxc_prof = rxc_prof->next;
+		rc_prof = rc_prof->next;
 	}
+list_out:
 	printf("\n");
-	return 0;
+	return SUCCESS;
 }
 
-int stat_rxcache_mapping(struct RxC_PROFILE *rxc_prof, unsigned char *cache)
+int stat_cache_mapping(struct RC_PROFILE *rc_prof, unsigned char *cache)
 {
 	unsigned char cmd[NAMELEN] = {0};
 
-	if (rxc_prof == NULL) {
+	if (rc_prof == NULL) {
 		printf("  No RapidCache Mappings exist.\n\n");
 		return 1;
 	}
 	sprintf(cmd, "dmsetup status %s", cache);
 	system(cmd);
 	printf("\n");
-	return 0;
+	return SUCCESS;
 }
 
-int short_list_devices(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE *rxc_prof)
+int short_list_devices(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 {
-	if ((rxd_prof == NULL) && (rxc_prof == NULL)) {
-		printf("There are no rxd or rxc devices.\n");
-		return 0;
+	if ((rd_prof == NULL) && (rc_prof == NULL)) {
+		printf("There are no RapidDisk or RapidDisk-Cache devices.\n");
+		goto short_list_out;
 	}
 
-	while (rxd_prof != NULL) {
-		printf("%s:%llu\n", rxd_prof->device, rxd_prof->size);
-		rxd_prof = rxd_prof->next;
+	while (rd_prof != NULL) {
+		printf("%s:%llu\n", rd_prof->device, rd_prof->size);
+		rd_prof = rd_prof->next;
 	}
-	while (rxc_prof != NULL) {
-		printf("%s:%s,%s\n", rxc_prof->device, rxc_prof->cache, rxc_prof->source);
-		rxc_prof = rxc_prof->next;
+	while (rc_prof != NULL) {
+		printf("%s:%s,%s\n", rc_prof->device, rc_prof->cache, rc_prof->source);
+		rc_prof = rc_prof->next;
 	}
-	return 0;
+short_list_out:
+	return SUCCESS;
 }
 
-int attach_device(struct RxD_PROFILE *prof, unsigned long size)
+int attach_device(struct RD_PROFILE *prof, unsigned long size)
 {
 	int dsk, err = -1;
 	FILE *fp;
 	unsigned char string[BUFSZ], name[16];
 
-	/* echo "rxdsk attach 64" > /sys/kernel/rapiddisk/mgmt <- in sectors*/
+	/* echo "rapiddisk attach 64" > /sys/kernel/rapiddisk/mgmt <- in sectors*/
 	for (dsk = 0; prof != NULL; dsk++) {
 		sprintf(string, "%s,%s", string, prof->device);
 		prof = prof->next;
 	}
 
 	while (dsk >= 0) {
-		sprintf(name, "rxd%d", dsk);
+		sprintf(name, "rd%d", dsk);
 		if (strstr(string, (const char *)name) == NULL) {
 			break;
 		}
@@ -255,42 +234,42 @@ int attach_device(struct RxD_PROFILE *prof, unsigned long size)
 	}
 	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
-		return -1;
+		return -ENOENT;
 	}
-	if ((err = fprintf(fp, "rxdsk attach %llu\n",
+	if ((err = fprintf(fp, "rapiddisk attach %llu\n",
 		((unsigned long long)size * 1024))) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
-		return err;
+		return -EIO;
 	}
-	printf("Attached device rxd%d of size %lu Mbytes\n", dsk, size);
+	printf("Attached device rd%d of size %lu Mbytes\n", dsk, size);
 	fclose(fp);
-	return 0;
+	return SUCCESS;
 }
 
-int detach_device(struct RxD_PROFILE *rxd_prof, RxC_PROFILE * rxc_prof, unsigned char *string)
+int detach_device(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned char *string)
 {
 	int err = -1;
 	FILE *fp;
 	unsigned char *buf;
 
-	/* echo "rxdsk detach 1" > /sys/kernel/rapiddisk/mgmt */
-	while (rxd_prof != NULL) {
-		if (strcmp(string, rxd_prof->device) == 0)
+	/* echo "rapiddisk detach 1" > /sys/kernel/rapiddisk/mgmt */
+	while (rd_prof != NULL) {
+		if (strcmp(string, rd_prof->device) == SUCCESS)
 			err = 0;
-		rxd_prof = rxd_prof->next;
+		rd_prof = rd_prof->next;
 	}
 	if (err != 0) {
 		printf("Error. Device %s does not exist.\n", string);
 		return -1;
 	}
-	/* Check to make sure rxdsk device isn't in a mapping */
-	while (rxc_prof != NULL) {
-		if (strcmp(string, rxc_prof->cache) == 0) {
-			printf("Error. Unable to remove %s.\nThis rxdsk device is currently"
-				" mapped as a cache drive to %s.\n\n", string, rxc_prof->device);
+	/* Check to make sure RapidDisk device isn't in a mapping */
+	while (rc_prof != NULL) {
+		if (strcmp(string, rc_prof->cache) == SUCCESS) {
+			printf("Error. Unable to remove %s.\nThis RapidDisk device is currently"
+				" mapped as a cache drive to %s.\n\n", string, rc_prof->device);
 			return -1;
 		}
-		rxc_prof = rxc_prof->next;
+		rc_prof = rc_prof->next;
 	}
 
 	if ((buf = (char *)malloc(BUFSZ)) == '\0') {
@@ -301,7 +280,7 @@ int detach_device(struct RxD_PROFILE *rxd_prof, RxC_PROFILE * rxc_prof, unsigned
 	/* Here we are starting to check to see if the device is mounted */
 	if ((fp = fopen(etc_mtab, "r")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, etc_mtab, strerror(errno));
-		return -1;
+		return -ENOENT;
 	}
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
@@ -313,12 +292,12 @@ int detach_device(struct RxD_PROFILE *rxd_prof, RxC_PROFILE * rxc_prof, unsigned
 	/* This is where we begin to detach the block device */
 	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
-		return -1;
+		return -ENOENT;
 	}
 
-	if ((err = fprintf(fp, "rxdsk detach %s\n", string + 3)) < 0) {
+	if ((err = fprintf(fp, "rapiddisk detach %s\n", string + 2)) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
-		return err;
+		return -EIO;
 	}
 	printf("Detached device %s\n", string);
 	fclose(fp);
@@ -326,17 +305,17 @@ int detach_device(struct RxD_PROFILE *rxd_prof, RxC_PROFILE * rxc_prof, unsigned
 	return 0;
 }
 
-int resize_device(struct RxD_PROFILE *prof, unsigned char *string, unsigned long size)
+int resize_device(struct RD_PROFILE *prof, unsigned char *string, unsigned long size)
 {
 	int err = -1;
 	FILE *fp;
 
-	/* echo "rxdsk resize 1 128" > /sys/kernel/rapiddisk/mgmt */
+	/* echo "rapiddisk resize 1 128" > /sys/kernel/rapiddisk/mgmt */
 	while (prof != NULL) {
-		if (strcmp(string, prof->device) == 0) {
+		if (strcmp(string, prof->device) == SUCCESS) {
 			if (((unsigned long long)size * 1024) <= (prof->size / 1024)) {
 				printf("Error. Please specify a size larger than %lu Mbytes\n", size);
-				return -1;
+				return -EINVAL;
 			}
 			err = 0;
 		}
@@ -344,19 +323,19 @@ int resize_device(struct RxD_PROFILE *prof, unsigned char *string, unsigned long
 	}
 	if (err != 0) {
 		printf("Error. Device %s does not exist.\n", string);
-		return -1;
+		return -ENOENT;
 	}
 
 	/* This is where we begin to detach the block device */
 	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
-		return -1;
+		return -ENOENT;
 	}
 
-	if ((err = fprintf(fp, "rxdsk resize %s %llu\n", string + 3,
+	if ((err = fprintf(fp, "rapiddisk resize %s %llu\n", string + 2,
 		((unsigned long long)size * 1024))) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
-		return err;
+		return -EIO;
 	}
 	printf("Resized device %s to %lu Mbytes\n", string, size);
 	fclose(fp);
@@ -364,7 +343,7 @@ int resize_device(struct RxD_PROFILE *prof, unsigned char *string, unsigned long
 	return 0;
 }
 
-int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof,
+int cache_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 	        unsigned char *cache, unsigned char *source)
 {
 	int err = -1, node, fd;
@@ -372,32 +351,32 @@ int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof,
 	FILE *fp;
 	unsigned char *buf, string[BUFSZ], name[NAMELEN] = {0}, str[NAMELEN] = {0}, *dup, *token;
 
-	while (rxd_prof != NULL) {
-		if (strcmp(cache, rxd_prof->device) == 0) {
+	while (rd_prof != NULL) {
+		if (strcmp(cache, rd_prof->device) == SUCCESS) {
 			err = 0;
 		}
-		rxd_prof = rxd_prof->next;
+		rd_prof = rd_prof->next;
 	}
 	if (err != 0) {
 		printf("Error. Device %s does not exist.\n", cache);
-		return -1;
+		return -ENOENT;
 	}
 
 	/* Check to make sure it is a normal block device found in /dev */
-	if (strncmp(source, "/dev/", 5) != 0) {
+	if (strncmp(source, "/dev/", 5) != SUCCESS) {
 		printf("Error. Source device does not seem to be a normal block device listed\n"
 			"in the /dev directory path.\n\n");
 		return -1;
 	}
 	/* Check to make sure that cache/source devices are not in a mapping already */
-	while (rxc_prof != NULL) {
-		if ((strcmp(cache, rxc_prof->cache) == 0) || \
-		    (strcmp(source+5, rxc_prof->source) == 0)) {
+	while (rc_prof != NULL) {
+		if ((strcmp(cache, rc_prof->cache) == SUCCESS) || \
+		    (strcmp(source+5, rc_prof->source) == SUCCESS)) {
 			printf("Error. At least one of your cache/source devices is currently mapped to %s.\n\n",
-				rxc_prof->device);
+				rc_prof->device);
 			return -1;
 		}
-		rxc_prof = rxc_prof->next;
+		rc_prof = rc_prof->next;
 	}
 
 	if ((buf = (char *)malloc(BUFSZ)) == '\0') {
@@ -421,24 +400,24 @@ int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof,
 
 	if ((fd = open(source, O_RDONLY)) < 0) {
 		printf("%s: open: %s\n", __func__, strerror(errno));
-		return errno;
+		return -ENOENT;
 	}
 
 	if (ioctl(fd, BLKGETSIZE, &source_sz) == -1) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
-		return errno;
+		return -EIO;
 	}
 	close(fd);
 
 	sprintf(name, "/dev/%s", cache);
 	if ((fd = open(name, O_RDONLY)) < 0) {
 		printf("%s: open: %s\n", __func__, strerror(errno));
-		return errno;
+		return -ENOENT;
 	}
 
 	if (ioctl(fd, BLKGETSIZE, &cache_sz) == -1) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
-		return errno;
+		return -EIO;
 	}
 	close(fd);
 	memset(name, 0x0, sizeof(name));
@@ -449,14 +428,14 @@ int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof,
 		sprintf(str, "%s", token);
 		token = strtok(NULL, "/");
 	}
-	sprintf(name, "rxc_%s", str);
+	sprintf(name, "rc_%s", str);
 
 	memset(string, 0x0, BUFSZ);
-	/* echo 0 4194303 rxcache /dev/sdb /dev/rxd0 0 196608|dmsetup create rxc0 */
-	/* Param after echo 0 & 1: starting and ending offsets of source device      *
-	 * Param 3: always rxcache; Param 4 & 5: path to source device and rxdsk dev *
+	/* echo 0 4194303 rapiddisk-cache /dev/sdb /dev/rd0 0 196608|dmsetup create rc_sdb       */
+	/* Param after echo 0 & 1: starting and ending offsets of source device                  *
+	 * Param 3: always rapiddisk-cache; Param 4 & 5: path to source device and RapidDisk dev *
 	 * Param 6: is the size of the cache  */
-	sprintf(string, "echo 0 %llu rxcache %s /dev/%s %llu|dmsetup create %s\n",
+	sprintf(string, "echo 0 %llu rapiddisk-cache %s /dev/%s %llu|dmsetup create %s\n",
 		source_sz, source, cache, cache_sz, name);
 
 	if ((err = system(string)) == 0) {
@@ -468,106 +447,105 @@ int rxcache_map(struct RxD_PROFILE *rxd_prof, struct RxC_PROFILE * rxc_prof,
 	return err;
 }
 
-int rxcache_unmap(struct RxC_PROFILE *prof, unsigned char *string)
+int cache_unmap(struct RC_PROFILE *prof, unsigned char *string)
 {
 	int err = -1;
 	FILE *fp;
 	unsigned char *buf;
 	unsigned char cmd[NAMELEN] = {0};
 
-	/* dmsetup remove rxc0 */
+	/* dmsetup remove rc_sdb */
 	while (prof != NULL) {
-		if (strcmp(string, prof->device) == 0) {
-			err = 0;
-		}
+		if (strcmp(string, prof->device) == SUCCESS) err = 0;
 		prof = prof->next;
 	}
 	if (err != 0) {
 		printf("Error. Cache target %s does not exist.\n", string);
-		return -1;
+		return -ENOENT;
 	}
 
 	if ((buf = (char *)malloc(BUFSZ)) == '\0') {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
-		return -1;
+		return -ENOMEM;
 	}
 
 	/* Here we are starting to check to see if the device is mounted */
 	if ((fp = fopen(etc_mtab, "r")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, etc_mtab, strerror(errno));
-		return -1;
+		return -ENOENT;
 	}
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, string) != NULL)) {
 		printf("%s is currently mounted. Please \"umount\" and retry.\n", string);
-		return -1;
+		return -EBUSY;
 	}
 
 	sprintf(cmd, "dmsetup remove %s\n", string);
-	if ((err = system(cmd)) == 0)
+	if ((err = system(cmd)) == SUCCESS)
 		printf("Command to unmap %s has been sent\nVerify with \"--list\"\n\n", string);
-	else
-		printf("Error. Unable to unmap %s. Please check to make sure nothing is wrong.n\n", string);
-
+	else {
+		printf("Error. Unable to unmap %s. Please check to make sure "
+		       "nothing is wrong.n\n", string);
+	}
 	return err;
 }
 
-int rxdsk_flush(struct RxD_PROFILE *rxd_prof, RxC_PROFILE *rxc_prof, unsigned char *string)
+int rdsk_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned char *string)
 {
 	int fd, err = -1;
 	unsigned char file[NAMELEN] = {0}, *buf;
 	FILE *fp;
 
-	while (rxd_prof != NULL) {
-		if (strcmp(string, rxd_prof->device) == 0)
-			err = 0;
-		rxd_prof = rxd_prof->next;
+	while (rd_prof != NULL) {
+		if (strcmp(string, rd_prof->device) == SUCCESS) err = 0;
+		rd_prof = rd_prof->next;
 	}
 	if (err != 0) {
 		printf("Error. Device %s does not exist.\n", string);
-		return -1;
+		return -ENOENT;
 	}
-	/* Check to make sure rxdsk device isn't in a mapping */
-	while (rxc_prof != NULL) {
-		if (strcmp(string, rxc_prof->cache) == 0) {
-			printf("Error. Unable to remove %s.\nThis rxdsk device is currently"
-				" mapped as a cache drive to %s.\n\n", string, rxc_prof->device);
-			return -1;
+	/* Check to make sure RapidDisk device isn't in a mapping */
+	while (rc_prof != NULL) {
+		if (strcmp(string, rc_prof->cache) == SUCCESS) {
+			printf("Error. Unable to remove %s.\nThis RapidDisk device "
+			       "is currently mapped as a cache drive to %s.\n\n",
+			       string, rc_prof->device);
+			return -EBUSY;
 		}
-		rxc_prof = rxc_prof->next;
+		rc_prof = rc_prof->next;
 	}
 
 	if ((buf = (char *)malloc(BUFSZ)) == '\0') {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
-		return -1;
+		return -ENOMEM;
 	}
 
 	/* Here we are starting to check to see if the device is mounted */
 	if ((fp = fopen(etc_mtab, "r")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, etc_mtab, strerror(errno));
-		return -1;
+		return -ENOENT;
 	}
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, string) != NULL)) {
 		printf("%s is currently mounted. Please \"umount\" and retry.\n", string);
-		return -1;
+		return -EBUSY;
 	}
 
 	sprintf(file, "/dev/%s", string);
 
 	if ((fd = open(file, O_WRONLY)) < 0) {
 		printf("%s: open: %s\n", __func__, strerror(errno));
-		return errno;
+		return -ENOENT;
 	}
 
 	if (ioctl(fd, BLKFLSBUF, 0) == -1) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
-		return errno;
+		return -EIO;
 	}
 	close(fd);
 	printf("Flushed all data from device %s\n", string);
 
-	return err;
+	return SUCCESS;
 }

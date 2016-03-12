@@ -1,6 +1,6 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 3.7
+Version: 4.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
@@ -33,7 +33,7 @@ make
 
 %install
 rm -rf %{buildroot}
-cd bin
+cd src
 make DESTDIR=%{buildroot}/ install
 cd ../doc
 make DESTDIR=%{buildroot}/ install
@@ -42,7 +42,7 @@ make DESTDIR=%{buildroot}/ install
 cd ../module
 mkdir -pv %{buildroot}/usr/src/rapiddisk-%{version}/
 cp -v dkms.conf  %{buildroot}/usr/src/rapiddisk-%{version}/
-cp -v {rxdsk,rxcache}.c  %{buildroot}/usr/src/rapiddisk-%{version}/
+cp -v {rapiddisk,rapiddisk-cache}.c  %{buildroot}/usr/src/rapiddisk-%{version}/
 cp -v Makefile  %{buildroot}/usr/src/rapiddisk-%{version}/
 cd ../www
 make DESTDIR=%{buildroot}/ install
@@ -51,20 +51,20 @@ make DESTDIR=%{buildroot}/ install
 dkms add -m rapiddisk -v %{version}
 dkms build -m rapiddisk -v %{version}
 dkms install -m rapiddisk -v %{version}
-echo rxdsk > /etc/modules-load.d/rxdsk.conf
-echo rxcache >> /etc/modules-load.d/rxdsk.conf
-echo dm-crypt >> /etc/modules-load.d/rxdsk.conf
-chmod 755 /etc/modules-load.d/rxdsk.conf
+echo rapiddisk > /etc/modules-load.d/rapiddisk.conf
+echo rapiddisk-cache >> /etc/modules-load.d/rapiddisk.conf
+echo dm-crypt >> /etc/modules-load.d/rapiddisk.conf
+chmod 755 /etc/modules-load.d/rapiddisk.conf
 modprobe dm-crypt
-modprobe rxdsk
-modprobe rxcache
+modprobe rapiddisk 
+modprobe rapiddisk-cache
 
 %preun
 dkms remove -m rapiddisk -v %{version} --all
 
 %postun
-rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rxdsk,rxcache}.ko
-rm -f /etc/modules-load.d/rxdsk.conf
+rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rapiddisk,rapiddisk-cache}.ko
+rm -f /etc/modules-load.d/rapiddisk.conf
 
 %clean
 rm -rf %{buildroot}

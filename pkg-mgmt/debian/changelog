@@ -1,3 +1,8 @@
+rapiddisk (4.0-1) released; urgency=medium
+
+* Fixed bug in libcryptsetup configuration
+* Renamed kernel modules.
+
 rapiddisk (3.7-1) released; urgency=medium
 
 * Cleaned up the module code.

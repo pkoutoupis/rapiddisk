@@ -1,3 +1,13 @@
+*** Release 4.0 ***
+
+- Fixed libcryptsetup build error for RHEL6.
+- Renamed rxdsk/rxcache modules.
+- Did massive cleanup of administration utility code.
+- Converted most (if not all) return codes to POSIX.1 error numbers.
+- Code cleanup in RESTful API.
+- RapidDisk volumes now show up as non-rotational.
+- Cleaned up ioctls in both module and utilies.
+
 *** Release 3.7 ***
 
 - Cleaned up kernel module code.

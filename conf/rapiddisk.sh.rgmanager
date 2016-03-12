@@ -135,12 +135,12 @@ do_start()
 			clog_service_start $CLOG_FAILED
 			return $OCF_ERR_GENERIC
 		fi
-		volume="/dev/mapper/rxcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		volume="/dev/mapper/crypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
 	else
 		volume="$OCF_RESKEY_volume"
 	fi
-	rxdsk=`echo $output|sed -e 's/^.*rxd/rxd/' -e 's/ .*$//'`
-	$RDSK_bin --rxc-map $rxdsk $volume
+	rdsk=`echo $output|sed -e 's/^.*rd/rd/' -e 's/ .*$//'`
+	$RDSK_bin --cache-map $rdsk $volume
 
 	clog_service_start $CLOG_SUCCEED
         return $OCF_SUCCESS
@@ -155,16 +155,16 @@ do_stop()
 
 	/sbin/cryptsetup isLuks $OCF_RESKEY_volume
 	if [ $? -eq 0 ]; then
-		cache="rxc_rxcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		cache="rc_crypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
 		crypt=1
 	else
-		cache="rxc_`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		cache="rc_`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
 	fi
 	output=`$RDSK_bin --short-list|grep "$cache:"`
-	$RDSK_bin --rxc-unmap $cache
-	$RDSK_bin --detach `echo "$output"|sed -e 's/^rxc.*://' -e 's/,.*$//'`
+	$RDSK_bin --cache-unmap $cache
+	$RDSK_bin --detach `echo "$output"|sed -e 's/^rc.*://' -e 's/,.*$//'`
 	if [ $crypt -eq "1" ]; then
-		$RDSK_bin --deactivate-crypt /dev/mapper/rxcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
+		$RDSK_bin --deactivate-crypt /dev/mapper/crypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
 	fi
 
         clog_service_stop $CLOG_SUCCEED
@@ -178,7 +178,7 @@ do_status()
 	clog_service_status $CLOG_INIT
 
 	volume=`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
-	if [ -e "/dev/mapper/rxc_$volume" ] || [ -e "/dev/mapper/rxc_rxcrypt-$volume" ]; then
+	if [ -e "/dev/mapper/rc_$volume" ] || [ -e "/dev/mapper/rc_crypt-$volume" ]; then
 		clog_service_status $CLOG_SUCCEED
 		return 0
 	fi

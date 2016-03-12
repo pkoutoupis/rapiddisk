@@ -21,16 +21,16 @@ set -e
 
 case "$1" in
   purge)
-    rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rxdsk,rxcache}.ko
-    sed -i '/rxdsk/d' /etc/modules
-    sed -i '/rxcache/d' /etc/modules
+    rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rapiddisk,rapiddisk-cache}.ko
+    sed -i '/rapiddisk/d' /etc/modules
+    sed -i '/rapiddisk-cache/d' /etc/modules
     sed -i '/dm-crypt/d' /etc/modules
   ;;
 
   remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
-    rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rxdsk,rxcache}.ko
-    sed -i '/rxdsk/d' /etc/modules
-    sed -i '/rxcache/d' /etc/modules
+    rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rapiddisk,rapiddisk-cache}.ko
+    sed -i '/rapiddisk/d' /etc/modules
+    sed -i '/rapiddisk-cache/d' /etc/modules
     sed -i '/dm-crypt/d' /etc/modules
   ;;
 

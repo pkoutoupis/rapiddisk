@@ -1,10 +1,10 @@
 .TH RAPIDDISK 1 "Oct 16 2010" "Linux" "GENERAL COMMANDS"
 .SH NAME
-rapiddisk \- An administration tool to manage the RapidDisk (rxdsk) RAM disk devices and RapidCache (rxcache) mappings.
+rapiddisk \- An administration tool to manage the RapidDisk RAM disk devices and RapidDisk-Cache mappings.
 .SH SYNOPSIS
-rapiddisk [ -h | -v ] function [parameters: unit | size | src & dest | cache & source & block size ]
+rapiddisk [ -h | -v ] function [parameters: unit | size | src & dest | cache & source ]
 .SH DESCRIPTION
-rapiddisk is a RapidDisk (rxdsk) module management tool. The tool allows the user to list all attached rxdsk devices, with the ability to dynamically attach a new rxdsk block devices and detach existing ones. It also is capable of mapping and unmapping an rxd volume to any block device via the RapidCache (rxcache) kernel module.
+rapiddisk is a RapidDisk module management tool. The tool allows the user to list all attached RapidDisk devices, with the ability to dynamically attach a new RapidDisk block devices and detach existing ones. It also is capable of mapping and unmapping an RapidDisk volumes as a Write-Through cache to any block device via the RapidDisk-Cache kernel module.
 .SS Options
 .TP
 -h
@@ -15,37 +15,37 @@ Display the version number.
 .SS Function
 .TP
 --attach
-Dynamically attach new rxdsk devices.
+Dynamically attach new RapidDisk devices.
 .TP
 --detach
-Dynamically detach rxdsk devices.
+Dynamically detach RapidDisk devices.
 .TP
 --list   
-List all attached rxdsk devices.
+List all attached RapidDisk devices.
 .TP
 --short-list   
-List all attached rxdsk devices in script friendly format.
+List all attached RapidDisk devices in script friendly format.
 .TP
 --flush
-Erase all data to a specified rxdsk device (dangerous).
+Erase all data to a specified RapidDisk device (dangerous).
 .TP
 --resize
-Dynamically grow the size of an existing rxdsk device.
+Dynamically grow the size of an existing RapidDisk device.
 .TP
 --archive
-Using zlib, archive an rxdsk device to a data file.
+Using zlib, archive an RapidDisk device to a data file.
 .TP
 --restore
-Using zlib, restore an rxdsk device from an archived data file.
+Using zlib, restore an RapidDisk device from an archived data file.
 .TP
---rxc-map
-Map an rxdsk device as a caching node to anotther block device.
+--cache-map
+Map an RapidDisk device as a caching node to another block device.
 .TP
---rxc-unmap
-Map an rxdsk device as a caching node to anotther block device.
+--cache-unmap
+Map an RapidDisk device as a caching node to another block device.
 .TP
 --stat-cache
-Obtain RapidCache Mappings statistics.
+Obtain RapidDisk-Cache Mappings statistics.
 .TP
 --enable-crypt
 Initialize a storage volume for data encryption.
@@ -70,40 +70,37 @@ Source path for archive/restore options.
 Destination path for arcive/restore options.
 .TP
 [cache]
-Specify rxd node to use as caching volume.
+Specify RapidDisk node to use as caching volume.
 .TP
 [source]
 Specify block device to map cache to.
-.TP
-[block size]
-Specify cache block size in KBytes (multiples of 4).
 .SH EXAMPLES
 .TP
 rapiddisk --list
 .TP
 rapiddisk --attach 64
 .TP
-rapiddisk --detach rxd2
+rapiddisk --detach rd2
 .TP
-rapiddisk --resize rxd2 128
+rapiddisk --resize rd2 128
 .TP
-rapiddisk --archive rxd0 rxd-052911.dat
+rapiddisk --archive rd0 rd-052911.dat
 .TP
-rapiddisk --restore rxd-052911.dat rxd0
+rapiddisk --restore rd-052911.dat rd0
 .TP
-rapiddisk --rxc-map rxd1 /dev/sdb
+rapiddisk --cache-map rd1 /dev/sdb
 .TP
-rapiddisk --rxc-unmap rxc0
+rapiddisk --cache-unmap rc_sdb
 .TP
-rapiddisk --stat-cache rxc0
+rapiddisk --stat-cache rc_sdb
 .TP
-rapiddisk --flush rxd2
+rapiddisk --flush rd2
 .TP
-rapiddisk --enable-crypt /dev/rxd0
+rapiddisk --enable-crypt /dev/rd0
 .TP
-rapiddisk --activate-crypt /dev/rxd0
+rapiddisk --activate-crypt /dev/rd0
 .TP
-rapiddisk --deactivate-crypt /dev/mapper/rxcrypt-rxd0
+rapiddisk --deactivate-crypt /dev/mapper/crypt-rd0
 .SH EXIT STATUS
 rapiddisk returns a zero exit status if no error occurs during operation. A non-zero value is returned on error.
 .SH AUTHORS

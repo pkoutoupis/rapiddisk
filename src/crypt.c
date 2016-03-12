@@ -24,13 +24,15 @@ int format_crypt(unsigned char *device)
 		printf("%s: crypt_init: %s\n", __func__, strerror(errno));
 		return err;
 	}
-	printf("Device %s will be formatted to LUKS device after 5 seconds.\n"
+	printf("Device %s will be formatted to a LUKS device after 5 seconds.\n"
 	       "Press CTRL+C now if you want to cancel this operation.\n", device);
 	sleep(5);
 
 	params.hash = "sha1";
 	params.data_alignment = 0;
+#if !defined LEGACY_CRYPT
 	params.data_device = NULL;
+#endif
 
 	if ((err = crypt_format(cd, CRYPT_LUKS1, "aes", "xts-plain64", NULL, NULL, 256 / 8, &params)) < 0) {
 		printf("%s: crypt_format: %s\n", __func__, strerror(errno));
@@ -70,7 +72,7 @@ int activate_crypt(unsigned char *device)
 		token = strtok(NULL, "/");
 	}
 
-	sprintf(device_name, "rxcrypt-%s", str);
+	sprintf(device_name, "crypt-%s", str);
 	if ((err = crypt_init(&cd, device)) < 0) {
 		printf("%s: crypt_init: %s\n", __func__, strerror(errno));
 		syslog(LOG_ERR, "%s: crypt_init: %s\n", __func__, strerror(errno));

@@ -29,8 +29,8 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"3.7"
-#define PREFIX			"rxd"
+#define VERSION_STR		"4.0"
+#define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
 #define DEFAULT_MAX_SECTS	127
@@ -44,10 +44,10 @@
 
 /* ioctls */
 #define INVALID_CDQUERY_IOCTL	0x5331
-#define RXD_GET_STATS		0x0529
+#define RD_GET_STATS		0x0529
 
 static DEFINE_MUTEX(sysfs_mutex);
-static DEFINE_MUTEX(rxioctl_mutex);
+static DEFINE_MUTEX(ioctl_mutex);
 
 struct rdsk_device {
 	int num;
@@ -119,10 +119,10 @@ static ssize_t mgmt_show(struct kobject *kobj, struct kobj_attribute *attr,
 	int len;
 	struct rdsk_device *rdsk;
 
-	len = sprintf(buf, "RapidDisk (rxdsk) %s\n\nMaximum Number of Attachable Devices: %d\nNumber of Attached Devices: %d\nMax Sectors (KB): %d\nNumber of Requests: %d\n\n",
+	len = sprintf(buf, "RapidDisk %s\n\nMaximum Number of Attachable Devices: %d\nNumber of Attached Devices: %d\nMax Sectors (KB): %d\nNumber of Requests: %d\n\n",
 		      VERSION_STR, rd_max_nr, rd_total, max_sectors, nr_requests);
 	list_for_each_entry(rdsk, &rdsk_devices, rdsk_list) {
-		len += sprintf(buf + len, "rxd%d\tSize: %llu MBs\tErrors: %lu\n",
+		len += sprintf(buf + len, "rd%d\tSize: %llu MBs\tErrors: %lu\n",
 			       rdsk->num, (rdsk->size / 1024 / 1024),
 			       rdsk->error_cnt);
 	}
@@ -146,28 +146,28 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 	}
 	strcpy(buf, buffer);
 
-	if (!strncmp("rxdsk attach ", buffer, 13)) {
-		ptr = buf + 13;
+	if (!strncmp("rapiddisk attach ", buffer, 17)) {
+		ptr = buf + 17;
 		size = (simple_strtoul(ptr, &ptr, 0) * 2);
 
 		if (attach_device(size) != 0) {
-			pr_err("%s: Unable to attach a new rxdsk device.\n", PREFIX);
+			pr_err("%s: Unable to attach a new RapidDisk device.\n", PREFIX);
 			err = -EINVAL;
 		}
-	} else if (!strncmp("rxdsk detach ", buffer, 13)) {
-		ptr = buf + 13;
+	} else if (!strncmp("rapiddisk detach ", buffer, 17)) {
+		ptr = buf + 17;
 		num = simple_strtoul(ptr, &ptr, 0);
 		if (detach_device(num) != 0) {
-			pr_err("%s: Unable to detach rxd%d\n", PREFIX, num);
+			pr_err("%s: Unable to detach rd%d\n", PREFIX, num);
 			err = -EINVAL;
 		}
-	} else if (!strncmp("rxdsk resize ", buffer, 13)) {
-		ptr = buf + 13;
+	} else if (!strncmp("rapiddisk resize ", buffer, 17)) {
+		ptr = buf + 17;
 		num = simple_strtoul(ptr, &ptr, 0);
 		size = (simple_strtoul(ptr + 1, &ptr, 0) * 2);
 
 		if (resize_device(num, size) != 0) {
-			pr_err("%s: Unable to resize rxd%d\n", PREFIX, num);
+			pr_err("%s: Unable to resize rd%d\n", PREFIX, num);
 			err = -EINVAL;
 		}
 	} else {
@@ -570,7 +570,7 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 			sizeof(bdev->bd_inode->i_size)) ? -EFAULT : 0;
 	case BLKFLSBUF:
 		/* We are killing the RAM disk data. */
-		mutex_lock(&rxioctl_mutex);
+		mutex_lock(&ioctl_mutex);
 		mutex_lock(&bdev->bd_mutex);
 		error = -EBUSY;
 		if (bdev->bd_openers <= 1) {
@@ -584,11 +584,11 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 			error = 0;
 		}
 		mutex_unlock(&bdev->bd_mutex);
-		mutex_unlock(&rxioctl_mutex);
+		mutex_unlock(&ioctl_mutex);
 		return error;
 	case INVALID_CDQUERY_IOCTL:
 		return -EINVAL;
-	case RXD_GET_STATS:
+	case RD_GET_STATS:
 		return copy_to_user((void __user *)arg,
 			&rdsk->max_blk_alloc,
 			sizeof(rdsk->max_blk_alloc)) ? -EFAULT : 0;
@@ -626,12 +626,12 @@ static int attach_device(int size)
 	if (!string)
 		goto out;
 	list_for_each_entry(tmp, &rdsk_devices, rdsk_list) {
-		sprintf(string, "%srxd%d,", string, tmp->num);
+		sprintf(string, "%srd%d,", string, tmp->num);
 		num++;
 	}
 	while (num >= 0) {
 		memset(name, 0x0, sizeof(name));
-		sprintf(name, "rxd%d,", num);
+		sprintf(name, "rd%d,", num);
                 if (strstr(string, (const char *)name) == NULL) {
                         break;
                 }
@@ -668,6 +668,7 @@ static int attach_device(int size)
 	rdsk->rdsk_queue->limits.max_discard_sectors = UINT_MAX;
 	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, rdsk->rdsk_queue);
 #endif
+	queue_flag_set_unlocked(QUEUE_FLAG_NONROT, rdsk->rdsk_queue);
 
 	disk = rdsk->rdsk_disk = alloc_disk(1);
 	if (!disk)
@@ -678,13 +679,13 @@ static int attach_device(int size)
 	disk->private_data = rdsk;
 	disk->queue = rdsk->rdsk_queue;
 	disk->flags |= GENHD_FL_SUPPRESS_PARTITION_INFO;
-	sprintf(disk->disk_name, "%s%d", PREFIX, num);
+	sprintf(disk->disk_name, "rd%d", num);
 	set_capacity(disk, size);
 
 	add_disk(rdsk->rdsk_disk);
 	list_add_tail(&rdsk->rdsk_list, &rdsk_devices);
 	rd_total++;
-	pr_info("%s: Attached rxd%d of %llu bytes in size.\n", PREFIX,
+	pr_info("%s: Attached rd%d of %llu bytes in size.\n", PREFIX,
 		num, rdsk->size);
 	return 0;
 
@@ -711,7 +712,7 @@ static int detach_device(int num)
 	rdsk_free_pages(rdsk);
 	kfree(rdsk);
 	rd_total--;
-	pr_info("%s: Detached rxd%d.\n", PREFIX, num);
+	pr_info("%s: Detached rd%d.\n", PREFIX, num);
 
 	return 0;
 }
@@ -731,12 +732,12 @@ static int resize_device(int num, int size)
 	}
 	set_capacity(rdsk->rdsk_disk, size);
 	rdsk->size = (size * BYTES_PER_SECTOR);
-	pr_info("%s: Resized rxd%d of %lu bytes in size.\n", PREFIX, num,
+	pr_info("%s: Resized rd%d of %lu bytes in size.\n", PREFIX, num,
 	        (unsigned long)(size * BYTES_PER_SECTOR));
 	return 0;
 }
 
-static int __init init_rxd(void)
+static int __init init_rd(void)
 {
 	int retval, i;
 
@@ -758,7 +759,7 @@ static int __init init_rxd(void)
 	for (i = 0; i < rd_nr; i++) {
 		retval = attach_device(rd_size * 2);
 		if (retval) {
-			pr_err("%s: Failed to load RapidDisk volume rxd%d.\n",
+			pr_err("%s: Failed to load RapidDisk volume rd%d.\n",
 			       PREFIX, i);
 			goto init_failure2;
 		}
@@ -772,7 +773,7 @@ init_failure:
 	return -ENOMEM;
 }
 
-static void __exit exit_rxd(void)
+static void __exit exit_rd(void)
 {
 	struct rdsk_device *rdsk, *next;
 
@@ -782,11 +783,11 @@ static void __exit exit_rxd(void)
 	unregister_blkdev(rd_ma_no, PREFIX);
 }
 
-module_init(init_rxd);
-module_exit(exit_rxd);
+module_init(init_rd);
+module_exit(exit_rd);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Petros Koutoupis <petros@petroskoutoupis.com>");
-MODULE_DESCRIPTION("RapidDisk (rxdsk) is an enhanced RAM disk block device driver.");
+MODULE_DESCRIPTION("RapidDisk is an enhanced RAM disk block device driver.");
 MODULE_VERSION(VERSION_STR);
 MODULE_INFO(Copyright, "Copyright 2010 - 2015 Petros Koutoupis");

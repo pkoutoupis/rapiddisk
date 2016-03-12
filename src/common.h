@@ -26,25 +26,26 @@
 
 #define UTIL			"rapiddisk"
 #define COPYRIGHT		"Copyright 2011-2016 Petros Koutoupis"
-#define VERSION_NUM	  	"3.7"
-#define BYTES_PER_SECTOR	512	/* Traditional sector size */
-#define BUFSZ			65536
+#define VERSION_NUM	  	"4.0"
+#define SUCCESS			0x0
+#define NAMELEN			0x100
+#define BYTES_PER_SECTOR	0x200
+#define BUFSZ			0x10000
 #define DES_KEY			"05291983"
-#define NAMELEN			256
 #define SYS_RDSK		"/sys/kernel/rapiddisk/mgmt"
 
-typedef struct RxD_PROFILE{		/* For rxdsk device list   */
+typedef struct RD_PROFILE{	/* For RapidDisk device list     */
 	unsigned char device[16];
 	unsigned long long size;
-	struct RxD_PROFILE *next;
-}RxD_PROFILE;
+	struct RD_PROFILE *next;
+} RD_PROFILE;
 
-typedef struct RxC_PROFILE{		/* For rxcache node list   */
+typedef struct RC_PROFILE{	/* For RapidDisk-Cache node list */
 	unsigned char device[NAMELEN];
 	unsigned char cache[16];
 	unsigned char source[NAMELEN];
-	struct RxC_PROFILE *next;
-}RxC_PROFILE;
+	struct RC_PROFILE *next;
+} RC_PROFILE;
 
 #define ERROR(fmt, args...) syslog(LOG_ERR, "rapiddisk: %s:", fmt, __FUNCTION__, __LINE__, ##args);
 #define INFO(fmt, args...) syslog(LOG_INFO, "rapiddisk: %s:", fmt, __FUNCTION__, __LINE__, ##args);
