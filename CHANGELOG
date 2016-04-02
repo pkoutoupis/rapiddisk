@@ -1,3 +1,8 @@
+*** Release 4.0-2 ***
+
+- Updated fatfree-framework.
+- Addressed bug in RapidDisk REST implementation.
+
 *** Release 4.0 ***
 
 - Fixed libcryptsetup build error for RHEL6.

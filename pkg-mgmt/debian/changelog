@@ -1,11 +1,26 @@
+rapiddisk (4.0-2) released; urgency=medium
+
+* Updated fatfree-framework.
+* Addressed bug in RapidDisk REST implementation.
+
 rapiddisk (4.0-1) released; urgency=medium
 
-* Fixed bug in libcryptsetup configuration
-* Renamed kernel modules.
+* Fixed libcryptsetup build error for RHEL6.
+* Renamed rxdsk/rxcache modules.
+* Did massive cleanup of administration utility code.
+* Converted most (if not all) return codes to POSIX.1 error numbers.
+* Code cleanup in RESTful API.
+* RapidDisk volumes now show up as non-rotational.
+* Cleaned up ioctls in both module and utilies.
 
 rapiddisk (3.7-1) released; urgency=medium
 
-* Cleaned up the module code.
+* Cleaned up kernel module code.
+* Fixed stack overflow bug in administration utility.
+* Fixed error print statement in administration utility.
+* Updated copyright years.
+* Cleaned up build environment, including Makefiles.
+* Fixed bug in configuring encryption on device.
 
 rapiddisk (3.6-3) released; urgency=medium
 
@@ -17,4 +32,4 @@ rapiddisk (3.6-2) released; urgency=medium
 * Placed better checks before deallocating memory in administration utility.
 
 
--- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
+-* Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600

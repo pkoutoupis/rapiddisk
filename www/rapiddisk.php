@@ -14,7 +14,10 @@ class RapidDisk {
 		$list = $tmp = [];
 		foreach ($output as &$volume) {
 			$var = explode(':', $volume);
-			if (strstr($var[0], 'rd') != False) {
+                        if (strstr($var[0], 'Unable to locate any') != False) {
+                                unset($tmp);
+                                break;
+			} elseif (strstr($var[0], 'rd') != False) {
 				$tmp = array('rapidDisk' => $var[0], 'size' => intval($var[1]));
 				array_push($list, $tmp);
 			} elseif (strstr($var[0], 'rc') != False) {
