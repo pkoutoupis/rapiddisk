@@ -57,7 +57,7 @@ void online_menu(char *string)
 	       "\t--restore\t\tUsing zlib, restore an RapidDisk device from an archived data file.\n\n"
 	       "\t--cache-map\t\tMap an RapidDisk device as a caching node to another block device.\n"
 	       "\t--cache-unmap\t\tMap an RapidDisk device as a caching node to anotther block device.\n"
-	       "\t--stat-cache\t\tObtain RapidCache Mappings statistics.\n"
+	       "\t--stat-cache\t\tObtain RapidDisk-Cache Mappings statistics.\n"
 	       "\t--enable-crypt\t\tInitialize a storage volume for data encryption.\n"
 	       "\t--activate-crypt\tActivate an encryption volume.\n"
 	       "\t--deactivate-crypt\tDeactivate an encryption volume.\n\n");

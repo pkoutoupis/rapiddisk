@@ -1,3 +1,7 @@
+*** Release 4.0-3 ***
+
+- Fixed all references of RapidCache to RapidDisk-Cache.
+
 *** Release 4.0-2 ***
 
 - Updated fatfree-framework.

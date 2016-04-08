@@ -7,9 +7,9 @@ $f3 = require('./lib/base.php');
 $f3->set('rapidDisk', new \rapiddisk);
 
 $f3->route('GET /v1/listAllRapidDiskVolumes','rapidDisk->listAllRapidDiskVolumes');
-$f3->route('GET /v1/showRapidCacheStatistics/@cache',
+$f3->route('GET /v1/showRapidDiskCacheStatistics/@cache',
         function($f3)  {
-                $f3->get('rapidDisk')->showRapidCacheStatistics($f3->get('PARAMS.cache'));
+                $f3->get('rapidDisk')->showRapidDiskCacheStatistics($f3->get('PARAMS.cache'));
         }
 );
 
@@ -27,10 +27,10 @@ $f3->route('PUT /v1/resizeRapidDisk',
 	}
 );
 
-$f3->route('POST /v1/createRapidCacheMapping',
+$f3->route('POST /v1/createRapidDiskCacheMapping',
         function($f3) {
                 $inputData = file_get_contents('php://input');
-                $f3->get('rapidDisk')->createRapidCacheMapping($inputData);
+                $f3->get('rapidDisk')->createRapidDiskCacheMapping($inputData);
         }
 );
 
@@ -40,9 +40,9 @@ $f3->route('DELETE /v1/removeRapidDisk/@disk',
 	}
 );
 
-$f3->route('DELETE /v1/removeRapidCacheMapping/@cache',
+$f3->route('DELETE /v1/removeRapidDiskCacheMapping/@cache',
         function($f3)  {
-                $f3->get('rapidDisk')->removeRapidCacheMapping($f3->get('PARAMS.cache'));
+                $f3->get('rapidDisk')->removeRapidDiskCacheMapping($f3->get('PARAMS.cache'));
         }
 );
 

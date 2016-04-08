@@ -163,14 +163,14 @@ int list_devices(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 		num++;
 		rd_prof = rd_prof->next;
 	}
-	printf("\nList of RapidCache mapping(s):\n\n");
+	printf("\nList of RapidDisk-Cache mapping(s):\n\n");
 	if (rc_prof == NULL) {
 		printf("  None\n");
 		goto list_out;
 	}
 	num = 1;
 	while (rc_prof != NULL) {
-	printf(" RapidCache Target %d: %s\tCache: %s  Target: %s (WRITETHROUGH)\n",
+	printf(" RapidDisk-Cache Target %d: %s\tCache: %s  Target: %s (WRITETHROUGH)\n",
 			num, rc_prof->device, rc_prof->cache, rc_prof->source);
 		num++;
 		rc_prof = rc_prof->next;
@@ -185,7 +185,7 @@ int stat_cache_mapping(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	unsigned char cmd[NAMELEN] = {0};
 
 	if (rc_prof == NULL) {
-		printf("  No RapidCache Mappings exist.\n\n");
+		printf("  No RapidDisk-Cache Mappings exist.\n\n");
 		return 1;
 	}
 	sprintf(cmd, "dmsetup status %s", cache);

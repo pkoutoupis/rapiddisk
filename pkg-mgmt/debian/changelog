@@ -1,3 +1,7 @@
+rapiddisk (4.0-3) released; urgency=medium
+
+* Fixed all references of RapidCache to RapidDisk-Cache.
+
 rapiddisk (4.0-2) released; urgency=medium
 
 * Updated fatfree-framework.

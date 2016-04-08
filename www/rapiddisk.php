@@ -7,7 +7,7 @@ class RapidDisk {
 		 $this->RDISK_CMD = 'sudo -u root /sbin/rapiddisk';
 	}
 
-	/* @GET: List all RapidDisk and RapidCache volumes with sizes (in MBs) and mappings. */
+	/* @GET: List all RapidDisk and RapidDisk-Cache volumes with sizes (in MBs) and mappings. */
 	public function listAllRapidDiskVolumes() {
                 $command = implode(' ', array($this->RDISK_CMD, '--short-list'));
                 exec($command, $output, $retval);
@@ -31,8 +31,8 @@ class RapidDisk {
 		print json_encode($rtn);
 	}
 
-        /* @GET: Show cache statistics of an existing RapidCache Volume. */
-        public function showRapidCacheStatistics($cache) {
+        /* @GET: Show cache statistics of an existing RapidDisk-Cache Volume. */
+        public function showRapidDiskCacheStatistics($cache) {
                 $command = implode(' ', array($this->RDISK_CMD, '--stat-cache', $cache, '|grep "("|tr -s \'[[:space:]]\' \' \'|sed -e \'s/,//\'g -e \'s/^ //\' -e \'s/$/\n/\''));
                 exec($command, $output, $retval);
                 $rtn = array('errorCode' => $retval, 'message' => implode(' ', $output));
@@ -72,8 +72,8 @@ class RapidDisk {
                 print json_encode($rtn);
 	}
 
-        /* @POST: Create a RapidCache Mapping. */
-        public function createRapidCacheMapping($JSONRequest) {
+        /* @POST: Create a RapidDisk-Cache Mapping. */
+        public function createRapidDiskCacheMapping($JSONRequest) {
                 $nameObject = json_decode($JSONRequest, true);
                 $rdsk = $nameObject['rapidDisk'];
                 $source = $nameObject['sourceDrive'];
@@ -84,8 +84,8 @@ class RapidDisk {
                 print json_encode($rtn);
         }
 
-        /* @DELETE: Remove an existing RapidCache Mapping. */
-        public function removeRapidCacheMapping($disk) {
+        /* @DELETE: Remove an existing RapidDisk-Cache Mapping. */
+        public function removeRapidDiskCacheMapping($disk) {
 		$command = implode(' ', array($this->RDISK_CMD, '--cache-unmap', $disk));
 		exec($command, $output, $retval);
                 $rtn = array('errorCode' => $retval, 'message' => implode(' ', $output));

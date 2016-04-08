@@ -42,15 +42,15 @@ This is the name of the resource rule.
 
 <parameter name="volume" unique="0" required="0">
 <longdesc lang="en">
-This is the absolute path of the storage device to map with RapidCache.
+This is the absolute path of the storage device to map with RapidDisk-Cache.
 </longdesc>
-<shortdesc lang="en">Path of storage device for RapidCache.</shortdesc>
+<shortdesc lang="en">Path of storage device for RapidDisk-Cache.</shortdesc>
 <content type="string"/>
 </parameter>
 
 <parameter name="size" unique="0" required="0">
 <longdesc lang="en">
-This is the size of the RapidDisk (and cache for RapidCache) volume.
+This is the size of the RapidDisk (and cache for RapidDisk-Cache) volume.
 </longdesc>
 <shortdesc lang="en">
 RapidDisk size.

@@ -18,7 +18,7 @@ rd_size: Size of each RAM disk (in KB) loaded on insertion. (Default = 0) (int)
 rd_max_nr: Maximum number of RAM Disks. (Default = 128) (int)
 
 
-RapidCache
+RapidDisk-Cache
 ---------
 None.
 
@@ -40,7 +40,7 @@ Resize an existing RapidDisk volume by typing (size in KB):
 
 
 
-RapidCache
+RapidDisk-Cache
 ---------
 It is advised to utilize the userland utility, rapiddisk, but this is essentially what is sent to the dmsetup command:
 
