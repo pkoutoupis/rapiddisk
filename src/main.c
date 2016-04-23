@@ -94,12 +94,12 @@ int parse_input(int argcin, char *argvin[])
 	}
 
 	if (((strcmp(argvin[1], "-h")) == 0) || ((strcmp(argvin[1],"-H")) == 0) ||
-		((strcmp(argvin[1], "--help")) == 0)) {
+	    ((strcmp(argvin[1], "--help")) == 0)) {
 		online_menu(argvin[0]);
 		return err;
 	}
 	if (((strcmp(argvin[1], "-v")) == 0) || ((strcmp(argvin[1],"-V")) == 0) ||
-		((strcmp(argvin[1], "--version")) == 0)) {
+	    ((strcmp(argvin[1], "--version")) == 0)) {
 		return err;
 	}
 

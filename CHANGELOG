@@ -1,3 +1,8 @@
+*** Release 4.0-4 ***
+
+- Code cleanup.
+- Also need to remove CONFIG_BLK_DEV_RAM_COUNT from distro specific packages.
+
 *** Release 4.0-3 ***
 
 - Fixed all references of RapidCache to RapidDisk-Cache.
