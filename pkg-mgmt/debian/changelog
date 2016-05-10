@@ -1,3 +1,9 @@
+rapiddisk (4.1-1) released; urgency=medium
+
+* kernel: Refuse misaligned discard requests.
+* kernel: Convert ENOMEM to ENOSPC when cannot alloc pages.
+* kernel: Added 4k physical block size attribute.
+
 rapiddisk (4.0-4) released; urgency=medium
 
 * Code cleanup.

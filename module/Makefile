@@ -1,4 +1,4 @@
-VERSION = 4.0
+VERSION = 4.1
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build
@@ -28,7 +28,7 @@ uninstall:
 	depmod -a
 
 clean:
-	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order .tmp_versions .rxdsk.o.d *.unsigned
+	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order .tmp_versions .rapiddisk.o.d *.unsigned
 
 .PHONY: dkms
 dkms:

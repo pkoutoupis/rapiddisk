@@ -1,7 +1,7 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 4.0
-Release: 4
+Version: 4.1
+Release: 1
 License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
@@ -85,6 +85,10 @@ rm -rf %{buildroot}
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %changelog
+* Mon May 9 2016 Petros Koutoupis <petros@petroskoutoupis.com>
+- kernel: Refuse misaligned discard requests.
+- kernel: Convert ENOMEM to ENOSPC when cannot alloc pages.
+- kernel: Added 4k physical block size attribute.
 * Fri Apr 22 2016 Petros Koutoupis <petros@petroskoutoupis.com>
 - Code cleanup.
 - Also need to remove CONFIG_BLK_DEV_RAM_COUNT from distro specific packages.

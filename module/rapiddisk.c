@@ -29,7 +29,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"4.0"
+#define VERSION_STR		"4.1"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -157,6 +157,7 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 	} else if (!strncmp("rapiddisk detach ", buffer, 17)) {
 		ptr = buf + 17;
 		num = simple_strtoul(ptr, &ptr, 0);
+
 		if (detach_device(num) != 0) {
 			pr_err("%s: Unable to detach rd%d\n", PREFIX, num);
 			err = -EINVAL;
@@ -302,11 +303,11 @@ static int copy_to_rdsk_setup(struct rdsk_device *rdsk,
 
 	copy = min_t(size_t, n, PAGE_SIZE - offset);
 	if (!rdsk_insert_page(rdsk, sector))
-		return -ENOMEM;
+		return -ENOSPC;
 	if (copy < n) {
 		sector += copy >> SECTOR_SHIFT;
 		if (!rdsk_insert_page(rdsk, sector))
-			return -ENOMEM;
+			return -ENOSPC;
 	}
 	return 0;
 }
@@ -491,6 +492,11 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 	err = 0;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 	if (unlikely(bio->bi_rw & REQ_DISCARD)) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
+		if (sector & ((PAGE_SIZE >> SECTOR_SHIFT) - 1) ||
+		    bio->bi_iter.bi_size & ~PAGE_MASK)
+		goto io_error;
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 		discard_from_rdsk(rdsk, sector, bio->bi_iter.bi_size);
 #else
@@ -563,11 +569,11 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		if ((size >> 9) > ~0UL)
 			return -EFBIG;
 		return copy_to_user((void __user *)arg, &size,
-			sizeof(size)) ? -EFAULT : 0;
+				    sizeof(size)) ? -EFAULT : 0;
 	case BLKGETSIZE64:
 		return copy_to_user((void __user *)arg,
-			&bdev->bd_inode->i_size,
-			sizeof(bdev->bd_inode->i_size)) ? -EFAULT : 0;
+				    &bdev->bd_inode->i_size,
+				    sizeof(bdev->bd_inode->i_size)) ? -EFAULT : 0;
 	case BLKFLSBUF:
 		/* We are killing the RAM disk data. */
 		mutex_lock(&ioctl_mutex);
@@ -654,6 +660,7 @@ static int attach_device(int size)
 		goto out_free_dev;
 	blk_queue_make_request(rdsk->rdsk_queue, rdsk_make_request);
 	blk_queue_logical_block_size(rdsk->rdsk_queue, BYTES_PER_SECTOR);
+	blk_queue_physical_block_size(rdsk->rdsk_queue, PAGE_SIZE);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
 	blk_queue_flush(rdsk->rdsk_queue, REQ_FLUSH);
 #else

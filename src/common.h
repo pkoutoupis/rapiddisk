@@ -26,7 +26,7 @@
 
 #define UTIL			"rapiddisk"
 #define COPYRIGHT		"Copyright 2011-2016 Petros Koutoupis"
-#define VERSION_NUM	  	"4.0"
+#define VERSION_NUM	  	"4.1"
 #define SUCCESS			0x0
 #define NAMELEN			0x100
 #define BYTES_PER_SECTOR	0x200

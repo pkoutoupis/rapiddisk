@@ -1,16 +1,22 @@
+*** Release 4.1 ***
+
+- kernel: Refuse misaligned discard requests.
+- kernel: Convert ENOMEM to ENOSPC when cannot alloc pages.
+- kernel: Added 4k physical block size attribute.
+
 *** Release 4.0-4 ***
 
 - Code cleanup.
-- Also need to remove CONFIG_BLK_DEV_RAM_COUNT from distro specific packages.
+- packaging: Also need to remove CONFIG_BLK_DEV_RAM_COUNT from distro specific packages.
 
 *** Release 4.0-3 ***
 
-- Fixed all references of RapidCache to RapidDisk-Cache.
+- utility: Fixed all references of RapidCache to RapidDisk-Cache.
 
 *** Release 4.0-2 ***
 
-- Updated fatfree-framework.
-- Addressed bug in RapidDisk REST implementation.
+- utility: Updated fatfree-framework.
+- utility: Addressed bug in RapidDisk REST implementation.
 
 *** Release 4.0 ***
 
