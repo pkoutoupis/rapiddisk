@@ -492,10 +492,16 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 	err = 0;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 	if (unlikely(bio->bi_rw & REQ_DISCARD)) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
 		if (sector & ((PAGE_SIZE >> SECTOR_SHIFT) - 1) ||
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 		    bio->bi_iter.bi_size & ~PAGE_MASK)
+#else
+		    bio->bi_size & ~PAGE_MASK)
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
 		goto io_error;
+#else
+		goto out;
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 		discard_from_rdsk(rdsk, sector, bio->bi_iter.bi_size);

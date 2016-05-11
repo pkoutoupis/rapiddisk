@@ -1,3 +1,7 @@
+rapiddisk (4.1-2) released; urgency=medium
+
+* kernel: Readjusted misaligned discard request check to build on kernels older than 4.3.
+
 rapiddisk (4.1-1) released; urgency=medium
 
 * kernel: Refuse misaligned discard requests.
