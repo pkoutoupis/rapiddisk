@@ -170,8 +170,10 @@ int list_devices(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 	}
 	num = 1;
 	while (rc_prof != NULL) {
-	printf(" RapidDisk-Cache Target %d: %s\tCache: %s  Target: %s (WRITETHROUGH)\n",
-			num, rc_prof->device, rc_prof->cache, rc_prof->source);
+	printf(" RapidDisk-Cache Target %d: %s\tCache: %s  Target: %s (%s)\n",
+			num, rc_prof->device, rc_prof->cache, rc_prof->source,
+			(strncmp(rc_prof->device, "rc-wt_", 5) == 0) ? \
+			"WRITE THROUGH" : "WRITE AROUND");
 		num++;
 		rc_prof = rc_prof->next;
 	}
@@ -344,7 +346,7 @@ int resize_device(struct RD_PROFILE *prof, unsigned char *string, unsigned long 
 }
 
 int cache_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
-	        unsigned char *cache, unsigned char *source)
+	        unsigned char *cache, unsigned char *source, int mode)
 {
 	int err = -1, node, fd;
 	unsigned long long source_sz = 0, cache_sz = 0;
@@ -428,15 +430,18 @@ int cache_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 		sprintf(str, "%s", token);
 		token = strtok(NULL, "/");
 	}
-	sprintf(name, "rc_%s", str);
+	if (mode == WRITETHROUGH)
+		sprintf(name, "rc-wt_%s", str);
+	else
+		sprintf(name, "rc-wa_%s", str);
 
 	memset(string, 0x0, BUFSZ);
-	/* echo 0 4194303 rapiddisk-cache /dev/sdb /dev/rd0 0 196608|dmsetup create rc_sdb       */
+	/* echo 0 4194303 rapiddisk-cache /dev/sdb /dev/rd0 0 196608|dmsetup create rc-wt_sdb    */
 	/* Param after echo 0 & 1: starting and ending offsets of source device                  *
 	 * Param 3: always rapiddisk-cache; Param 4 & 5: path to source device and RapidDisk dev *
 	 * Param 6: is the size of the cache  */
-	sprintf(string, "echo 0 %llu rapiddisk-cache %s /dev/%s %llu|dmsetup create %s\n",
-		source_sz, source, cache, cache_sz, name);
+	sprintf(string, "echo 0 %llu rapiddisk-cache %s /dev/%s %llu %d|dmsetup create %s\n",
+		source_sz, source, cache, cache_sz, mode, name);
 
 	if ((err = system(string)) == 0) {
 		printf("Command to map %s with %s and %s has been sent.\nVerify with \"--list\"\n\n",
@@ -454,7 +459,7 @@ int cache_unmap(struct RC_PROFILE *prof, unsigned char *string)
 	unsigned char *buf;
 	unsigned char cmd[NAMELEN] = {0};
 
-	/* dmsetup remove rc_sdb */
+	/* dmsetup remove rc-wt_sdb */
 	while (prof != NULL) {
 		if (strcmp(string, prof->device) == SUCCESS) err = 0;
 		prof = prof->next;

@@ -55,6 +55,11 @@ Uninstalling:
 # make tools-uninstall
 
 
+Build without encryption support
+================================================================
+# make nocrypt
+
+
 Installing modules for DKMS support
 ================================================================
 # make dkms

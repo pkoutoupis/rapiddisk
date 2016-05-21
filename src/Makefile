@@ -20,6 +20,10 @@ DIR := /sbin
 all: rapiddisk
 	@echo Make has completed.
 
+.PHONY: nocrypt
+nocrypt: rapiddisk-nocrypt
+	@echo Make has completed.
+
 .PHONY: install
 install: all
 	@echo Installing all binary files.
@@ -47,10 +51,18 @@ else
 	$(CC) -c crypt.c -o crypt.o
 endif
 
+crypt-nocrypt.o: crypt.c
+	$(CC) -c crypt.c -DNO_CRYPT -o crypt-nocrypt.o
+
 main.o: core.o archive.o crypt.o
 	$(CC) main.c -o rapiddisk core.o archive.o crypt.o -lz -lcryptsetup
 
+main-nocrypt.o: core.o archive.o crypt-nocrypt.o
+	$(CC) main.c -DNO_CRYPT -o rapiddisk core.o archive.o crypt-nocrypt.o -lz
+
 rapiddisk: main.o
+
+rapiddisk-nocrypt: main-nocrypt.o
 
 .PHONY: clean
 clean:

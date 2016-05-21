@@ -47,7 +47,7 @@
 	} \
 } while (0)
 
-#define VERSION_STR	"4.1"
+#define VERSION_STR	"4.2"
 #define DM_MSG_PREFIX	"rapiddisk-cache"
 
 #define READCACHE	1
@@ -55,6 +55,9 @@
 #define READSOURCE	3
 #define WRITESOURCE	4
 #define READCACHE_DONE	5
+
+#define WRITETHROUGH	0
+#define WRITEAROUND	1
 
 #define GENERIC_ERROR		-1
 #define BYTES_PER_BLOCK		512
@@ -92,6 +95,7 @@ struct cache_context {
 	struct cache_block *cache;
 	u8 *cache_state;
 	u32 *set_lru_next;
+	int mode;			/* Write Through / Around */
 
 	struct dm_io_client *io_client;
 	sector_t size;
@@ -791,10 +795,12 @@ int rc_map(struct dm_target *ti, struct bio *bio, union map_info *map_context)
 		dmc->writes++;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
-	if (to_sector(bio->bi_iter.bi_size) != dmc->block_size) {
+	if (to_sector(bio->bi_iter.bi_size) != dmc->block_size ||
 #else
-	if (to_sector(bio->bi_size) != dmc->block_size) {
+	if (to_sector(bio->bi_size) != dmc->block_size ||
 #endif
+	    (dmc->mode && (bio_data_dir(bio) == WRITE))) {
+
 		spin_lock_bh(&dmc->cache_spin_lock);
 		(void)cache_invalidate_blocks(dmc, bio);
 		spin_unlock_bh(&dmc->cache_spin_lock);
@@ -888,7 +894,8 @@ static inline int rc_get_dev(struct dm_target *ti, char *pth,
  *  arg[0]: path to source device
  *  arg[1]: path to cache device
  *  arg[2]: cache size (in blocks)
- *  arg[3]: cache associativity */
+ *  arg[3]: mode: write through / around
+ *  arg[4]: cache associativity */
 static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
 	struct cache_context *dmc;
@@ -964,7 +971,17 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	}
 
 	if (argc >= 4) {
-		if (kstrtoint(argv[3], 10, &dmc->assoc)) {
+		if (sscanf(argv[3], "%d", &dmc->mode) != 1) {
+			ti->error = "rapiddisk-cache: Invalid mode";
+			r = -EINVAL;
+			goto construct_fail5;
+                }
+	} else {
+		dmc->mode = WRITETHROUGH;
+	}
+
+	if (argc >= 5) {
+		if (kstrtoint(argv[4], 10, &dmc->assoc)) {
 			ti->error = "rapiddisk-cache: Invalid cache associativity";
 			r = -EINVAL;
 			goto construct_fail5;
@@ -1132,13 +1149,14 @@ static void rc_status_table(struct cache_context *dmc, status_type_t type,
 	DMEMIT("conf:\n\tRapidDisk dev (%s), disk dev (%s) mode (%s)\n"
 		"\tcapacity(%luM), associativity(%u), block size(%uK)\n"
 		"\ttotal blocks(%lu), cached blocks(%lu)\n",
-		dmc->cache_devname, dmc->disk_devname, "WRITETHROUGH",
+		dmc->cache_devname, dmc->disk_devname,
+		((dmc->mode) ? "WRITE_AROUND" : "WRITETHROUGH"),
 		(unsigned long)dmc->size * dmc->block_size >> 11, dmc->assoc,
 		dmc->block_size >> (10 - SECTOR_SHIFT),
 		(unsigned long)dmc->size, dmc->cached_blocks);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,8,3)
 static int
 #else
 static void
@@ -1161,14 +1179,14 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 		rc_status_table(dmc, type, result, maxlen);
 		break;
 	}
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,8,3)
 	return 0;
 #endif
 }
 
 static struct target_type cache_target = {
 	.name    = "rapiddisk-cache",
-	.version = {4, 1, 0},
+	.version = {4, 2, 0},
 	.module  = THIS_MODULE,
 	.ctr	 = cache_ctr,
 	.dtr	 = cache_dtr,

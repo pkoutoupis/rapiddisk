@@ -11,6 +11,8 @@
  ********************************************************************************/
 
 #include "common.h"
+#if !defined NO_CRYPT
+#define _GNU_SOURCE
 #include <libcryptsetup.h>
 
 
@@ -18,7 +20,11 @@ int format_crypt(unsigned char *device)
 {
 	struct crypt_device *cd;
 	struct crypt_params_luks1 params;
+	char *key;
+	FILE *fp;
 	int err;
+	size_t len;
+	ssize_t read;
 
 	if ((err = crypt_init(&cd, device)) < 0) {
 		printf("%s: crypt_init: %s\n", __func__, strerror(errno));
@@ -34,7 +40,21 @@ int format_crypt(unsigned char *device)
 	params.data_device = NULL;
 #endif
 
-	if ((err = crypt_format(cd, CRYPT_LUKS1, "aes", "xts-plain64", NULL, NULL, 256 / 8, &params)) < 0) {
+	if (access(KEY_FILE, F_OK) == -1) {
+		key = strdup(DEFAULT_DES_KEY);
+		len = strlen(key);
+	} else {
+		fp = fopen(KEY_FILE, "r");
+		if ((read = getline(&key, &len, fp)) == -1) {
+			printf("%s: getline: %s\n", __func__, strerror(errno));
+			return errno;
+		}
+		len = (read - 1);
+		fclose(fp);
+	}
+
+	if ((err = crypt_format(cd, CRYPT_LUKS1, "aes", "xts-plain64",
+	    NULL, NULL, 256 / 8, &params)) < 0) {
 		printf("%s: crypt_format: %s\n", __func__, strerror(errno));
 		syslog(LOG_ERR, "%s: crypt_format: %s\n",
 		       __func__, strerror(errno));
@@ -42,7 +62,8 @@ int format_crypt(unsigned char *device)
 		return err;
 	}
 
-	if ((err = crypt_keyslot_add_by_volume_key(cd, CRYPT_ANY_SLOT, NULL, 0, DES_KEY, 8)) < 0) {
+	if ((err = crypt_keyslot_add_by_volume_key(cd, CRYPT_ANY_SLOT, NULL,
+	    0, key, len)) < 0) {
 		printf("%s: crypt_keyslot_add_by_volume_key: %s\n",
 		       __func__, strerror(errno));
 		syslog(LOG_ERR, "%s: crypt_keyslot_add_by_volume_key: %s\n",
@@ -51,6 +72,7 @@ int format_crypt(unsigned char *device)
 		return err;
 	}
 
+	free(key);
 	printf("Device %s is now formatted for encrypted access.\n", device);
 	syslog(LOG_INFO, "Device %s is now formatted for encrypted access.\n", device);
 	crypt_free(cd);
@@ -62,14 +84,30 @@ int activate_crypt(unsigned char *device)
 	struct crypt_device *cd;
 	struct crypt_active_device cad;
 	unsigned char device_name[NAMELEN] = {0};
-	char *token, str[64] = {0}, *dup;
+	char *token, str[64] = {0}, *dup, *key;
+	FILE *fp;
 	int err;
+	size_t len;
+	ssize_t read;
 
 	dup = strdup(device);
 	token = strtok((char *)dup, "/");
 	while (token != NULL) {
 		sprintf(str, "%s", token);
 		token = strtok(NULL, "/");
+	}
+
+	if (access(KEY_FILE, F_OK) == -1) {
+		key = strdup(DEFAULT_DES_KEY);
+		len = strlen(key);
+	} else {
+		fp = fopen(KEY_FILE, "r");
+		if ((read = getline(&key, &len, fp)) == -1) {
+			printf("%s: getline: %s\n", __func__, strerror(errno));
+			return errno;
+		}
+		len = (read - 1);
+		fclose(fp);
 	}
 
 	sprintf(device_name, "crypt-%s", str);
@@ -93,7 +131,8 @@ int activate_crypt(unsigned char *device)
 		return err;
 	}
 
-	if ((err = crypt_activate_by_passphrase(cd, device_name, CRYPT_ANY_SLOT, DES_KEY, 8, 0)) < 0) {
+	if ((err = crypt_activate_by_passphrase(cd, device_name, CRYPT_ANY_SLOT,
+	    key, len, 0)) < 0) {
 		printf("%s: crypt_activate_by_passphrase: %s\n", __func__,
 		       strerror(errno));
 		syslog(LOG_ERR, "%s: crypt_activate_by_passphrase: %s\n",
@@ -102,6 +141,7 @@ int activate_crypt(unsigned char *device)
 		return err;
 	}
 
+	free(key);
 	printf("Device %s is now activated as /dev/mapper/%s.\n",
 	       device, device_name);
 	syslog(LOG_INFO, "Device %s is now activated as /dev/mapper/%s.\n",
@@ -144,3 +184,4 @@ int deactivate_crypt(unsigned char *device_name)
 	crypt_free(cd);
 	return 0;
 }
+#endif

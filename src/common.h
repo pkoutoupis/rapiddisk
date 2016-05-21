@@ -26,13 +26,16 @@
 
 #define UTIL			"rapiddisk"
 #define COPYRIGHT		"Copyright 2011-2016 Petros Koutoupis"
-#define VERSION_NUM	  	"4.1"
+#define VERSION_NUM	  	"4.2"
 #define SUCCESS			0x0
 #define NAMELEN			0x100
 #define BYTES_PER_SECTOR	0x200
 #define BUFSZ			0x10000
-#define DES_KEY			"05291983"
+#define DEFAULT_DES_KEY		"05291983"
 #define SYS_RDSK		"/sys/kernel/rapiddisk/mgmt"
+#define KEY_FILE		"/etc/rapiddisk/key"
+#define WRITETHROUGH		0
+#define WRITEAROUND		1
 
 typedef struct RD_PROFILE{	/* For RapidDisk device list     */
 	unsigned char device[16];

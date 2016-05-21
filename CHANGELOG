@@ -1,3 +1,10 @@
+*** Release 4.2 ***
+
+- kernel: Added Write-Around support to rapiddisk-cache.
+- kernel: Fixed LINUX_VERSION check for rapiddisk-cache to accommodate changes in 3.8.3.
+- utility: Added a NOCRYPT build flag.
+- utility: Added user definable keys for encryption setup.
+
 *** Release 4.1-2 ***
 
 - kernel: Readjusted misaligned discard request check to build on kernels older than 4.3.

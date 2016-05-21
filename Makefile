@@ -33,3 +33,9 @@ tools-uninstall:
 	cd ../conf; make uninstall; \
 	cd ../doc; make uninstall; \
 	cd ../www; make install; cd ..
+
+.PHONY: nocrypt
+nocrypt:
+	cd src; make nocrypt; \
+	cd ../module; make; \
+	cd ../test; make; cd ..

@@ -24,22 +24,24 @@ int short_list_devices(struct RD_PROFILE *, struct RC_PROFILE *);
 int detach_device(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *);
 int attach_device(struct RD_PROFILE *, unsigned long);
 int resize_device(struct RD_PROFILE *, unsigned char *, unsigned long);
-int cache_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, unsigned char *);
+int cache_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, unsigned char *, int);
 int cache_unmap(struct RC_PROFILE *, unsigned char *);
 int stat_cache_mapping(struct RC_PROFILE *, unsigned char *);
 int rdsk_flush(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
 int archive_rd_volume(struct RD_PROFILE *, unsigned char *, unsigned char *);
 int restore_rd_volume(struct RD_PROFILE *, unsigned char *, unsigned char *);
+#if !defined NO_CRYPT
 int format_crypt(unsigned char *);
 int activate_crypt(unsigned char *);
 int deactivate_crypt(unsigned char *);
+#endif
 
 void online_menu(char *string)
 {
 	printf("%s is an administration tool to manage the RapidDisk RAM disk devices and\n"
 	       "\tRapidDisk-Cache mappings.\n\n", string);
-	printf("Usage: %s [ -h | -v ] function [parameters: unit | size | start & end | "
-	       "src & dest |\n\t\tcache & source ]\n\n", string);
+	printf("Usage: %s [ -h | -v ] function [ parameters: unit | size | start & end | "
+	       "src & dest |\n\t\tcache & source | mode ]\n\n", string);
 	printf("Description:\n\t%s is a RapidDisk module management tool. The tool allows the\n"
 	       "\tuser to list all attached RapidDisk devices, with the ability to dynamically\n"
 	       "\tattach a new RapidDisk block devices and detach existing ones. It also is\n"
@@ -58,32 +60,42 @@ void online_menu(char *string)
 	       "\t--cache-map\t\tMap an RapidDisk device as a caching node to another block device.\n"
 	       "\t--cache-unmap\t\tMap an RapidDisk device as a caching node to anotther block device.\n"
 	       "\t--stat-cache\t\tObtain RapidDisk-Cache Mappings statistics.\n"
+#if !defined NO_CRYPT
 	       "\t--enable-crypt\t\tInitialize a storage volume for data encryption.\n"
 	       "\t--activate-crypt\tActivate an encryption volume.\n"
 	       "\t--deactivate-crypt\tDeactivate an encryption volume.\n\n");
+#else
+	       "\n");
+#endif
 	printf("Parameters:\n"
 	       "\t[size]\t\t\tSpecify desired size of attaching RAM disk device in MBytes.\n"
 	       "\t[unit]\t\t\tSpecify unit number of RAM disk device to detach.\n"
 	       "\t[src]\t\t\tSource path for archive/restore options.\n"
 	       "\t[dest]\t\t\tDestination path for arcive/restore options.\n"
 	       "\t[cache]\t\t\tSpecify RapidDisk node to use as caching volume.\n"
-	       "\t[source]\t\tSpecify block device to map cache to.\n\n");
+	       "\t[source]\t\tSpecify block device to map cache to.\n"
+	       "\t[mode]\t\t\tWrite Through (wt) or Write Around (wa) for cache.\n\n");
 	printf("Example:\n\trapiddisk --attach 64\n"
 	       "\trapiddisk --detach rd2\n"
 	       "\trapiddisk --resize rd2 128\n"
 	       "\trapiddisk --archive rd0 rd-052911.dat\n"
 	       "\trapiddisk --restore rd-052911.dat rd0\n"
 	       "\trapiddisk --cache-map rd1 /dev/sdb\n"
+	       "\trapiddisk --cache-map rd1 /dev/sdb wt\n"
 	       "\trapiddisk --cache-unmap rc_sdb\n"
 	       "\trapiddisk --flush rd2\n"
+#if !defined NO_CRYPT
 	       "\trapiddisk --enable-crypt /dev/rd0\n"
 	       "\trapiddisk --activate-crypt /dev/rd0\n"
 	       "\trapiddisk --deactivate-crypt /dev/mapper/crypt-rd0\n\n");
+#else
+	       "\n");
+#endif
 }
 
 int parse_input(int argcin, char *argvin[])
 {
-	int err = 0;
+	int err = 0, mode = WRITETHROUGH;
 	struct RD_PROFILE *rd;	 /* These are dummy pointers to  */
 	struct RC_PROFILE *rc;	 /* help create the linked  list */
 
@@ -142,8 +154,11 @@ int parse_input(int argcin, char *argvin[])
 		if (argcin != 4) goto invalid_out;
 		err = restore_rd_volume(rd, argvin[2], argvin[3]);
 	} else if (strcmp(argvin[1], "--cache-map") == 0) {
-		if (argcin != 4) goto invalid_out;
-		err = cache_map(rd, rc, argvin[2], argvin[3]);
+		if ((argcin < 4) || (argcin > 5)) goto invalid_out;
+		if (argcin == 5)
+			if (strcmp(argvin[4], "wa") == 0)
+				mode = WRITEAROUND;
+		err = cache_map(rd, rc, argvin[2], argvin[3], mode);
 	} else if (strcmp(argvin[1], "--cache-unmap") == 0) {
 		if (argcin != 3) goto invalid_out;
 		err = cache_unmap(rc, argvin[2]);
@@ -153,6 +168,7 @@ int parse_input(int argcin, char *argvin[])
 	} else if (strcmp(argvin[1], "--stat-cache") == 0) {
 		if (argcin != 3) goto invalid_out;
 		err = stat_cache_mapping(rc, argvin[2]);
+#if !defined NO_CRYPT
 	} else if (strcmp(argvin[1], "--enable-crypt") == 0) {
 		if (argcin != 3) goto invalid_out;
 		err = format_crypt(argvin[2]);
@@ -162,6 +178,7 @@ int parse_input(int argcin, char *argvin[])
 	} else if (strcmp(argvin[1], "--deactivate-crypt") == 0) {
 		if (argcin != 3) goto invalid_out;
 		err = deactivate_crypt(argvin[2]);
+#endif
 	} else {
 		goto invalid_out;
 	}
@@ -196,9 +213,14 @@ int main(int argc, char *argv[])
 	}
 	fread(string, BUFSZ, 1, fp);
 	fclose(fp);
+#if !defined NO_CRYPT
 	if ((strstr(string, "rapiddisk_cache") == NULL) || \
 	    (strstr(string, "dm_crypt") == NULL)) {
 		printf("Please ensure that the RapidDisk-Cache and dm_crypt modules "
+#else
+	if (strstr(string, "rapiddisk_cache") == NULL) {
+		printf("Please ensure that the RapidDisk-Cache module "
+#endif
 		       "are loaded and retry.\n");
 		return -EPERM;
 	}
