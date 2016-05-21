@@ -134,10 +134,10 @@ do_stop()
 
 	/sbin/cryptsetup isLuks $OCF_RESKEY_volume
 	if [ $? -eq 0 ]; then
-		cache="rc_rcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		cache="rc-wt_rcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
 		crypt=1
 	else
-		cache="rc_`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		cache="rc-wt_`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
 	fi
 	output=`$RDSK_bin --short-list|grep "$cache:"`
 	$RDSK_bin --cache-unmap $cache
@@ -155,7 +155,7 @@ do_status()
 	verify_all || exit $?
 
 	volume=`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
-	if [ -e "/dev/mapper/rc_$volume" ] || [ -e "/dev/mapper/rc_crypt-$volume" ]; then
+	if [ -e "/dev/mapper/rc-wt_$volume" ] || [ -e "/dev/mapper/rc-wt_crypt-$volume" ]; then
 		return $OCF_SUCCESS
 	fi
 	ocf_log debug "RapidDisk resource for $OCF_RESKEY_volume is not running."

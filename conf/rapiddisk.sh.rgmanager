@@ -155,10 +155,10 @@ do_stop()
 
 	/sbin/cryptsetup isLuks $OCF_RESKEY_volume
 	if [ $? -eq 0 ]; then
-		cache="rc_crypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		cache="rc-wt_crypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
 		crypt=1
 	else
-		cache="rc_`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		cache="rc-wt_`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
 	fi
 	output=`$RDSK_bin --short-list|grep "$cache:"`
 	$RDSK_bin --cache-unmap $cache
@@ -178,7 +178,7 @@ do_status()
 	clog_service_status $CLOG_INIT
 
 	volume=`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
-	if [ -e "/dev/mapper/rc_$volume" ] || [ -e "/dev/mapper/rc_crypt-$volume" ]; then
+	if [ -e "/dev/mapper/rc-wt_$volume" ] || [ -e "/dev/mapper/rc-wt_crypt-$volume" ]; then
 		clog_service_status $CLOG_SUCCEED
 		return 0
 	fi
