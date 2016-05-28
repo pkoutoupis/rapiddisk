@@ -32,7 +32,7 @@ Defines a standard RapidDisk HA failover.
 </shortdesc>
 
 <parameters>
-<parameter name="name" unique="0" required="0">
+<parameter name="name" unique="1" required="1">
 <longdesc lang="en">
 This is the name of the resource rule.
 </longdesc>
@@ -40,7 +40,7 @@ This is the name of the resource rule.
 <content type="string"/>
 </parameter>
 
-<parameter name="volume" unique="0" required="0">
+<parameter name="volume" unique="1" required="1">
 <longdesc lang="en">
 This is the absolute path of the storage device to map with RapidDisk-Cache.
 </longdesc>
@@ -48,12 +48,22 @@ This is the absolute path of the storage device to map with RapidDisk-Cache.
 <content type="string"/>
 </parameter>
 
-<parameter name="size" unique="0" required="0">
+<parameter name="size" unique="1" required="1">
 <longdesc lang="en">
 This is the size of the RapidDisk (and cache for RapidDisk-Cache) volume.
 </longdesc>
 <shortdesc lang="en">
 RapidDisk size.
+</shortdesc>
+<content type="string"/>
+</parameter>
+
+<parameter name="mode" unique="1" required="0">
+<longdesc lang="en">
+This caching mode: Write-Through (wt) or Write-Around (wa).
+</longdesc>
+<shortdesc lang="en">
+Caching mode: wt or wa.
 </shortdesc>
 <content type="string"/>
 </parameter>
@@ -104,6 +114,12 @@ do_start()
 		return $OCF_SUCCESS
 	fi
 
+        if [ -z "$OCF_RESKEY_mode" ]; then
+                mode="wt"
+        else
+                mode=$OCF_RESKEY_mode
+        fi
+
 	output=`$RDSK_bin --attach $OCF_RESKEY_size`
 	if [ $? -ne 0 ]; then
 		ocf_log info "Unable to create a RapidDisk volume of $OCF_RESKEY_size MB"
@@ -121,7 +137,7 @@ do_start()
 		volume="$OCF_RESKEY_volume"
 	fi
 	rdsk=`echo $output|sed -e 's/^.*rd/rd/' -e 's/ .*$//'`
-	$RDSK_bin --cache-map $rdsk $volume
+	$RDSK_bin --cache-map $rdsk $volume $mode
 
         return $OCF_SUCCESS
 }
@@ -132,12 +148,18 @@ do_stop()
 	verify_all || exit $?
 	crypt=0
 
+	if [ -z "$OCF_RESKEY_mode" ]; then
+		mode="wt"
+	else
+		mode=$OCF_RESKEY_mode
+	fi
+
 	/sbin/cryptsetup isLuks $OCF_RESKEY_volume
 	if [ $? -eq 0 ]; then
-		cache="rc-wt_rcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		cache="rc-${mode}_rcrypt-`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
 		crypt=1
 	else
-		cache="rc-wt_`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
+		cache="rc-${mode}_`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`"
 	fi
 	output=`$RDSK_bin --short-list|grep "$cache:"`
 	$RDSK_bin --cache-unmap $cache
@@ -154,8 +176,14 @@ do_status()
 {
 	verify_all || exit $?
 
+	if [ -z "$OCF_RESKEY_mode" ]; then
+		mode="wt"
+	else
+		mode=$OCF_RESKEY_mode
+	fi
+
 	volume=`echo $OCF_RESKEY_volume|rev|cut -d'/' -f1|rev`
-	if [ -e "/dev/mapper/rc-wt_$volume" ] || [ -e "/dev/mapper/rc-wt_crypt-$volume" ]; then
+	if [ -e "/dev/mapper/rc-${mode}_$volume" ] || [ -e "/dev/mapper/rc-${mode}_crypt-$volume" ]; then
 		return $OCF_SUCCESS
 	fi
 	ocf_log debug "RapidDisk resource for $OCF_RESKEY_volume is not running."

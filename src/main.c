@@ -186,7 +186,7 @@ int parse_input(int argcin, char *argvin[])
 out:
 	return err;
 invalid_out:
-	printf("Error. Invalid number of arguments entered.\n");
+	printf("Error. Invalid argument(s) entered.\n");
 	return -EINVAL;
 }
 

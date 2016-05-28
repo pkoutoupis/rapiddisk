@@ -1,3 +1,9 @@
+rapiddisk (4.2-2) released; urgency=medium
+
+* utility: Added more complex default DES key with backwards compatibility to legacy key.
+* ha: added write around support to HA resource agents.
+* documentation: corrections / clean up.
+
 rapiddisk (4.2-1) released; urgency=medium
 
 * kernel: Added Write-Around support to rapiddisk-cache.

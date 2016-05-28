@@ -1,3 +1,9 @@
+*** Release 4.2-2 ***
+
+- utility: Added more complex default DES key with backwards compatibility to legacy key.
+- ha: added write around support to HA resource agents.
+- documentation: corrections / clean up.
+
 *** Release 4.2 ***
 
 - kernel: Added Write-Around support to rapiddisk-cache.

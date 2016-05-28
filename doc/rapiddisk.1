@@ -4,7 +4,7 @@ rapiddisk \- An administration tool to manage the RapidDisk RAM disk devices and
 .SH SYNOPSIS
 rapiddisk [ -h | -v ] function [ parameters: unit | size | src & dest | cache & source | mode ]
 .SH DESCRIPTION
-rapiddisk is a RapidDisk module management tool. The tool allows the user to list all attached RapidDisk devices, with the ability to dynamically attach a new RapidDisk block devices and detach existing ones. It also is capable of mapping and unmapping an RapidDisk volumes as a Write-Through cache to any block device via the RapidDisk-Cache kernel module.
+rapiddisk is a RapidDisk module management tool. The tool allows the user to list all attached RapidDisk devices, with the ability to dynamically attach a new RapidDisk block devices and detach existing ones. It also is capable of mapping and unmapping an RapidDisk volumes as a Write-Through or Write Around cache to any block device via the RapidDisk-Cache kernel module.
 .SS Options
 .TP
 -h | --help
@@ -48,7 +48,7 @@ Map an RapidDisk device as a caching node to another block device.
 Obtain RapidDisk-Cache Mappings statistics.
 .TP
 --enable-crypt
-Initialize a storage volume for data encryption.
+Initialize a storage volume for data encryption. Please store them in /etc/rapiddisk/key, otherwise it will default to the built DES key provided by the utility.
 .TP
 --activate-crypt
 Activate an encryption volume. For user defined keys. Please store them in /etc/rapiddisk/key, otherwise it will default to the built DES key provided by the utility.

@@ -133,6 +133,14 @@ int activate_crypt(unsigned char *device)
 
 	if ((err = crypt_activate_by_passphrase(cd, device_name, CRYPT_ANY_SLOT,
 	    key, len, 0)) < 0) {
+		if (strcmp(key, DEFAULT_DES_KEY) == 0) {
+			err = crypt_activate_by_passphrase(cd, device_name,
+							   CRYPT_ANY_SLOT,
+							   LEGACY_DES_KEY,
+							   strlen(LEGACY_DES_KEY), 0);
+			if (err >= 0)
+				goto activated;
+		}
 		printf("%s: crypt_activate_by_passphrase: %s\n", __func__,
 		       strerror(errno));
 		syslog(LOG_ERR, "%s: crypt_activate_by_passphrase: %s\n",
@@ -141,6 +149,7 @@ int activate_crypt(unsigned char *device)
 		return err;
 	}
 
+activated:
 	free(key);
 	printf("Device %s is now activated as /dev/mapper/%s.\n",
 	       device, device_name);
