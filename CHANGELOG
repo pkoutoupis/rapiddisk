@@ -1,3 +1,8 @@
+*** Release 4.2-3 ***
+
+- utility: Fixed bug in make install with nocrypt enabled.
+- documentation: clean up.
+
 *** Release 4.2-2 ***
 
 - utility: Added more complex default DES key with backwards compatibility to legacy key.

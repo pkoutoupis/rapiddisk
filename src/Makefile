@@ -32,6 +32,14 @@ install: all
 	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
 	ln -s $(BIN) $(DESTDIR)/sbin/rxadm
 
+.PHONY: nocrypt-install
+nocrypt-install: nocrypt
+	@echo Installing all binary files.
+	$(MKDIR) $(DESTDIR)$(DIR)
+	$(CP) $(BIN) $(DESTDIR)$(DIR)
+	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
+	ln -s $(BIN) $(DESTDIR)/sbin/rxadm
+
 .PHONY: uninstall
 uninstall:
 	@echo Uninstalling rapiddisk files.

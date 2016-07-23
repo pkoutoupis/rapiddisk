@@ -2,7 +2,7 @@
  ** Copyright (c) 2011-2016 Petros Koutoupis
  ** All rights reserved.
  **
- ** filename: rdsk.c
+ ** filename: rapiddisk.c
  ** description: RapidDisk is an enhanced Linux RAM disk module to dynamically
  **	 create, remove, and resize non-persistent RAM drives.
  ** created: 1Jun11, petros@petroskoutoupis.com

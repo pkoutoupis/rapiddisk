@@ -47,7 +47,7 @@ void online_menu(char *string)
 	       "\tattach a new RapidDisk block devices and detach existing ones. It also is\n"
 	       "\tcapable of mapping and unmapping a RapidDisk volume to any block device via\n"
 	       "\tthe RapidDisk-Cache kernel module.\n\n", string);
-	printf("Function:\n"
+	printf("Functions:\n"
 	       "\t--attach\t\tAttach RAM disk device.\n"
 	       "\t--detach\t\tDetach RAM disk device.\n"
 	       "\t--list\t\t\tList all attached RAM disk devices.\n"
@@ -75,7 +75,7 @@ void online_menu(char *string)
 	       "\t[cache]\t\t\tSpecify RapidDisk node to use as caching volume.\n"
 	       "\t[source]\t\tSpecify block device to map cache to.\n"
 	       "\t[mode]\t\t\tWrite Through (wt) or Write Around (wa) for cache.\n\n");
-	printf("Example:\n\trapiddisk --attach 64\n"
+	printf("Example Usage:\n\trapiddisk --attach 64\n"
 	       "\trapiddisk --detach rd2\n"
 	       "\trapiddisk --resize rd2 128\n"
 	       "\trapiddisk --archive rd0 rd-052911.dat\n"

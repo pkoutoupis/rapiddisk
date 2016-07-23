@@ -12,7 +12,7 @@ Invoke the help menu.
 .TP
 -v | --version
 Display the version number.
-.SS Function
+.SS Functions
 .TP
 --attach
 Dynamically attach new RapidDisk devices.
@@ -48,13 +48,13 @@ Map an RapidDisk device as a caching node to another block device.
 Obtain RapidDisk-Cache Mappings statistics.
 .TP
 --enable-crypt
-Initialize a storage volume for data encryption. Please store them in /etc/rapiddisk/key, otherwise it will default to the built DES key provided by the utility.
+Initialize a storage volume for data encryption. Please store user defined keys in /etc/rapiddisk/key, otherwise it will default to the built-in DES key provided by the utility.
 .TP
 --activate-crypt
-Activate an encryption volume. For user defined keys. Please store them in /etc/rapiddisk/key, otherwise it will default to the built DES key provided by the utility.
+Activate an encryption volume. Please store user defined keys in /etc/rapiddisk/key, otherwise it will default to the built-in DES key provided by the utility.
 .TP
 --deactivate-crypt
-Deactivate an encryption volume.
+Deactivate an encrypted volume.
 .SS Parameters (if applicable)
 .TP
 [size]
@@ -77,7 +77,7 @@ Specify block device to map cache to.
 .TP
 [mode]
 Write Through (wt) or Write Around (wa) for cache.
-.SH EXAMPLES
+.SH EXAMPLE USAGE
 .TP
 rapiddisk --list
 .TP
