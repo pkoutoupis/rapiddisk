@@ -39,3 +39,11 @@ nocrypt:
 	cd src; make nocrypt; \
 	cd ../module; make; \
 	cd ../test; make; cd ..
+
+.PHONY: nocrypt-install
+nocrypt-install:
+	cd src; make nocrypt-install; \
+	cd ../module; make install; \
+	cd ../conf; make install; \
+	cd ../doc; make install; \
+	cd ../www; make install; cd ..
