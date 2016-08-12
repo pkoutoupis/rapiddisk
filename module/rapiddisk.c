@@ -667,7 +667,9 @@ static int attach_device(int size)
 	blk_queue_make_request(rdsk->rdsk_queue, rdsk_make_request);
 	blk_queue_logical_block_size(rdsk->rdsk_queue, BYTES_PER_SECTOR);
 	blk_queue_physical_block_size(rdsk->rdsk_queue, PAGE_SIZE);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)
+	blk_queue_write_cache(rdsk->rdsk_queue, true, false);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
 	blk_queue_flush(rdsk->rdsk_queue, REQ_FLUSH);
 #else
 	blk_queue_ordered(rdsk->rdsk_queue, QUEUE_ORDERED_TAG, NULL);
