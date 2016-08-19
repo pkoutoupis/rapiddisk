@@ -1,3 +1,8 @@
+*** Release 4.3 ***
+
+- kernel: Add support for the 4.7 kernel (patch supplied by Marcel Huber)
+- packaging: Updated DEB control for PHP changes between Ubuntu 14.04/16.04
+
 *** Release 4.2-3 ***
 
 - utility: Fixed bug in make install with nocrypt enabled.

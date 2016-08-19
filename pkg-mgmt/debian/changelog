@@ -1,3 +1,8 @@
+rapiddisk (4.3-1) released; urgency=medium
+
+* kernel: Add support for the 4.7 kernel (patch supplied by Marcel Huber)
+* packaging: Updated DEB control for PHP changes between Ubuntu 14.04/16.04
+
 rapiddisk (4.2-2) released; urgency=medium
 
 * utility: Added more complex default DES key with backwards compatibility to legacy key.
