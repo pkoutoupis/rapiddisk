@@ -1,6 +1,7 @@
 CP := cp
 RM := rm -f
-MKDIR := mkdir -pv
+MKDIR := mkdir -pv -m 755
+MAN_DIR := /usr/share/man/man1
 
 .PHONY: all
 all: 
@@ -9,13 +10,13 @@ all:
 .PHONY: install
 install: all
 	@echo Installing rapiddisk man page.
-	$(MKDIR) $(DESTDIR)/usr/share/man/man1/
-	$(CP) rapiddisk*.1 $(DESTDIR)/usr/share/man/man1/
+	$(MKDIR) $(DESTDIR)$(MAN_DIR)
+	$(CP) rapiddisk*.1 $(DESTDIR)$(MAN_DIR)/
 
 .PHONY: uninstall
 uninstall: 
 	@echo Uninstalling rapiddisk man page.
-	$(RM) $(DESTDIR)/usr/share/man/man1/rapiddisk*.1
+	$(RM) $(DESTDIR)$(MAN_DIR)/rapiddisk*.1
 
 .PHONY: clean
 clean:
