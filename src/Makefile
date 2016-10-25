@@ -30,7 +30,7 @@ install: all
 	$(MKDIR) $(DESTDIR)$(DIR)
 	$(CP) $(BIN) $(DESTDIR)$(DIR)
 	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
-	ln -s $(BIN) $(DESTDIR)/sbin/rxadm
+	ln -s $(BIN) $(DESTDIR)$(DIR)/rxadm
 
 .PHONY: nocrypt-install
 nocrypt-install: nocrypt
@@ -38,7 +38,7 @@ nocrypt-install: nocrypt
 	$(MKDIR) $(DESTDIR)$(DIR)
 	$(CP) $(BIN) $(DESTDIR)$(DIR)
 	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
-	ln -s $(BIN) $(DESTDIR)/sbin/rxadm
+	ln -s $(BIN) $(DESTDIR)$(DIR)/rxadm
 
 .PHONY: uninstall
 uninstall:
