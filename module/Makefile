@@ -1,4 +1,4 @@
-VERSION = 4.3
+VERSION = 4.4
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build

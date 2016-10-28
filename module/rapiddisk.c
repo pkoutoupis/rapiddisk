@@ -29,7 +29,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"4.3"
+#define VERSION_STR		"4.4"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -94,7 +94,11 @@ module_param(rd_max_nr, int, S_IRUGO);
 MODULE_PARM_DESC(rd_max_nr, " Maximum number of RAM Disks. (Default = 128)");
 
 static int rdsk_do_bvec(struct rdsk_device *, struct page *,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+			unsigned int, unsigned int, bool, sector_t);
+#else
 			unsigned int, unsigned int, int, sector_t);
+#endif
 static int rdsk_ioctl(struct block_device *, fmode_t,
 		      unsigned int, unsigned long);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
@@ -422,12 +426,20 @@ static void copy_from_rdsk(void *dst, struct rdsk_device *rdsk,
 }
 
 static int rdsk_do_bvec(struct rdsk_device *rdsk, struct page *page,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+			unsigned int len, unsigned int off, bool is_write,
+#else
 			unsigned int len, unsigned int off, int rw,
+#endif
 			sector_t sector){
 	void *mem;
 	int err = 0;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+	if (is_write) {
+#else
 	if (rw != READ) {
+#endif
 		err = copy_to_rdsk_setup(rdsk, sector, len);
 		if (err)
 			goto out;
@@ -437,7 +449,11 @@ static int rdsk_do_bvec(struct rdsk_device *rdsk, struct page *page,
 #else
 	mem = kmap_atomic(page, KM_USER0);
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+	if (!is_write) {
+#else
 	if (rw == READ) {
+#endif
 		copy_from_rdsk(mem + off, rdsk, sector, len);
 		flush_dcache_page(page);
 	} else {
@@ -466,7 +482,9 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 {
 	struct block_device *bdev = bio->bi_bdev;
 	struct rdsk_device *rdsk = bdev->bd_disk->private_data;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
 	int rw;
+#endif
 	sector_t sector;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 	struct bio_vec bvec;
@@ -490,8 +508,12 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 #endif
 
 	err = 0;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,336)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+	if (unlikely(bio_op(bio) == REQ_OP_DISCARD)) {
+#else
 	if (unlikely(bio->bi_rw & REQ_DISCARD)) {
+#endif
 		if (sector & ((PAGE_SIZE >> SECTOR_SHIFT) - 1) ||
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 		    bio->bi_iter.bi_size & ~PAGE_MASK)
@@ -511,16 +533,23 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 		goto out;
 	}
 #endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
 	rw = bio_rw(bio);
 	if (rw == READA)
 		rw = READ;
+#endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 	bio_for_each_segment(bvec, bio, iter) {
 		unsigned int len = bvec.bv_len;
 
 		err = rdsk_do_bvec(rdsk, bvec.bv_page, len,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+				   bvec.bv_offset, op_is_write(bio_op(bio)), sector);
+#else
 				   bvec.bv_offset, rw, sector);
+#endif
 #else
 	bio_for_each_segment(bvec, bio, i) {
 		unsigned int len = bvec->bv_len;

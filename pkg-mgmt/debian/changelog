@@ -1,3 +1,8 @@
+rapiddisk (4.4-1) released; urgency=medium
+
+* kernel: Update to 4.8 and 4.9 kernels.
+* build: Cleaned up Makefiles (thanks Marcel!)
+
 rapiddisk (4.3-1) released; urgency=medium
 
 * kernel: Add support for the 4.7 kernel (patch supplied by Marcel Huber)

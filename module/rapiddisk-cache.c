@@ -47,7 +47,7 @@
 	} \
 } while (0)
 
-#define VERSION_STR	"4.3"
+#define VERSION_STR	"4.4"
 #define DM_MSG_PREFIX	"rapiddisk-cache"
 
 #define READCACHE	1
@@ -167,7 +167,11 @@ int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where,
 	struct cache_context *dmc = job->dmc;
 	struct dm_io_request iorq;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+	iorq.bi_op = rw;
+#else
 	iorq.bi_rw = rw;
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 	iorq.mem.type = DM_IO_BIO;
 	iorq.mem.ptr.bio = bio;
@@ -768,7 +772,11 @@ static void cache_write(struct cache_context *dmc, struct bio *bio)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
 #define bio_barrier(bio)		((bio)->bi_rw & REQ_HARDBARRIER)
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+#define bio_barrier(bio)		((bio)->bi_opf & REQ_PREFLUSH)
+#else
 #define bio_barrier(bio)		((bio)->bi_rw & REQ_FLUSH)
+#endif
 #endif
 #endif
 #endif
@@ -1186,7 +1194,7 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 
 static struct target_type cache_target = {
 	.name    = "rapiddisk-cache",
-	.version = {4, 3, 0},
+	.version = {4, 4, 0},
 	.module  = THIS_MODULE,
 	.ctr	 = cache_ctr,
 	.dtr	 = cache_dtr,
@@ -1228,4 +1236,4 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Petros Koutoupis <petros@petroskoutoupis.com>");
 MODULE_DESCRIPTION("RapidDisk-Cache DM target is a write-through caching target with RapidDisk volumes.");
 MODULE_VERSION(VERSION_STR);
-MODULE_INFO(Copyright, "Copyright 2010 - 2015 Petros Koutoupis");
+MODULE_INFO(Copyright, "Copyright 2010 - 2016 Petros Koutoupis");
