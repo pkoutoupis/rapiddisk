@@ -1,13 +1,16 @@
-Author: Petros Koutoupis <petros@petroskoutoupis.com>
-Project Website: <http://www.rapiddisk.org>
+![RapidDisk Logo](http://www.rapiddisk.org/wp-content/uploads/2015/06/RapidDisk_Logo_new-300x173.png)
+
+RapidDisk
+=========
+
+- Author: Petros Koutoupis (<petros@petroskoutoupis.com>)
+- Project Website: <http://www.rapiddisk.org>
 
 Building and Installing the rapiddisk kernel modules and utilities
 ------------------------------------------------------------------
 
 Change into the project's parent directory path.
 
-> ** NOTE **
->
 > To build the rapiddisk management utility, you will need to have the `zlib`
 > and `libcryptsetup` libraries and zlib development files installed on your
 > host system.
@@ -102,5 +105,5 @@ Contact
 -------
 
 If you have any questions or concerns, do not contact
-Petros Koutoupis <petros@petroskoutoupis.com>. Instead, contact your
+Petros Koutoupis (<petros@petroskoutoupis.com>). Instead, contact your
 congressman or congresswoman. I am trying to be politically correct here.
