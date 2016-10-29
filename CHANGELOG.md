@@ -10,7 +10,7 @@
 
 ### Release 4.2-3 ###
 
-- utility: Fixed bug in make install with nocrypt enabled.
+- utility: Fixed bug in `make install` with `nocrypt` enabled.
 - documentation: clean up.
 
 ### Release 4.2-2 ###
@@ -21,9 +21,9 @@
 
 ### Release 4.2 ###
 
-- kernel: Added Write-Around support to rapiddisk-cache.
-- kernel: Fixed LINUX_VERSION check for rapiddisk-cache to accommodate changes in 3.8.3.
-- utility: Added a NOCRYPT build flag.
+- kernel: Added Write-Around support to `rapiddisk-cache`.
+- kernel: Fixed `LINUX_VERSION_CODE` check for `rapiddisk-cache` to accommodate changes in 3.8.3.
+- utility: Added a `nocrypt` build flag.
 - utility: Added user definable keys for encryption setup.
 
 ### Release 4.1-2 ###
@@ -33,13 +33,13 @@
 ### Release 4.1 ###
 
 - kernel: Refuse misaligned discard requests.
-- kernel: Convert ENOMEM to ENOSPC when cannot alloc pages.
+- kernel: Convert `ENOMEM` to `ENOSPC` when cannot alloc pages.
 - kernel: Added 4k physical block size attribute.
 
 ### Release 4.0-4 ###
 
 - Code cleanup.
-- packaging: Also need to remove CONFIG_BLK_DEV_RAM_COUNT from distro specific packages.
+- packaging: Also need to remove `CONFIG_BLK_DEV_RAM_COUNT` from distro specific packages.
 
 ### Release 4.0-3 ###
 
@@ -52,8 +52,8 @@
 
 ### Release 4.0 ###
 
-- Fixed libcryptsetup build error for RHEL6.
-- Renamed rxdsk/rxcache modules.
+- Fixed `libcryptsetup` build error for RHEL6.
+- Renamed `rxdsk`/`rxcache` modules.
 - Did massive cleanup of administration utility code.
 - Converted most (if not all) return codes to POSIX.1 error numbers.
 - Code cleanup in RESTful API.
@@ -88,33 +88,33 @@
 
 ### Release 3.5 ###
 
-- Forcing rxdsk driver to do the drive enumeration. Removed functionality from administration utility.
+- Forcing `rxdsk` driver to do the drive enumeration. Removed functionality from administration utility.
 - Appropriately initializing major number variable to 0 before registering block device module.
-- Administration utility now checks for sysfs entry of rxdsk and not module name in /proc/modules.
-- Converted sector size input in rxdsk module to KB input. Modified administration utility to this.
-- Fixed bug in check for total rxdsk devices in module.
+- Administration utility now checks for `sysfs` entry of `rxdsk` and not module name in `/proc/modules`.
+- Converted sector size input in `rxdsk` module to KB input. Modified administration utility to this.
+- Fixed bug in check for total `rxdsk` devices in module.
 
 ### Release 3.4-2 ###
 
 - Updated Makefile for tools install to add HA scripts.
-- Fixed bugs with HA scripts (both rgmanager and pacemaker).
+- Fixed bugs with HA scripts (both `rgmanager` and `pacemaker`).
 
 ### Release 3.4 ###
 
 - Added ability to autoload RapidDisk volumes during module insertion.
 - Fixed bug in RapidDisk (volatile) volume size definition across 32 to 64 bit types.
-- Making use of BIT() macro in the driver.
-- Removed RapidDisk-NV support. It was redundant with the recently kernel integrated pmem code.
+- Making use of `BIT()` macro in the driver.
+- Removed RapidDisk-NV support. It was redundant with the recently kernel integrated `pmem` code.
 
 ### Release 3.3 ###
 
 - Updated code for the 4.3 kernel.
-- Cleaned up the main Makefile.
+- Cleaned up the main `Makefile`.
 - Cleaned up entire driver code. Adjusted formatting.
 
 ### Release 3.2 ###
 
-- Replaced procfs management to sysfs.
+- Replaced `procfs` management to `sysfs`.
 - Identified & corrected a couple of memory leaks.
 - Massive code cleanup (intended for kernel submission).
 - Minor code optimizations (slight performance improvements).
@@ -127,9 +127,9 @@
 
 ### Release 3.1 ###
 
-- Fixed memory leak and an exit on failure before removing mutex during a procfs read.
+- Fixed memory leak and an exit on failure before removing mutex during a `procfs` read.
 - Added RESTful test file to test API from CLI.
-- Integrated encryption support via dm-crypt.
+- Integrated encryption support via `dm-crypt`.
 - Enabled RPM builds for Red Hat / CentOS 6 & 7.
 - Enabled RapidDisk YUM repo for Red Hat / CentOS 6 & 7 support.
 - Added Pacemaker and rgmanager resource files to enable HA support.
@@ -141,12 +141,12 @@
 - Updated administration binary and cleaned up a lot of its code.
 - Removed pyRxAdm graphical wrapper.
 - Fixed bug when erroring during RapidCache module insertion.
-- Cleaned up RapidCache module code (removed procfs entry).
+- Cleaned up RapidCache module code (removed `procfs` entry).
 
 ### Release 2.13 ###
 
-- Bug fix with rxadm binary and mapping RapidCache to pre-existing partitions.
-- Added more information to RapidDisk proc_fs file.
+- Bug fix with `rxadm` binary and mapping RapidCache to pre-existing partitions.
+- Added more information to RapidDisk `procfs` file.
 - Addressed compilation warnings for GCC 5.1
 
 ### Release 2.12 ###
@@ -155,17 +155,17 @@
 
 ### Release 2.11 ###
 
-- Updated rxcache for Red Hat 6.4 (device mapper conflict)
+- Updated `rxcache` for Red Hat 6.4 (device mapper conflict)
 - Addressed incorrect description of maximum number of rxdsks supported.
 
 ### Release 2.10 ###
 
 - Updated modules for kernel 3.10.
-- Updated Makefile for cross compiling install.
+- Updated `Makefile` for cross compiling install.
 
 ### Release 2.9.2 ###
 
-- Addressed a bug in rxdsk print statement (wrong type). Thanks go to Neo for discovering and patching it.
+- Addressed a bug in `rxdsk` print statement (wrong type). Thanks go to Neo for discovering and patching it.
 
 ### Release 2.9.1 ###
 
@@ -174,8 +174,8 @@
 
 ### Release 2.9 ###
 
-- Added better implementation of BLKFLSBUF ioctl to rxdsk module. This will "flush data" and truncate pages.
-- Added flush command to rxadm utility.
+- Added better implementation of `BLKFLSBUF` ioctl to rxdsk module. This will "flush data" and truncate pages.
+- Added flush command to `rxadm` utility.
 - Added support for Linux kernel 3.9. Tested on 3.9.2.
 
 ### Release 2.8 ###
@@ -190,66 +190,65 @@
 
 ### Release 2.6 ###
 
-- Minor rxcache kernel update: Make spinlocks less greedy by removing most of the disable ALL interupts spinlocks and replacing them with spinlocks to disable interrupts ONLY from bottom halves.
+- Minor `rxcache` kernel update: Make spinlocks less greedy by removing most of the disable ALL interupts spinlocks and replacing them with spinlocks to disable interrupts ONLY from bottom halves.
 
 ### Release 2.5 ###
 
 - Added support for building in 3.4 and later Linux kernels.
-- Update module Makefile to point to a different DESTDIR and KSRC (for cross-compiling)
+- Update module Makefile to point to a different `DESTDIR` and `KSRC` (for cross-compiling)
 
 ### Release 2.4 ###
 
 - Removed warning for RapidCache build. 
-- Addressed an issue with md raid 1 (mirror) and using rxdsk in which the md driver would routinely send i/o of size 0 and rxdsk would return an EIO, failing the array. Problem and solution found and provided by Dmitry Trikoz of Stratus Technologies.
-
+- Addressed an issue with `md` raid 1 (mirror) and using `rxdsk` in which the `md` driver would routinely send i/o of size 0 and `rxdsk` would return an `EIO`, failing the array. Problem and solution found and provided by Dmitry Trikoz of Stratus Technologies.
 
 ### Release 2.3 ###
 
-- Addressed warning generated for kernels 3.2 and later with the return type of the blk_queue_make_request request_queue function.
+- Addressed warning generated for kernels 3.2 and later with the return type of the `blk_queue_make_request` `request_queue` function.
 - Added comments and cleaned error messages in pyRxAdm.
-- Added comments to rxadm files.
+- Added comments to `rxadm` files.
 
 ### Release 2.2.1 ###
 
 - Added additional functionality to pyRxAdm (add, map, archive, restore) also added some more error checking. 
-- Fixed bug in rxadm (archive.c) during the archival process.
-- Updated version no. (cmd/common.h, rxcommon.h) and removed b's to move from beta to production.
-- Added a couple more switches to list version/help info of rxadm (main.c)
-- Cleaned up rxadm logo for pyRxAdm (rxadm_logo_48x48.png)
+- Fixed bug in `rxadm` (`archive.c`) during the archival process.
+- Updated version no. (`cmd/common.h`, `rxcommon.h`) and removed b's to move from beta to production.
+- Added a couple more switches to list version/help info of `rxadm` (`main.c`)
+- Cleaned up `rxadm` logo for pyRxAdm (`rxadm_logo_48x48.png`)
 
 ### Release 2.2 ###
 
 - Added cmd/pyRxAdm wrapper
-- Modifed short-list feature output and modified error statement (cmd.c, common.h)
-- Modified cmd/Makefile
-- Added logo for wrapper misc/rxadm_logo_48x48.png).
-- Updated version no. (rxcommon.h)
+- Modifed short-list feature output and modified error statement (`cmd.c`, `common.h`)
+- Modified `cmd/Makefile`
+- Added logo for wrapper (`misc/rxadm_logo_48x48.png`).
+- Updated version no. (`rxcommon.h`)
 
 ### Release 2.1 ###
 
-- Added --short-list support.
+- Added `--short-list` support.
 - Cleaned up debug messages on modules and added a couple of more.
 
 ### Release 2.0.1 ###
 
-- Fixed bug #5 relating to using the rxadm utility without any nodes listed in /dev/mapper.
-- Cleaned up a few messages in both rxdsk.c and rxcache.c.
+- Fixed bug #5 relating to using the `rxadm` utility without any nodes listed in `/dev/mapper`.
+- Cleaned up a few messages in both `rxdsk.c` and `rxcache.c`.
 
 ### Release 2.0 ###
 
-- Added rxcache write/read through caching module support.
-- Added rxcache management features in rxadm utility.
-- Modified input for archive/restore in rxadm to not use absolute path for rxdsk node. It maintains a form of consistency across all commands.
+- Added `rxcache` write/read through caching module support.
+- Added `rxcache` management features in `rxadm` utility.
+- Modified input for archive/restore in `rxadm` to not use absolute path for `rxdsk` node. It maintains a form of consistency across all commands.
 
 ### Release 1.4 ###
 
-- Fixed bug #4 by adding the BLKFLSBUF ioctl() command to process. This is specifically for when the user places an rxd node in an mdadm raid array.
+- Fixed bug #4 by adding the `BLKFLSBUF` ioctl() command to process. This is specifically for when the user places an rxd node in an `mdadm` raid array.
 	- Added a new test file to test the new ioctl command.
 - Cleaned up the Makefiles a bit and now the user can build and install the kernel module from the root of the package tree as opposed to doing it from the module directory.
 
 ### Release 1.3.2 ###
 
-- Fixed bug #3 which was for a warning during the build of rxadm on an x86_64 architecture. Thanks go to Gustaf Ullberg for discovering the root cause and providing a quick solution.
+- Fixed bug #3 which was for a warning during the build of `rxadm` on an x86_64 architecture. Thanks go to Gustaf Ullberg for discovering the root cause and providing a quick solution.
 
 ### Release 1.3.1r2 ###
 
@@ -258,14 +257,14 @@
 
 ### Release 1.3.1b ###
 
-- Added check in management utility to make sure that rxdsk node is present before archiving and restoring compressed/ decompressed images.
+- Added check in management utility to make sure that `rxdsk` node is present before archiving and restoring compressed/ decompressed images.
 
 ### Release 1.3b ###
 
 - Added new feature to archive/restore an rxd volume to/from a zlib compressed data file (many thanks to Simon Ball for suggesting a similar feature).
-- Added discard support.
-- Added an ioctl to handle an invalid query sent by later versions of udev that correspond with Linux kernels 2.6.35 and above.
-- Also integrated patch submitted by James Plummer of Stratus Technologies to address 32 bit limitation of rxadm utility rxdsk creation/resizing by casting the variable to a 64-bit type. Patch also included minor clean up code/optimizations for the same rxadm util.
+- Added `discard` support.
+- Added an ioctl to handle an invalid query sent by later versions of `udev` that correspond with Linux kernels 2.6.35 and above.
+- Also integrated patch submitted by James Plummer of Stratus Technologies to address 32 bit limitation of `rxadm` utility `rxdsk` creation/resizing by casting the variable to a 64-bit type. Patch also included minor clean up code/optimizations for the same `rxadm` util.
 
 ### Release 1.2b ###
 
@@ -274,7 +273,7 @@
 
 ### Release 1.1b ###
 
-- Added support for dynamic resizing of attached rxdsk volumes.
+- Added support for dynamic resizing of attached `rxdsk` volumes.
 
 ### Release 1.0b ###
 
