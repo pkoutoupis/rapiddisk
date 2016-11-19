@@ -57,7 +57,7 @@
 	} \
 } while (0)
 
-#define VERSION_STR	"4.4"
+#define VERSION_STR	"4.5"
 #define DM_MSG_PREFIX	"rapiddisk-cache"
 
 #define READCACHE	1
@@ -179,6 +179,7 @@ int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where,
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
 	iorq.bi_op = rw;
+	iorq.bi_op_flags = 0;
 #else
 	iorq.bi_rw = rw;
 #endif
@@ -1204,7 +1205,7 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 
 static struct target_type cache_target = {
 	.name    = "rapiddisk-cache",
-	.version = {4, 4, 0},
+	.version = {4, 5, 0},
 	.module  = THIS_MODULE,
 	.ctr	 = cache_ctr,
 	.dtr	 = cache_dtr,

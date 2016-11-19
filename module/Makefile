@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION = 4.4
+VERSION = 4.5
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build

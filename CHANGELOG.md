@@ -1,3 +1,8 @@
+### Release 4.5 ###
+
+- kernel: cache - Fixed I/O handler bug for 4.8+ kernels
+- documentation: Cleaned up formatting and license disclaimers (thanks Boian!)
+
 ### Release 4.4 ###
 
 - kernel: Update to 4.8 and 4.9 kernels.
