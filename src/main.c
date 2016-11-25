@@ -35,6 +35,7 @@ struct RC_PROFILE *search_cache(void);
 int check_uid(int);
 void online_menu(char *);
 int list_devices(struct RD_PROFILE *, struct RC_PROFILE *);
+int list_devices_json(struct RD_PROFILE *, struct RC_PROFILE *);
 int short_list_devices(struct RD_PROFILE *, struct RC_PROFILE *);
 int detach_device(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *);
 int attach_device(struct RD_PROFILE *, unsigned long);
@@ -67,6 +68,9 @@ void online_menu(char *string)
 	       "\t--detach\t\tDetach RAM disk device.\n"
 	       "\t--list\t\t\tList all attached RAM disk devices.\n"
 	       "\t--short-list\t\tList all attached RAM disk devices in script friendly format.\n"
+#if !defined NOJANSSON
+	       "\t--list-json\t\tList all attached RAM disk devices in JSON format.\n"
+#endif
 	       "\t--flush\t\t\tErase all data to a specified RapidDisk device "
 	       "\033[31;1m(dangerous)\033[0m.\n"
 	       "\t--resize\t\tDynamically grow the size of an existing RapidDisk device.\n\n"
@@ -139,6 +143,11 @@ int parse_input(int argcin, char *argvin[])
 		else
 			err = list_devices(rd, rc);
 		goto out;
+#if !defined NOJANSSON
+	} else if (strcmp(argvin[1], "--list-json") == 0) {
+		err = list_devices_json(rd, rc);
+		goto out;
+#endif
 	} else if (strcmp(argvin[1], "--short-list") == 0) {
 		if (rd == NULL)
 			printf("Unable to locate any RapidDisk devices.\n");

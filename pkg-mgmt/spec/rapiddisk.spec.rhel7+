@@ -1,29 +1,29 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 4.5
+Version: 5.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: gcc,make,kernel-headers,kernel-devel,dkms,cryptsetup-luks-libs,httpd,php
-BuildRequires: kernel-headers,kernel-devel,gcc,make,cryptsetup-luks-devel,zlib-devel
+Requires: gcc,make,kernel-headers,kernel-devel,dkms,cryptsetup-luks-libs,jansson
+BuildRequires: kernel-headers,kernel-devel,gcc,make,cryptsetup-luks-devel,zlib-devel,jansson-devel
 
 %description
 The RapidDisk software defined advanced RAM drive and storage
 caching solution. This suite includes a collection of modules,
-configuration files, and command line utilities, and a RESTful
-API for managing RapidDisk enabled storage volumes.
+configuration files, and command line utilities for managing
+RapidDisk enabled storage volumes.
 
 %package utils
-Summary: The RapidDisk administration utilities and API.
+Summary: The RapidDisk administration utilities.
 Group: Applications/System
 
 %description utils
 The RapidDisk software defined advanced RAM drive and storage
 caching solution. This packages includes a collection of
-configuration files, command line utilities, and a RESTful API
-for managing RapidDisk enabled storage volumes.
+configuration files, and command line utilities for managing
+RapidDisk enabled storage volumes.
 
 %prep
 %setup -T -D -n rapiddisk
@@ -44,7 +44,6 @@ mkdir -pv %{buildroot}/usr/src/rapiddisk-%{version}/
 cp -v dkms.conf  %{buildroot}/usr/src/rapiddisk-%{version}/
 cp -v {rapiddisk,rapiddisk-cache}.c  %{buildroot}/usr/src/rapiddisk-%{version}/
 cp -v Makefile  %{buildroot}/usr/src/rapiddisk-%{version}/
-cd ../www
 make DESTDIR=%{buildroot}/ install
 
 %post
@@ -74,17 +73,19 @@ rm -rf %{buildroot}
 /etc/*
 /sbin/*
 /usr/src/rapiddisk-*
-/var/www/html/*
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %files utils
 %defattr(-,root,root)
 /etc/*
 /sbin/*
-/var/www/html/*
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %changelog
+* Fri Nov 25 2016 Petros Koutoupis <petros@petroskoutoupis.com>
+- kernel: Remove kernel mainline specific code (intended for brd replacement).
+- utility: Add JSON output for RapidDisk configuration (requires libjansson).
+- www: remove fat-free (f3) RESTful API.
 * Sat Nov 19 2016 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: cache - Fixed I/O handler bug for 4.8+ kernels
 - documentation: Cleaned up formatting and license disclaimers (thanks Boian!)
@@ -100,7 +101,7 @@ rm -rf %{buildroot}
 * Tue May 17 2016 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: Added Write-Around support to rapiddisk-cache.
 - kernel: Fixed LINUX_VERSION check for rapiddisk-cache to accommodate changes in 3.8.3.
-- utility: Added a NOCRYPT build flag. 
+- utility: Added a NOCRYPT build flag.
 - utility: Added user definable keys for encryption setup.
 * Tue May 10 2016 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: Readjusted misaligned discard request check to build on kernels older than 4.3.

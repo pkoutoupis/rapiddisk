@@ -20,8 +20,11 @@ Dynamically attach new RapidDisk devices.
 --detach
 Dynamically detach RapidDisk devices.
 .TP
---list   
+--list
 List all attached RapidDisk devices.
+.TP
+--list-json
+List all attached RapidDisk devices in JSON format (only if enabled during compilation).
 .TP
 --short-list   
 List all attached RapidDisk devices in script friendly format.
@@ -48,13 +51,13 @@ Map an RapidDisk device as a caching node to another block device.
 Obtain RapidDisk-Cache Mappings statistics.
 .TP
 --enable-crypt
-Initialize a storage volume for data encryption. Please store user defined keys in /etc/rapiddisk/key, otherwise it will default to the built-in DES key provided by the utility.
+Initialize a storage volume for data encryption. Please store user defined keys in /etc/rapiddisk/key, otherwise it will default to the built-in DES key provided by the utility (only if enabled during compilation).
 .TP
 --activate-crypt
-Activate an encryption volume. Please store user defined keys in /etc/rapiddisk/key, otherwise it will default to the built-in DES key provided by the utility.
+Activate an encryption volume. Please store user defined keys in /etc/rapiddisk/key, otherwise it will default to the built-in DES key provided by the utility (only if enabled during compilation).
 .TP
 --deactivate-crypt
-Deactivate an encrypted volume.
+Deactivate an encrypted volume (only if enabled during compilation).
 .SS Parameters (if applicable)
 .TP
 [size]
@@ -80,6 +83,8 @@ Write Through (wt) or Write Around (wa) for cache.
 .SH EXAMPLE USAGE
 .TP
 rapiddisk --list
+.TP
+rapiddisk --list-json
 .TP
 rapiddisk --attach 64
 .TP

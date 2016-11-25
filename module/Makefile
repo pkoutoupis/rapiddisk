@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION = 4.5
+VERSION = 5.0
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build
@@ -29,7 +29,7 @@ obj-m += rapiddisk.o
 obj-m += rapiddisk-cache.o
 
 all:
-	KCPPFLAGS="-DNOTMAINLINE" $(MAKE) -C$(KSRC) M=$(PWD)
+	$(MAKE) -C$(KSRC) M=$(PWD)
 
 install:
 	$(MKDIR) $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
