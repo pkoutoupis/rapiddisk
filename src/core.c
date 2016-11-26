@@ -30,7 +30,7 @@
 #include <malloc.h>
 #include <linux/fs.h>
 #include <sys/ioctl.h>
-#if !defined NOJANSSON
+#if !defined NO_JANSSON
 #include <jansson.h>
 #endif
 
@@ -233,7 +233,7 @@ short_list_out:
 	return SUCCESS;
 }
 
-#if !defined NOJANSSON
+#if !defined NO_JANSSON
 
 /*
  * JSON output format:

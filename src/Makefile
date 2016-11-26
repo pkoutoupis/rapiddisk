@@ -85,7 +85,11 @@ crypt-nocrypt.o: crypt.c
 	$(CC) -c crypt.c -DNO_CRYPT -o crypt-nocrypt.o
 
 main.o: core.o archive.o crypt.o
+ifeq ($(RH_VER_NUM), 6)
+	$(CC) main.c -DNO_JANSSON -o rapiddisk core.o archive.o crypt.o -lz -lcryptsetup
+else
 	$(CC) main.c -o rapiddisk core.o archive.o crypt.o -lz -lcryptsetup -ljansson
+endif
 
 main-nocrypt.o: core.o archive.o crypt-nocrypt.o
 	$(CC) main.c -DNO_CRYPT -o rapiddisk core.o archive.o crypt-nocrypt.o -lz -ljansson

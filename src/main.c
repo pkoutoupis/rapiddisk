@@ -68,7 +68,7 @@ void online_menu(char *string)
 	       "\t--detach\t\tDetach RAM disk device.\n"
 	       "\t--list\t\t\tList all attached RAM disk devices.\n"
 	       "\t--short-list\t\tList all attached RAM disk devices in script friendly format.\n"
-#if !defined NOJANSSON
+#if !defined NO_JANSSON
 	       "\t--list-json\t\tList all attached RAM disk devices in JSON format.\n"
 #endif
 	       "\t--flush\t\t\tErase all data to a specified RapidDisk device "
@@ -143,7 +143,7 @@ int parse_input(int argcin, char *argvin[])
 		else
 			err = list_devices(rd, rc);
 		goto out;
-#if !defined NOJANSSON
+#if !defined NO_JANSSON
 	} else if (strcmp(argvin[1], "--list-json") == 0) {
 		err = list_devices_json(rd, rc);
 		goto out;
