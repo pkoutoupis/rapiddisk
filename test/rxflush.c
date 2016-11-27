@@ -31,7 +31,7 @@
 int main (){
     int fd, err;
 
-    if((fd = open("/dev/rxd0", O_WRONLY)) < 0){
+    if((fd = open("/dev/rd0", O_WRONLY)) < 0){
         printf("%s\n", strerror(errno));
         return errno;
     }
