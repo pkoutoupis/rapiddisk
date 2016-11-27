@@ -3,9 +3,11 @@ RapidDisk attached RAM disk raw block device. To compile: make
 
 To execute in place:
 
-./rxio
-./rxioctl
-./rxflush
+```console
+# ./rxio
+# ./rxioctl
+# ./rxflush
+```
 
 Note that they will only test the node named /dev/rd0. You can change
 this in the code if necessary and recompile.
