@@ -41,7 +41,7 @@ int main (){
     buf = (char *)malloc(XFER_SIZE);
     memset(buf, 0x2F, XFER_SIZE);
 
-    if((fd = open("/dev/rxd0", O_RDWR, O_NONBLOCK)) < 0){
+    if((fd = open("/dev/rd0", O_RDWR, O_NONBLOCK)) < 0){
         printf("%s\n", strerror(errno));
         return errno;
     }

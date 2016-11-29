@@ -39,7 +39,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"4.5"
+#define VERSION_STR		"5.0"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -76,21 +76,8 @@ static int rd_max_nr = MAX_RDSKS;
 static int max_sectors = DEFAULT_MAX_SECTS, nr_requests = DEFAULT_REQUESTS;
 static LIST_HEAD(rdsk_devices);
 static struct kobject *rdsk_kobj;
-#ifndef NOTMAINLINE
-#if CONFIG_BLK_DEV_RAM_COUNT
-static int rd_nr = CONFIG_BLK_DEV_RAM_COUNT;
-#else
-static int rd_nr = 0;
-#endif
-#if CONFIG_BLK_DEV_RAM_SIZE 
-int rd_size = CONFIG_BLK_DEV_RAM_SIZE;
-#else
-int rd_size = 0;
-#endif
-#else
 static int rd_nr = 0;
 int rd_size = 0;
-#endif
 
 module_param(max_sectors, int, S_IRUGO);
 MODULE_PARM_DESC(max_sectors, " Maximum sectors (in KB) for the request queue. (Default = 127)");

@@ -1,4 +1,4 @@
-SUBDIRS = src conf doc module test www
+SUBDIRS = src conf doc module test
 
 .PHONY: all
 all:
@@ -24,15 +24,13 @@ dkms:
 tools-install:
 	cd src; make; make install; \
 	cd ../conf; make install; \
-	cd ../doc; make install; \
-	cd ../www; make install; cd ..
+	cd ../doc; make install; cd ..
 
 .PHONY: tools-uninstall
 tools-uninstall:
 	cd src; make uninstall; \
 	cd ../conf; make uninstall; \
-	cd ../doc; make uninstall; \
-	cd ../www; make install; cd ..
+	cd ../doc; make uninstall; cd ..
 
 .PHONY: nocrypt
 nocrypt:
@@ -45,5 +43,4 @@ nocrypt-install:
 	cd src; make nocrypt-install; \
 	cd ../module; make install; \
 	cd ../conf; make install; \
-	cd ../doc; make install; \
-	cd ../www; make install; cd ..
+	cd ../doc; make install; cd ..

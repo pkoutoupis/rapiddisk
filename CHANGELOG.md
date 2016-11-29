@@ -1,3 +1,11 @@
+### Release 5.0 ###
+
+- kernel: Remove kernel mainline specific code (intended for brd replacement).
+- kernel: Change spinlock types to work better with virtio (github issue #13).
+- test: Updated tests to a work with the modern version of RapidDisk.
+- utility: Add JSON output for RapidDisk configuration (requires libjansson).
+- www: remove fat-free (f3) RESTful API.
+
 ### Release 4.5 ###
 
 - kernel: cache - Fixed I/O handler bug for 4.8+ kernels
