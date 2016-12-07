@@ -44,7 +44,6 @@ mkdir -pv %{buildroot}/usr/src/rapiddisk-%{version}/
 cp -v dkms.conf  %{buildroot}/usr/src/rapiddisk-%{version}/
 cp -v {rapiddisk,rapiddisk-cache}.c  %{buildroot}/usr/src/rapiddisk-%{version}/
 cp -v Makefile  %{buildroot}/usr/src/rapiddisk-%{version}/
-make DESTDIR=%{buildroot}/ install
 
 %post
 dkms add -m rapiddisk -v %{version}
