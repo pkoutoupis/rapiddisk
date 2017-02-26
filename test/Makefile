@@ -1,4 +1,4 @@
-# Copyright © 2016 Petros Koutoupis
+# Copyright © 2016 -2017 Petros Koutoupis
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
