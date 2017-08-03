@@ -705,7 +705,9 @@ static int attach_device(int size)
 	rdsk->rdsk_queue->nr_requests = nr_requests;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 	rdsk->rdsk_queue->limits.discard_granularity = PAGE_SIZE;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0)
 	rdsk->rdsk_queue->limits.discard_zeroes_data = 1;
+#endif
 	rdsk->rdsk_queue->limits.max_discard_sectors = UINT_MAX;
 	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, rdsk->rdsk_queue);
 #endif
