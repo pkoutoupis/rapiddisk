@@ -508,6 +508,8 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,336)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
 	if (unlikely(bio_op(bio) == REQ_OP_DISCARD)) {
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)
+	if ((unlikely(bio_op(bio) == REQ_OP_DISCARD)) || (unlikely(bio_op(bio) == REQ_OP_WRITE_ZEROES))) {
 #else
 	if (unlikely(bio->bi_rw & REQ_DISCARD)) {
 #endif
