@@ -56,7 +56,7 @@ int archive_rd_volume(struct RD_PROFILE *prof, unsigned char *src,
 	in = (char *)malloc(BUFSZ);
 	out = (char *)malloc(BUFSZ);
 
-	if ((in == '\0') || (out == '\0')) {
+	if ((in == NULL) || (out == NULL)) {
 		printf("Error. Unable to acquire memory space.\n");
 		return -ENOMEM;
 	}
@@ -150,7 +150,7 @@ int restore_rd_volume(struct RD_PROFILE *prof, unsigned char *src,
 	in = (char *)malloc(BUFSZ);
 	out = (char *)malloc(BUFSZ);
 
-	if ((in == '\0') || (out == '\0')) {
+	if ((in == NULL) || (out == NULL)) {
 		printf("Error. Unable to acquire memory space.\n");
 		return -ENOMEM;
 	}

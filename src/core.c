@@ -352,7 +352,7 @@ int detach_device(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned cha
 		rc_prof = rc_prof->next;
 	}
 
-	if ((buf = (char *)malloc(BUFSZ)) == '\0') {
+	if ((buf = (char *)malloc(BUFSZ)) == NULL) {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
 		return -1;
 	}
@@ -459,7 +459,7 @@ int cache_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 		rc_prof = rc_prof->next;
 	}
 
-	if ((buf = (char *)malloc(BUFSZ)) == '\0') {
+	if ((buf = (char *)malloc(BUFSZ)) == NULL) {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
 		return -1;
 	}
@@ -547,7 +547,7 @@ int cache_unmap(struct RC_PROFILE *prof, unsigned char *string)
 		return -ENOENT;
 	}
 
-	if ((buf = (char *)malloc(BUFSZ)) == '\0') {
+	if ((buf = (char *)malloc(BUFSZ)) == NULL) {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
 		return -ENOMEM;
 	}
@@ -599,7 +599,7 @@ int rdsk_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned char *s
 		rc_prof = rc_prof->next;
 	}
 
-	if ((buf = (char *)malloc(BUFSZ)) == '\0') {
+	if ((buf = (char *)malloc(BUFSZ)) == NULL) {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
 		return -ENOMEM;
 	}
