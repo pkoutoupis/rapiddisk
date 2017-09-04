@@ -1,3 +1,9 @@
+rapiddisk (5.1-1) released; urgency=medium
+
+* kernel: added support for 4.13 kernel.
+* kernel: added support for 4.12 kernel (thank you Marcel Huber).
+* utility: fixed compilation warnings (thank you Marcel Huber).
+
 rapiddisk (5.0-1) released; urgency=medium
 
 * kernel: Remove kernel mainline specific code (intended for brd replacement).

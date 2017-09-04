@@ -39,7 +39,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"5.0"
+#define VERSION_STR		"5.1"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -579,7 +579,11 @@ out:
 	return;
 #endif
 io_error:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+	bio->bi_status= err;
+#else
 	bio->bi_error = err;
+#endif
 	bio_io_error(bio);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 	return BLK_QC_T_NONE;

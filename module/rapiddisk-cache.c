@@ -57,7 +57,7 @@
 	} \
 } while (0)
 
-#define VERSION_STR	"5.0"
+#define VERSION_STR	"5.1"
 #define DM_MSG_PREFIX	"rapiddisk-cache"
 
 #define READCACHE	1
@@ -283,7 +283,11 @@ void rc_io_callback(unsigned long error, void *context)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 			bio_endio(bio, error);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+			bio->bi_status= error;
+#else
 			bio->bi_error = error;
+#endif
 			bio_io_error(bio);
 #endif
 			spin_lock_irqsave(&dmc->cache_spin_lock, flags);
@@ -570,7 +574,11 @@ static void cache_read_miss(struct cache_context *dmc,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 		bio_endio(bio, -EIO);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+		bio->bi_status = -EIO;
+#else
 		bio->bi_error = -EIO;
+#endif
 		bio_io_error(bio);
 #endif
 	} else {
@@ -616,7 +624,11 @@ static void cache_read(struct cache_context *dmc, struct bio *bio)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 			bio_endio(bio, -EIO);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+			bio->bi_status = -EIO;
+#else
 			bio->bi_error = -EIO;
+#endif
 			bio_io_error(bio);
 #endif
 		} else {
@@ -766,7 +778,11 @@ static void cache_write(struct cache_context *dmc, struct bio *bio)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 		bio_endio(bio, -EIO);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+		bio->bi_status= -EIO;
+#else
 		bio->bi_error = -EIO;
+#endif
 		bio_io_error(bio);
 #endif
 		return;
@@ -857,7 +873,11 @@ static void rc_uncached_io_callback(unsigned long error, void *context)
 	bio_endio(job->bio, error);
 #else
 	if (error) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+		job->bio->bi_status = error;
+#else
 		job->bio->bi_error = error;
+#endif
 		bio_io_error(job->bio);
 	} else {
 		bio_endio(job->bio);
@@ -878,7 +898,11 @@ static void rc_start_uncached_io(struct cache_context *dmc, struct bio *bio)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
 		bio_endio(bio, -EIO);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+		bio->bi_status= -EIO;
+#else
 		bio->bi_error = -EIO;
+#endif
 		bio_io_error(bio);
 #endif
 		return;
@@ -1212,7 +1236,7 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 
 static struct target_type cache_target = {
 	.name    = "rapiddisk-cache",
-	.version = {5, 0, 0},
+	.version = {5, 1, 0},
 	.module  = THIS_MODULE,
 	.ctr	 = cache_ctr,
 	.dtr	 = cache_dtr,

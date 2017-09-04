@@ -1,3 +1,9 @@
+### Release 5.1 ###
+
+- kernel: added support for 4.13 kernel.
+- kernel: added support for 4.12 kernel (thank you Marcel Huber).
+- utility: fixed compilation warnings (thank you Marcel Huber).
+
 ### Release 5.0 ###
 
 - kernel: Remove kernel mainline specific code (intended for brd replacement).
