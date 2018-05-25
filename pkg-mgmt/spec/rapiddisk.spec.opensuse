@@ -1,6 +1,6 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 5.1
+Version: 5.2
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
@@ -81,6 +81,10 @@ rm -rf %{buildroot}
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %changelog
+* Mon May 25 2018 Petros Koutoupis <petros@petroskoutoupis.com>
+- kernel: added support for 4.17 kernel.
+- build: Cleaned up module clean Makefile.
+- Updated copyright years.
 * Mon Sep 4 2017 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: added support for 4.13 kernel.
 - kernel: added support for 4.12 kernel (thank you Marcel Huber).

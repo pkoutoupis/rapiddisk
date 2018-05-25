@@ -1,3 +1,9 @@
+### Release 5.2 ###
+
+- kernel: added support for 4.17 kernel.
+- build: Cleaned up module clean Makefile.
+- Updated Copyright years.
+
 ### Release 5.1 ###
 
 - kernel: added support for 4.13 kernel.

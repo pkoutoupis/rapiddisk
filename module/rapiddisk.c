@@ -1,5 +1,5 @@
 /*******************************************************************************
- ** Copyright © 2011-2017 Petros Koutoupis
+ ** Copyright © 2011-2018 Petros Koutoupis
  ** All rights reserved.
  **
  ** This program is free software: you can redistribute it and/or modify
@@ -39,7 +39,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"5.1"
+#define VERSION_STR		"5.2"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -723,9 +723,17 @@ static int attach_device(int size)
 	rdsk->rdsk_queue->limits.discard_zeroes_data = 1;
 #endif
 	rdsk->rdsk_queue->limits.max_discard_sectors = UINT_MAX;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,17,0)
 	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, rdsk->rdsk_queue);
+#else
+	blk_queue_flag_set(QUEUE_FLAG_DISCARD, rdsk->rdsk_queue);
 #endif
+#endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,17,0)
 	queue_flag_set_unlocked(QUEUE_FLAG_NONROT, rdsk->rdsk_queue);
+#else
+	blk_queue_flag_set(QUEUE_FLAG_NONROT, rdsk->rdsk_queue);
+#endif
 
 	disk = rdsk->rdsk_disk = alloc_disk(1);
 	if (!disk)
@@ -847,4 +855,4 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Petros Koutoupis <petros@petroskoutoupis.com>");
 MODULE_DESCRIPTION("RapidDisk is an enhanced RAM disk block device driver.");
 MODULE_VERSION(VERSION_STR);
-MODULE_INFO(Copyright, "Copyright 2010 - 2017 Petros Koutoupis");
+MODULE_INFO(Copyright, "Copyright 2010 - 2018 Petros Koutoupis");

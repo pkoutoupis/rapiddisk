@@ -1,4 +1,4 @@
-# Copyright © 2011-2017 Petros Koutoupis
+# Copyright © 2011-2018 Petros Koutoupis
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION = 5.1
+VERSION = 5.2
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build
@@ -44,7 +44,7 @@ uninstall:
 
 clean:
 	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order
-	rm -rf .tmp_versions .rapiddisk.o.d *.unsigned *.sdtinfo.c .ctf/
+	rm -rf .tmp_versions .rapiddisk.o.d *.unsigned *.sdtinfo.c .ctf/ .cache.mk
 
 .PHONY: dkms
 dkms:

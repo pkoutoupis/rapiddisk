@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright © 2011-2017 Petros Koutoupis
+ ** Copyright © 2011 - 2018 Petros Koutoupis
  ** All rights reserved.
  **
  ** This file is part of RapidDisk.
@@ -40,8 +40,8 @@
 #include <syslog.h>
 
 #define UTIL			"rapiddisk"
-#define COPYRIGHT		"Copyright 2011-2017 Petros Koutoupis"
-#define VERSION_NUM	  	"5.1"
+#define COPYRIGHT		"Copyright 2011 - 2018 Petros Koutoupis"
+#define VERSION_NUM	  	"5.2"
 #define SUCCESS			0x0
 #define NAMELEN			0x100
 #define BYTES_PER_SECTOR	0x200
