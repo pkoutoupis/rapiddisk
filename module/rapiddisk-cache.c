@@ -14,6 +14,8 @@
  ** You should have received a copy of the GNU General Public License
  ** along with this program.  If not, see <http://www.gnu.org/licenses/>.
  **
+ ** SPDX-License-Identifier: GPL-2.0-only
+ **
  ** filename: rapiddisk-cache.c
  ** description: Device mapper target for block-level disk write-through and
  **	 read-ahead caching. This module is based on Flashcache-wt:
