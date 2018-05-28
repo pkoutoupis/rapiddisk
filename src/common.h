@@ -17,6 +17,8 @@
  ** You should have received a copy of the GNU General Public License
  ** along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
  **
+ ** SPDX-License-Identifier: GPL-2.0-or-later
+ **
  ** @project: rapiddisk
  **
  ** @filename: common.h

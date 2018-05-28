@@ -14,6 +14,8 @@
  ** You should have received a copy of the GNU General Public License
  ** along with this program.  If not, see <http://www.gnu.org/licenses/>.
  **
+ ** SPDX-License-Identifier: GPL-2.0-only
+ **
  ** filename: rapiddisk.c
  ** description: RapidDisk is an enhanced Linux RAM disk module to dynamically
  **	 create, remove, and resize non-persistent RAM drives.
