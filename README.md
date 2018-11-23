@@ -1,10 +1,6 @@
-![RapidDisk Logo](http://www.rapiddisk.org/wp-content/uploads/2015/06/RapidDisk_Logo_new-300x173.png)
+![RapidDisk](logo.png)
 
-RapidDisk
-=========
-
-- Author: Petros Koutoupis (<petros@petroskoutoupis.com>)
-- Project Website: <http://www.rapiddisk.org>
+Author: Petros Koutoupis (<petros@petroskoutoupis.com>)
 
 Building and Installing the rapiddisk kernel modules and utilities
 ------------------------------------------------------------------
@@ -25,13 +21,13 @@ line:
 # make
 ```
 
-To install rapiddisk (must execute with superuser rights: sudo):
+To install rapiddisk (must execute with superuser rights: `sudo`):
 
 ```console
 # make install
 ```
 
-To uninstall rapiddisk (must execute with superuser rights: sudo):
+To uninstall rapiddisk (must execute with superuser rights: `sudo`):
 
 ```console
 # make uninstall
