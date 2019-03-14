@@ -416,7 +416,8 @@ void kcached_client_destroy(struct cache_context *dmc)
 
 static unsigned long hash_block(struct cache_context *dmc, sector_t dbn)
 {
-	unsigned long set_number, value;
+	unsigned long set_number;
+	uint64_t value;
 
 	value = (dbn >> (dmc->block_shift + dmc->consecutive_shift));
 	set_number = do_div(value, (dmc->size >> dmc->consecutive_shift));

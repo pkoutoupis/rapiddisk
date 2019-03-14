@@ -45,7 +45,7 @@
 #define COPYRIGHT		"Copyright 2011 - 2018 Petros Koutoupis"
 #define VERSION_NUM	  	"5.2"
 #define SUCCESS			0x0
-#define NAMELEN			0x100
+#define NAMELEN			0x200
 #define BYTES_PER_SECTOR	0x200
 #define BUFSZ			0x10000
 #define DEFAULT_DES_KEY		"0529198310301978"
