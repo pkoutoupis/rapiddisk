@@ -45,7 +45,7 @@ uninstall:
 	depmod -a
 
 clean:
-	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order
+	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order *.o.*
 	rm -rf .tmp_versions .rapiddisk.o.d *.unsigned *.sdtinfo.c .ctf/ .cache.mk
 
 .PHONY: dkms
