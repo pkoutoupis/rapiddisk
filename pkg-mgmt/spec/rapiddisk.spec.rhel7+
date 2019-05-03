@@ -1,13 +1,13 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 5.2
+Version: 6.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: gcc,make,kernel-headers,kernel-devel,dkms,cryptsetup-luks-libs,jansson
-BuildRequires: kernel-headers,kernel-devel,gcc,make,cryptsetup-luks-devel,zlib-devel,jansson-devel
+Requires: gcc,make,kernel-headers,kernel-devel,dkms,jansson
+BuildRequires: kernel-headers,kernel-devel,gcc,make,jansson-devel
 
 %description
 The RapidDisk software defined advanced RAM drive and storage
@@ -51,9 +51,7 @@ dkms build -m rapiddisk -v %{version}
 dkms install -m rapiddisk -v %{version}
 echo -ne "#!/bin/sh\nmodprobe rapiddisk max_sectors=2048 nr_requests=1024 2>&1 >/dev/null" > /etc/sysconfig/modules/rapiddisk.modules
 echo -ne "\nmodprobe rapiddisk-cache 2>&1 >/dev/null" >> /etc/sysconfig/modules/rapiddisk.modules
-echo -ne "#!/bin/sh\nmodprobe dm-crypt 2>&1 >/dev/null" > /etc/sysconfig/modules/dm-crypt.modules
-chmod +x /etc/sysconfig/modules/{rapiddisk,dm-crypt}.modules
-sh /etc/sysconfig/modules/dm-crypt.modules
+chmod +x /etc/sysconfig/modules/rapiddisk.modules
 sh /etc/sysconfig/modules/rapiddisk.modules
 
 %preun
@@ -61,7 +59,6 @@ dkms remove -m rapiddisk -v %{version} --all|test 0
 
 %postun
 rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rapiddisk,rapiddisk-cache}.ko
-rm -f /etc/sysconfig/modules/dm-crypt.modules
 rm -f /etc/sysconfig/modules/rapiddisk.modules
 
 %clean
@@ -81,6 +78,11 @@ rm -rf %{buildroot}
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %changelog
+* Thu May 2 2019 Petros Koutoupis <petros@petroskoutoupis.com>
+- kernel: Fixed module compilation error with modern version of GCC.
+- utility: Remove dm-crypt code; Not sure why i had it in the first place. Doesn't really belong. Just use cryptsetup.
+- utility: Removed archive/restore code and dependency on zlib. Again, can just use dd and tar. Is anyone even using this?
+- misc: Updated licensing and logo location (thanks Boian!).
 * Mon May 25 2018 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: added support for 4.17 kernel.
 - build: Cleaned up module clean Makefile.

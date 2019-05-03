@@ -1,13 +1,13 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 5.2
+Version: 6.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: gcc,make,kernel-headers,kernel-devel,dkms,libcryptsetup4,libjansson4
-BuildRequires: kernel-headers,kernel-devel,gcc,make,cryptsetup-devel,zlib-devel,libjansson-devel
+Requires: gcc,make,kernel-headers,kernel-devel,dkms,libjansson4
+BuildRequires: kernel-headers,kernel-devel,gcc,make,libjansson-devel
 
 %description
 The RapidDisk software defined advanced RAM drive and storage
@@ -51,9 +51,7 @@ dkms build -m rapiddisk -v %{version}
 dkms install -m rapiddisk -v %{version}
 echo rapiddisk > /etc/modules-load.d/rapiddisk.conf
 echo rapiddisk-cache >> /etc/modules-load.d/rapiddisk.conf
-echo dm-crypt >> /etc/modules-load.d/rapiddisk.conf
 chmod 755 /etc/modules-load.d/rapiddisk.conf
-modprobe dm-crypt
 modprobe rapiddisk 
 modprobe rapiddisk-cache
 
@@ -81,6 +79,11 @@ rm -rf %{buildroot}
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %changelog
+* Thu May 2 2019 Petros Koutoupis <petros@petroskoutoupis.com>
+- kernel: Fixed module compilation error with modern version of GCC.
+- utility: Remove dm-crypt code; Not sure why i had it in the first place. Doesn't really belong. Just use cryptsetup.
+- utility: Removed archive/restore code and dependency on zlib. Again, can just use dd and tar. Is anyone even using this?
+- misc: Updated licensing and logo location (thanks Boian!).
 * Mon May 25 2018 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: added support for 4.17 kernel.
 - build: Cleaned up module clean Makefile.

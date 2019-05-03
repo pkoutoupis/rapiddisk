@@ -2,7 +2,7 @@
 .SH NAME
 rapiddisk \- An administration tool to manage the RapidDisk RAM disk devices and RapidDisk-Cache mappings.
 .SH SYNOPSIS
-rapiddisk [ -h | -v ] function [ parameters: unit | size | src & dest | cache & source | mode ]
+rapiddisk [ -h | -v ] function [ parameters: unit | size | cache & source | mode ]
 .SH DESCRIPTION
 rapiddisk is a RapidDisk module management tool. The tool allows the user to list all attached RapidDisk devices, with the ability to dynamically attach a new RapidDisk block devices and detach existing ones. It also is capable of mapping and unmapping an RapidDisk volumes as a Write-Through or Write Around cache to any block device via the RapidDisk-Cache kernel module.
 .SS Options
@@ -35,12 +35,6 @@ Erase all data to a specified RapidDisk device (dangerous).
 --resize
 Dynamically grow the size of an existing RapidDisk device.
 .TP
---archive
-Using zlib, archive an RapidDisk device to a data file.
-.TP
---restore
-Using zlib, restore an RapidDisk device from an archived data file.
-.TP
 --cache-map
 Map an RapidDisk device as a caching node to another block device.
 .TP
@@ -49,15 +43,6 @@ Map an RapidDisk device as a caching node to another block device.
 .TP
 --stat-cache
 Obtain RapidDisk-Cache Mappings statistics.
-.TP
---enable-crypt
-Initialize a storage volume for data encryption. Please store user defined keys in /etc/rapiddisk/key, otherwise it will default to the built-in DES key provided by the utility (only if enabled during compilation).
-.TP
---activate-crypt
-Activate an encryption volume. Please store user defined keys in /etc/rapiddisk/key, otherwise it will default to the built-in DES key provided by the utility (only if enabled during compilation).
-.TP
---deactivate-crypt
-Deactivate an encrypted volume (only if enabled during compilation).
 .SS Parameters (if applicable)
 .TP
 [size]
@@ -65,12 +50,6 @@ Specify desired size of attaching RAM disk device in MBytes.
 .TP
 [unit]
 Specify unit number of RAM disk device to detach.
-.TP
-[src]
-Source path for archive/restore options.
-.TP
-[dest]
-Destination path for arcive/restore options.
 .TP
 [cache]
 Specify RapidDisk node to use as caching volume.
@@ -92,10 +71,6 @@ rapiddisk --detach rd2
 .TP
 rapiddisk --resize rd2 128
 .TP
-rapiddisk --archive rd0 rd-052911.dat
-.TP
-rapiddisk --restore rd-052911.dat rd0
-.TP
 rapiddisk --cache-map rd1 /dev/sdb
 .TP
 rapiddisk --cache-map rd1 /dev/sdb wt
@@ -105,12 +80,6 @@ rapiddisk --cache-unmap rc_sdb
 rapiddisk --stat-cache rc_sdb
 .TP
 rapiddisk --flush rd2
-.TP
-rapiddisk --enable-crypt /dev/rd0
-.TP
-rapiddisk --activate-crypt /dev/rd0
-.TP
-rapiddisk --deactivate-crypt /dev/mapper/crypt-rd0
 .SH EXIT STATUS
 rapiddisk returns a zero exit status if no error occurs during operation. A non-zero value is returned on error.
 .SH AUTHORS

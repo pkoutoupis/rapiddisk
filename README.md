@@ -7,9 +7,8 @@ Building and Installing the rapiddisk kernel modules and utilities
 
 Change into the project's parent directory path.
 
-> To build the rapiddisk management utility, you will need to have the `zlib`,
-> `libcryptsetup` and `libjansson` development library files installed on your
-> host system.
+> To build the rapiddisk management utility, you will need to have the
+> `libjansson` development library files installed on your host system.
 >
 > You are required to having either the full kernel source or the kernel
 > headers installed for your current kernel revision.
@@ -81,13 +80,6 @@ Uninstalling:
 
 ```console
 # make tools-uninstall
-```
-
-Build without encryption support
---------------------------------
-
-```console
-# make nocrypt
 ```
 
 Installing modules for DKMS support

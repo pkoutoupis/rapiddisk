@@ -1,3 +1,10 @@
+### Release 6.0 ###
+
+- kernel: Fixed module compilation error with modern version of GCC.
+- utility: Remove dm-crypt code; Not sure why i had it in the first place. Doesn't really belong. Just use cryptsetup.
+- utility: Removed archive/restore code and dependency on zlib. Again, can just use dd and tar. Is anyone even using this?
+- misc: Updated licensing and logo location (thanks Boian!).
+
 ### Release 5.2 ###
 
 - kernel: added support for 4.17 kernel.
