@@ -40,20 +40,8 @@ DIR := /sbin
 all: rapiddisk
 	@echo Make has completed.
 
-.PHONY: nocrypt
-nocrypt: rapiddisk-nocrypt
-	@echo Make has completed.
-
 .PHONY: install
 install: all
-	@echo Installing all binary files.
-	$(MKDIR) $(DESTDIR)$(DIR)
-	$(CP) $(BIN) $(DESTDIR)$(DIR)
-	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
-	ln -s $(BIN) $(DESTDIR)$(DIR)/rxadm
-
-.PHONY: nocrypt-install
-nocrypt-install: nocrypt
 	@echo Installing all binary files.
 	$(MKDIR) $(DESTDIR)$(DIR)
 	$(CP) $(BIN) $(DESTDIR)$(DIR)
@@ -73,32 +61,14 @@ else
 	$(CC) -c core.c -o core.o
 endif
 
-archive.o: archive.c
-	$(CC) -c archive.c -o archive.o
-
-crypt.o: crypt.c
+main.o: core.o
 ifeq ($(RH_VER_NUM), 6)
-	$(CC) -c crypt.c -DLEGACY_CRYPT -o crypt.o
+	$(CC) main.c -DNO_JANSSON -o rapiddisk core.o
 else
-	$(CC) -c crypt.c -o crypt.o
+	$(CC) main.c -o rapiddisk core.o -ljansson
 endif
-
-crypt-nocrypt.o: crypt.c
-	$(CC) -c crypt.c -DNO_CRYPT -o crypt-nocrypt.o
-
-main.o: core.o archive.o crypt.o
-ifeq ($(RH_VER_NUM), 6)
-	$(CC) main.c -DNO_JANSSON -o rapiddisk core.o archive.o crypt.o -lz -lcryptsetup
-else
-	$(CC) main.c -o rapiddisk core.o archive.o crypt.o -lz -lcryptsetup -ljansson
-endif
-
-main-nocrypt.o: core.o archive.o crypt-nocrypt.o
-	$(CC) main.c -DNO_CRYPT -o rapiddisk core.o archive.o crypt-nocrypt.o -lz -ljansson
 
 rapiddisk: main.o
-
-rapiddisk-nocrypt: main-nocrypt.o
 
 .PHONY: clean
 clean:

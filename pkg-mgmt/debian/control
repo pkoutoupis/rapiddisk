@@ -1,9 +1,9 @@
 Package: rapiddisk
-Version: 5.2-1
+Version: 6.0-1
 Section: base
 Priority: optional
 Architecture: amd64
-Depends: dkms, gcc, zlib1g, cryptsetup-luks, libjansson4
+Depends: dkms, gcc, libjansson4
 Maintainer: Petros Koutoupis <petros@petroskoutoupis.com>
 Description: RapidDisk
  The RapidDisk software defined advanced RAM drive and storage

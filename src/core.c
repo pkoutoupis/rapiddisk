@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright © 2011 - 2018 Petros Koutoupis
+ ** Copyright © 2011 - 2019 Petros Koutoupis
  ** All rights reserved.
  **
  ** This file is part of RapidDisk.
@@ -127,8 +127,7 @@ struct RC_PROFILE *search_cache(void)
 	}
 
 	for (;n < num; n++) {
-		if ((strncmp(list[n]->d_name, "rc", 2) == SUCCESS) && \
-		    (strncmp(list[n]->d_name, "crypt", 5) != SUCCESS)) {
+		if (strncmp(list[n]->d_name, "rc", 2) == SUCCESS) {
 			prof = (struct RC_PROFILE *)calloc(1, sizeof(struct RC_PROFILE));
 			if (prof == NULL) {
 				printf("%s: calloc: %s\n", __func__, strerror(errno));

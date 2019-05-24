@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright © 2011 - 2018 Petros Koutoupis
+ ** Copyright © 2011 - 2019 Petros Koutoupis
  ** All rights reserved.
  **
  ** This file is part of RapidDisk.
@@ -46,13 +46,6 @@ int cache_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, unsigne
 int cache_unmap(struct RC_PROFILE *, unsigned char *);
 int stat_cache_mapping(struct RC_PROFILE *, unsigned char *);
 int rdsk_flush(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
-int archive_rd_volume(struct RD_PROFILE *, unsigned char *, unsigned char *);
-int restore_rd_volume(struct RD_PROFILE *, unsigned char *, unsigned char *);
-#if !defined NO_CRYPT
-int format_crypt(unsigned char *);
-int activate_crypt(unsigned char *);
-int deactivate_crypt(unsigned char *);
-#endif
 
 void online_menu(char *string)
 {
@@ -76,42 +69,22 @@ void online_menu(char *string)
 	       "\t--flush\t\t\tErase all data to a specified RapidDisk device "
 	       "\033[31;1m(dangerous)\033[0m.\n"
 	       "\t--resize\t\tDynamically grow the size of an existing RapidDisk device.\n\n"
-	       "\t--archive\t\tUsing zlib, archive an RapidDisk device to a data file.\n"
-	       "\t--restore\t\tUsing zlib, restore an RapidDisk device from an archived data file.\n\n"
 	       "\t--cache-map\t\tMap an RapidDisk device as a caching node to another block device.\n"
 	       "\t--cache-unmap\t\tMap an RapidDisk device as a caching node to anotther block device.\n"
-	       "\t--stat-cache\t\tObtain RapidDisk-Cache Mappings statistics.\n"
-#if !defined NO_CRYPT
-	       "\t--enable-crypt\t\tInitialize a storage volume for data encryption.\n"
-	       "\t--activate-crypt\tActivate an encryption volume.\n"
-	       "\t--deactivate-crypt\tDeactivate an encryption volume.\n\n");
-#else
-	       "\n");
-#endif
+	       "\t--stat-cache\t\tObtain RapidDisk-Cache Mappings statistics.\n\n");
 	printf("Parameters:\n"
 	       "\t[size]\t\t\tSpecify desired size of attaching RAM disk device in MBytes.\n"
 	       "\t[unit]\t\t\tSpecify unit number of RAM disk device to detach.\n"
-	       "\t[src]\t\t\tSource path for archive/restore options.\n"
-	       "\t[dest]\t\t\tDestination path for arcive/restore options.\n"
 	       "\t[cache]\t\t\tSpecify RapidDisk node to use as caching volume.\n"
 	       "\t[source]\t\tSpecify block device to map cache to.\n"
 	       "\t[mode]\t\t\tWrite Through (wt) or Write Around (wa) for cache.\n\n");
 	printf("Example Usage:\n\trapiddisk --attach 64\n"
 	       "\trapiddisk --detach rd2\n"
 	       "\trapiddisk --resize rd2 128\n"
-	       "\trapiddisk --archive rd0 rd-052911.dat\n"
-	       "\trapiddisk --restore rd-052911.dat rd0\n"
 	       "\trapiddisk --cache-map rd1 /dev/sdb\n"
 	       "\trapiddisk --cache-map rd1 /dev/sdb wt\n"
 	       "\trapiddisk --cache-unmap rc_sdb\n"
-	       "\trapiddisk --flush rd2\n"
-#if !defined NO_CRYPT
-	       "\trapiddisk --enable-crypt /dev/rd0\n"
-	       "\trapiddisk --activate-crypt /dev/rd0\n"
-	       "\trapiddisk --deactivate-crypt /dev/mapper/crypt-rd0\n\n");
-#else
-	       "\n");
-#endif
+	       "\trapiddisk --flush rd2\n\n");
 }
 
 int parse_input(int argcin, char *argvin[])
@@ -173,12 +146,6 @@ int parse_input(int argcin, char *argvin[])
 			printf("Unable to locate any RapidDisk devices.\n");
 		else
 			err = resize_device(rd, argvin[2], strtoul(argvin[3], (char **)NULL, 10));
-	} else if (strcmp(argvin[1], "--archive") == 0) {
-		if (argcin != 4) goto invalid_out;
-		err = archive_rd_volume(rd, argvin[2], argvin[3]);
-	} else if (strcmp(argvin[1], "--restore") == 0) {
-		if (argcin != 4) goto invalid_out;
-		err = restore_rd_volume(rd, argvin[2], argvin[3]);
 	} else if (strcmp(argvin[1], "--cache-map") == 0) {
 		if ((argcin < 4) || (argcin > 5)) goto invalid_out;
 		if (argcin == 5)
@@ -194,17 +161,6 @@ int parse_input(int argcin, char *argvin[])
 	} else if (strcmp(argvin[1], "--stat-cache") == 0) {
 		if (argcin != 3) goto invalid_out;
 		err = stat_cache_mapping(rc, argvin[2]);
-#if !defined NO_CRYPT
-	} else if (strcmp(argvin[1], "--enable-crypt") == 0) {
-		if (argcin != 3) goto invalid_out;
-		err = format_crypt(argvin[2]);
-	} else if (strcmp(argvin[1], "--activate-crypt") == 0) {
-		if (argcin != 3) goto invalid_out;
-		err = activate_crypt(argvin[2]);
-	} else if (strcmp(argvin[1], "--deactivate-crypt") == 0) {
-		if (argcin != 3) goto invalid_out;
-		err = deactivate_crypt(argvin[2]);
-#endif
 	} else {
 		goto invalid_out;
 	}
@@ -239,14 +195,8 @@ int main(int argc, char *argv[])
 	}
 	fread(string, BUFSZ, 1, fp);
 	fclose(fp);
-#if !defined NO_CRYPT
-	if ((strstr(string, "rapiddisk_cache") == NULL) || \
-	    (strstr(string, "dm_crypt") == NULL)) {
-		printf("Please ensure that the RapidDisk-Cache and dm_crypt modules "
-#else
 	if (strstr(string, "rapiddisk_cache") == NULL) {
 		printf("Please ensure that the RapidDisk-Cache module "
-#endif
 		       "are loaded and retry.\n");
 		return -EPERM;
 	}

@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright © 2011 - 2018 Petros Koutoupis
+ ** Copyright © 2011 - 2019 Petros Koutoupis
  ** All rights reserved.
  **
  ** This file is part of RapidDisk.
@@ -42,14 +42,12 @@
 #include <syslog.h>
 
 #define UTIL			"rapiddisk"
-#define COPYRIGHT		"Copyright 2011 - 2018 Petros Koutoupis"
-#define VERSION_NUM	  	"5.2"
+#define COPYRIGHT		"Copyright 2011 - 2019 Petros Koutoupis"
+#define VERSION_NUM	  	"6.0"
 #define SUCCESS			0x0
 #define NAMELEN			0x200
 #define BYTES_PER_SECTOR	0x200
 #define BUFSZ			0x10000
-#define DEFAULT_DES_KEY		"0529198310301978"
-#define LEGACY_DES_KEY		"05291983"
 #define SYS_RDSK		"/sys/kernel/rapiddisk/mgmt"
 #define KEY_FILE		"/etc/rapiddisk/key"
 #define WRITETHROUGH		0
@@ -67,7 +65,4 @@ typedef struct RC_PROFILE{	/* For RapidDisk-Cache node list */
 	unsigned char source[NAMELEN];
 	struct RC_PROFILE *next;
 } RC_PROFILE;
-
-#define ERROR(fmt, args...) syslog(LOG_ERR, "rapiddisk: %s:", fmt, __FUNCTION__, __LINE__, ##args);
-#define INFO(fmt, args...) syslog(LOG_INFO, "rapiddisk: %s:", fmt, __FUNCTION__, __LINE__, ##args);
 #endif
