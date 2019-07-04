@@ -1,3 +1,7 @@
+### Release 6.1 ###
+
+- kernel: Fix dkms version in module/Makefile.
+
 ### Release 6.0 ###
 
 - kernel: Fixed module compilation error with modern version of GCC.
