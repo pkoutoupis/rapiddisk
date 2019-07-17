@@ -48,10 +48,17 @@ clean:
 	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order *.o.*
 	rm -rf .tmp_versions .rapiddisk.o.d *.unsigned *.sdtinfo.c .ctf/ .cache.mk
 
-.PHONY: dkms
-dkms:
-	sudo mkdir -pv /usr/src/rapiddisk-$(VERSION)/
-	sudo cp -v * /usr/src/rapiddisk-$(VERSION)/
-	sudo dkms add -m rapiddisk -v $(VERSION)
-	sudo dkms build -m rapiddisk -v $(VERSION)
-	sudo dkms install -m rapiddisk -v $(VERSION)
+dkms-install:
+ifeq ($(shell dkms status rapiddisk/$(VERSION) -k $(KVER) | grep '$(KVER)' >/dev/null && echo 0 || echo 1 ),0)
+	$(error rapiddisk version $(VERSION) is already installed for kernel $(KVER). Use 'make dkms-remove' first.)
+else
+	dkms install rapiddisk/$(VERSION) -k $(KVER) .
+endif
+
+dkms-uninstall:
+ifeq ($(shell dkms status rapiddisk/$(VERSION) -k $(KVER) | grep '$(KVER)' >/dev/null && echo 0 || echo 1 ),0)
+	dkms remove rapiddisk/$(VERSION) -k $(KVER)
+else
+	$(error rapiddisk version $(VERSION) is not installed for kernel $(KVER).)
+endif
+

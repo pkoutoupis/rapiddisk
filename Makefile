@@ -16,9 +16,13 @@ uninstall:
 clean:
 	for i in $(SUBDIRS); do cd $$i; make clean; cd ..; done
 
-.PHONY: dkms
-dkms:
-	cd module; make dkms; cd ..
+.PHONY: dkms-install
+dkms-install:
+	cd module; make dkms-install; cd ..
+
+.PHONY: dkms-uninstall
+dkms-uninstall:
+	cd module; make dkms-uninstall; cd ..
 
 .PHONY: tools-install
 tools-install:
