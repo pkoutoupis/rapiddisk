@@ -50,7 +50,7 @@ clean:
 
 dkms-install:
 ifeq ($(shell dkms status rapiddisk/$(VERSION) -k $(KVER) | grep '$(KVER)' >/dev/null && echo 0 || echo 1 ),0)
-	$(error rapiddisk version $(VERSION) is already installed for kernel $(KVER). Use 'make dkms-remove' first.)
+	$(error rapiddisk version $(VERSION) is already installed for kernel $(KVER). Use 'make dkms-uninstall' first.)
 else
 	dkms install rapiddisk/$(VERSION) -k $(KVER) .
 endif
