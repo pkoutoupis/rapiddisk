@@ -26,6 +26,9 @@ ifeq ($(KVER),)
 endif
 
 MKDIR := mkdir -pv
+CP := cp -v
+DKMSFILES := $(shell ls *.c) dkms.conf Makefile
+DKMSDEST := /usr/src/rapiddisk-$(VERSION)
 
 obj-m += rapiddisk.o
 obj-m += rapiddisk-cache.o
@@ -50,8 +53,10 @@ clean:
 
 dkms-install:
 ifeq ($(shell dkms status rapiddisk/$(VERSION) -k $(KVER) | grep '$(KVER)' >/dev/null && echo 0 || echo 1 ),0)
-	$(error rapiddisk version $(VERSION) is already installed for kernel $(KVER). Use 'make dkms-uninstall' first.)
+	$(error rapiddisk version $(VERSION) is already installed for kernel $(KVER). Use 'make dkms-remove' first.)
 else
+	[ ! -d $(DKMSDEST) ] && $(MKDIR) $(DKMSDEST) || true
+	$(CP) $(DKMSFILES) $(DKMSDEST)
 	dkms install rapiddisk/$(VERSION) -k $(KVER) .
 endif
 
