@@ -18,7 +18,7 @@
  **
  ** filename: rapiddisk-cache.c
  ** description: Device mapper target for block-level disk write-through and
- **	 read-ahead caching. This module is based on Flashcache-wt:
+ **	 write-around caching. This module is based on Flashcache-wt:
  **	  Copyright 2010 Facebook, Inc.
  **	  Author: Mohan Srinivasan (mohan@facebook.com)
  **
