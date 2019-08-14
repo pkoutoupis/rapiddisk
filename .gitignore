@@ -1,0 +1,13 @@
+*.o
+*.o.*
+*.mod
+*.mod.*
+*.ko
+*.cmd
+*.mk
+*.symvers
+*.order
+src/rapiddisk
+test/rxflush
+test/rxio
+test/rxioctl
