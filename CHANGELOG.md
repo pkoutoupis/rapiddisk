@@ -1,7 +1,7 @@
 ### Release 6.0-1 ###
 
 - kernel: Fix dkms version in module/Makefile.
-- installer: modified dkms installation/removal procedures
+- installer: modified dkms installation/removal procedures (thank you Shub77)
 
 ### Release 6.0 ###
 
