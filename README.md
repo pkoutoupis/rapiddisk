@@ -86,7 +86,14 @@ Installing modules for DKMS support
 -----------------------------------
 
 ```console
-# make dkms
+# make dkms-install
+```
+
+Uninstalling modules for DKMS support
+-----------------------------------
+
+```console
+# make dkms-uninstall
 ```
 
 Contact
