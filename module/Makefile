@@ -48,11 +48,11 @@ uninstall:
 	depmod -a
 
 clean:
-	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order *.o.*
+	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order *.o.* built-in*
 	rm -rf .tmp_versions .rapiddisk.o.d *.unsigned *.sdtinfo.c .ctf/ .cache.mk
 
 dkms-install:
-ifeq (, $(shell which dkms))
+ifeq ($(shell which dkms 1>&2 2>/dev/null; echo $$?),1)
 	$(error "No dkms.")
 else
 ifeq ($(shell dkms status rapiddisk/$(VERSION) -k $(KVER) | grep '$(KVER)' >/dev/null && echo 0 || echo 1 ),0)
@@ -65,7 +65,7 @@ endif
 endif
 
 dkms-uninstall:
-ifeq (, $(shell which dkms))
+ifeq ($(shell which dkms 1>&2 2>/dev/null; echo $$?),1)
 	$(error "No dkms.")
 else
 ifeq ($(shell dkms status rapiddisk/$(VERSION) -k $(KVER) | grep '$(KVER)' >/dev/null && echo 0 || echo 1 ),0)
