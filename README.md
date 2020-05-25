@@ -95,10 +95,3 @@ Uninstalling modules for DKMS support
 ```console
 # make dkms-uninstall
 ```
-
-Contact
--------
-
-If you have any questions or concerns, do not contact
-Petros Koutoupis (<petros@petroskoutoupis.com>). Instead, contact your
-congressman or congresswoman. I am trying to be politically correct here.
