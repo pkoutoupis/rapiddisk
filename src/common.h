@@ -42,7 +42,7 @@
 
 #define UTIL			"rapiddisk"
 #define COPYRIGHT		"Copyright 2011 - 2020 Petros Koutoupis"
-#define VERSION_NUM	  	"6.0"
+#define VERSION_NUM	  	"6.1"
 #define SUCCESS			0
 #define INVALID_VALUE		-1
 #define NAMELEN			0x200

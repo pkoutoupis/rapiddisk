@@ -1,3 +1,12 @@
+### Release 6.1 ###
+
+- utility: fixed GCC compilation warnings
+- utility: code style cleanup
+- installer: additional dkms installation/removal cleanup (thank you Shub77)
+- documentation: fixed / updated README to reflect newer dkms installation/removal instructions
+- documentation: updated copyright dates
+- documentation: added AUTHORS file
+
 ### Release 6.0-1 ###
 
 - kernel: Fix dkms version in module/Makefile.

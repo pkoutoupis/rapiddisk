@@ -41,7 +41,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"6.0"
+#define VERSION_STR		"6.1"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128

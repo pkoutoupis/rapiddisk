@@ -1,3 +1,11 @@
+rapiddisk (6.1-1) released; urgency=medium
+* utility: fixed GCC compilation warnings
+* utility: code style cleanup
+* installer: additional dkms installation/removal cleanup (thank you Shub77)
+* documentation: fixed / updated README to reflect newer dkms installation/removal instructions
+* documentation: updated copyright dates
+* documentation: added AUTHORS file
+
 rapiddisk (6.0-1) released; urgency=medium
 
 * kernel: Fixed module compilation error with modern version of GCC.
