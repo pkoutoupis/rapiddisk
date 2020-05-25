@@ -1,6 +1,6 @@
 /* rxio.c */
 
-/** Copyright © 2016 - 2018 Petros Koutoupis
+/** Copyright © 2016 - 2020 Petros Koutoupis
  ** All rights reserved.
  **
  ** This program is free software: you can redistribute it and/or modify
@@ -34,21 +34,21 @@
 #define RD_GET_STATS     0x0529
 
 int main (){
-    int fd, max_sectors;
+	int fd, max_sectors;
 
-    if((fd = open("/dev/rd0", O_WRONLY)) < 0){
-        printf("%s\n", strerror(errno));
-        return errno;
-    }
+	if((fd = open("/dev/rd0", O_WRONLY)) < 0){
+		printf("%s\n", strerror(errno));
+		return errno;
+	}
 
-    if(ioctl(fd, RD_GET_STATS, &max_sectors) == -1){
-        printf("%s\n", strerror(errno));
-        return errno;
-    }else{
-        printf("max sectors allocated: %d\n", max_sectors);
-    }
+	if(ioctl(fd, RD_GET_STATS, &max_sectors) == -1){
+		printf("%s\n", strerror(errno));
+		return errno;
+	}else{
+		printf("max sectors allocated: %d\n", max_sectors);
+	}
 
-    close (fd);
+	close (fd);
 
-    return 0;
+	return 0;
 }

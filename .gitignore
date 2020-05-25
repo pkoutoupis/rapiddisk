@@ -1,3 +1,4 @@
+*.a
 *.o
 *.o.*
 *.mod
@@ -7,6 +8,7 @@
 *.mk
 *.symvers
 *.order
+*.swp
 src/rapiddisk
 test/rxflush
 test/rxio

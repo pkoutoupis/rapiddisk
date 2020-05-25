@@ -1,5 +1,5 @@
 /*******************************************************************************
- ** Copyright © 2011-2019 Petros Koutoupis
+ ** Copyright © 2011 - 2020 Petros Koutoupis
  ** All rights reserved.
  **
  ** This program is free software: you can redistribute it and/or modify
@@ -857,4 +857,4 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Petros Koutoupis <petros@petroskoutoupis.com>");
 MODULE_DESCRIPTION("RapidDisk is an enhanced RAM disk block device driver.");
 MODULE_VERSION(VERSION_STR);
-MODULE_INFO(Copyright, "Copyright 2010 - 2019 Petros Koutoupis");
+MODULE_INFO(Copyright, "Copyright 2010 - 2020 Petros Koutoupis");
