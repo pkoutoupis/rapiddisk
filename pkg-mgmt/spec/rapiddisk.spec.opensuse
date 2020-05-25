@@ -80,6 +80,7 @@ rm -rf %{buildroot}
 
 %changelog
 * Thu May 26 2020 Petros Koutoupis <petros@petroskoutoupis.com>
+- kernel: added support for 5.7 kernel
 - utility: fixed GCC compilation warnings
 - utility: code style cleanup
 - installer: additional dkms installation/removal cleanup (thank you Shub77)

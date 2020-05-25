@@ -1,5 +1,6 @@
 ### Release 6.1 ###
 
+- kernel: added support for 5.7 kernel
 - utility: fixed GCC compilation warnings
 - utility: code style cleanup
 - installer: additional dkms installation/removal cleanup (thank you Shub77)
