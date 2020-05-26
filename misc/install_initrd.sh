@@ -10,25 +10,29 @@ function ihelp () {
 	echo ""
 	echo "Where:"
 	echo ""
-	echo "boot_partition: the device mounted as '/' as in /etc/fstab"
-	echo "ramdisk_size: the size in MB of the ramdisk to be used as cache"
-	echo "kernel_version: the initrd file version you want to alter"
-	echo "--force: forces replacing already installed scripts"
+	echo "<boot_partition> is the device mounted as '/' as in /etc/fstab in the /dev/xxxn format"
+	echo "<ramdisk_size> is the size in MB of the ramdisk to be used as cache"
+	echo "<kernel_version> is needed to determine which initrd file to alter"
+	echo "--force forces replacing already installed scripts"
 	echo ""
-	echo "--uninstall: removes scripts and revert systems changes. Needs the --kernel option."
+	echo "--uninstall removes scripts and revert systems changes. Needs the '--kernel' option"
+	echo "            and make the script ignore all the other options."
 	echo ""
-	echo "Note: kernel_version is really important, if you end up with a system that"
-	echo "cannot boot, you can choose another kernel version from grub menu"
-	echo "and use the --uninstall command with the kernel_version not booting anymore"
+	echo "Note: kernel_version is really important: if you end up with a system that"
+	echo "cannot boot, you can choose another kernel version from the grub menu,"
+	echo "boot successfully, and use the --uninstall command with the kernel_version of"
+	echo "the non-booting kernel to restore it."
+	echo ""
 	echo "You can usually use 'uname -r' to obtain the current kernel version."
 	echo ""
+	echo "Warning: CentOS support is experimental!"
+	echo ""
 }
 
-# Credits: https://stackoverflow.com/questions/806906/how-do-i-test-if-a-variable-is-a-number-in-bash
+
 function is_num () {
        [ "$1" ] && [ -z "${1//[0-9]}" ]
-}
-
+} # Credits: https://stackoverflow.com/questions/806906/how-do-i-test-if-a-variable-is-a-number-in-bash
 
 function myerror () {
 	echo ""
@@ -59,7 +63,8 @@ case $i in
 	;;
 	--uninstall)
 		uninstall=1
-		shift # past argument with no value
+		break
+		# shift # past argument with no value
 	;;
 	--boot=*)
 		boot_device="${i#*=}"
@@ -86,6 +91,55 @@ fi
 
 cwd="$(pwd)"
 
+if [ -z $kernel_version ] ; then
+	myerror "Error: missing argument '--kernel'."
+fi
+
+if [ -z $uninstall ] ; then
+
+	if [ -z $ramdisk_size ] ; then
+		myerror "Error: missing argument '--size'."
+	fi
+
+	if [ -z $boot_device ] ; then
+		myerror "Error: missing argument '--boot'."
+	fi
+	
+	if ! is_num "$ramdisk_size" ; then
+		myerror "Error: The ramdisk size must be a positive integer. Exiting..."
+	fi
+fi
+
+
+# Check for CentOS
+if hostnamectl | grep "CentOS Linux" >/dev/null 2>/dev/null ; then
+	echo " - CentOS detected!"
+
+	if [ -z $uninstall ] ; then
+
+		echo " - Installing by copying 96rapiddisk into /usr/lib/dracut/modules.d/..."
+		rm -rf /usr/lib/dracut/modules.d/96rapiddisk
+		cp -rf 96rapiddisk /usr/lib/dracut/modules.d/
+		echo " - Editing /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh..."
+		sed -i 's/RAMDISKSIZE/'${ramdisk_size}'/' /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh
+		sed -i 's,BOOTDEVICE,'${boot_device}',' /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh
+		echo " - chmod +x /usr/lib/dracut/modules.d/96rapiddisk/* ..."
+		chmod +x /usr/lib/dracut/modules.d/96rapiddisk/*
+	else
+		echo " - Uninstalling by removing dir /usr/lib/dracut/modules.d/96rapiddisk..."
+		rm -rf /usr/lib/dracut/modules.d/96rapiddisk
+	fi
+	
+	echo " - Running 'dracut --kver $kernel_version -f'"
+	#dracut --add-drivers "rapiddisk rapiddisk-cache" --kver "$kernel_version" -f
+	dracut --kver "$kernel_version" -f
+	
+	echo " - Done under CentOS."
+	exit 0
+fi
+
+# Ubuntu
+
 if [ -d /etc/initramfs-tools/hooks ] && [ -d /etc/initramfs-tools/scripts/init-premount ] ; then
 	hook_dest=/etc/initramfs-tools/hooks/rapiddisk_hook
 	bootscript_dest=/etc/initramfs-tools/scripts/init-premount/rapiddisk
@@ -99,13 +153,10 @@ fi
 
 if [ ! -z $uninstall ] ; then
 	echo " - Starting uninstall process..."
-	if [ -z $kernel_version ] ; then
-	         myerror "Error: missing argument '--kernel'."
-	fi
 	if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] ; then
 		echo " - Uninstalling scripts..."
-		rm -f "$hook_dest/rapiddisk_hook" 2>/dev/null
-		rm -f "$bootscript_dest/rapiddisk" 2>/dev/null
+		rm -f "$hook_dest" 2>/dev/null
+		rm -f "$bootscript_dest" 2>/dev/null
 	fi
 	#if lsinitramfs /boot/initrd.img-"$kernel_version" | grep rapiddisk >/dev/null 2>/dev/null ; then
 	#	echo ""
@@ -118,21 +169,13 @@ if [ ! -z $uninstall ] ; then
 
 fi
 
-if [ -z "$boot_device" ] || [ -z "$ramdisk_size" ] || [ -z $kernel_version ]  ; then
-	myerror "Error: missing arguments."
-fi
-
 # TODO this check must be improved
 if ! echo "$boot_device" | grep -E '^/dev/[[:alpha:]]{1,4}[[:digit:]]{0,99}$' >/dev/null 2>/dev/null ; then
         myerror "Error: boot_device must be in the form '/dev/xxx' or '/dev/xxxn with n as a positive integer. Exiting..."
 fi
 
-if ! is_num "$ramdisk_size" ; then
-        myerror "Error: The ramdisk size must be a positive integer. Exiting..."
-fi
-
 if [ ! -x "${cwd}/hooks/rapiddisk_hook" ] || [ ! -x "${cwd}/scripts/init-premount/rapiddisk" ] ; then
-	myerror "Error: I can't find the scriptsi to be installed. Exiting..."
+	myerror "Error: I can't find the scripts to be installed. Exiting..."
 fi
 
 ##############################################################################
@@ -153,24 +196,23 @@ fi
 ##############################################################################
 
 if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] && [ -z $force ] ; then
-	myerror "Error: Initrd hook or boot scripts already installed. You may use the '--force' option. Exiting..."
+	myerror "Error: Initrd hook and/or boot scripts are already installed. You should use the '--force' option. Exiting..."
 else
 	echo " - Copying ${cwd}/hooks/rapiddisk_hook to ${hook_dest}..."
 	if ! cp "${cwd}/hooks/rapiddisk_hook" "${hook_dest}" ; then
 		myerror "Error: Could not copy rapiddisk_hook to ${hook_dest}. Exiting..."
 	fi
 	chmod +x "${hook_dest}"	
+	
 	echo " - Copying ${cwd}/scripts/init-premount/rapiddisk to ${bootscript_dest}..."
-
-	# TODO there are many better ways, I suppose...
-	rapiddisk_boot_script="$(cat ${cwd}/scripts/init-premount/rapiddisk | sed -r 's/RAMDISKSIZE/'${ramdisk_size}'/' | \
-		sed -r 's,BOOTDEVICE,'${boot_device}',')"
-
-	if ! echo "$rapiddisk_boot_script" | tee "${bootscript_dest}" >/dev/null ; then
-		myerror "Error: Could not copy rapiddisk to ${bootscript_dest}. Exiting..."
+	if ! cp "${cwd}/scripts/init-premount/rapiddisk" "${bootscript_dest}" ; then
+		myerror "Error: Could not copy rapiddisk_hook to ${bootscript_dest}. Exiting..."
 	fi
-	chmod +x "${bootscript_dest}"
+	
+	sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${bootscript_dest}"
+	sed -i 's,BOOTDEVICE,'"${boot_device}"',' "${bootscript_dest}"
 
+	chmod +x "${bootscript_dest}"
 fi
 
 finalstuff
