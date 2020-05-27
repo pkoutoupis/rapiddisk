@@ -6,7 +6,7 @@ ihelp()  {
     # echo
     echo "Usage:"
     echo "$(basename "$0") --boot=<boot_partition> --size=<ramdisk_size> --kernel=<kernel_version> [--force]"
-    echo "$(basename "$0") --kernel=<kernel_version> --uninstall"
+    echo "$(basename "$0") --kernel=<kernel_version> --uninstall [--force]"
     echo ""
     echo "Where:"
     echo ""
@@ -17,6 +17,7 @@ ihelp()  {
     echo ""
     echo "--uninstall removes scripts and revert systems changes. Needs the '--kernel' option"
     echo "            and make the script ignore all the other options."
+	echo "--force issue the rm command even if the install dir seems not to exists"
     echo ""
     echo "Note: kernel_version is really important: if you end up with a system that"
     echo "cannot boot, you can choose another kernel version from the grub menu,"
@@ -102,15 +103,15 @@ fi
 
 # if we are NOT uninstalling we need some more checks
 if [ -z $uninstall ]; then
+	if [ -z "$boot_device" ]; then
+        myerror "Error: missing argument '--boot'."
+    fi
+
     if [ -z "$ramdisk_size" ]; then
         myerror "Error: missing argument '--size'."
     fi
 
-    if [ -z "$boot_device" ]; then
-        myerror "Error: missing argument '--boot'."
-    fi
-
-    if ! is_num "$ramdisk_size"; then
+	if ! is_num "$ramdisk_size"; then
         myerror "Error: The ramdisk size must be a positive integer. Exiting..."
     fi
 
@@ -128,7 +129,9 @@ if hostnamectl | grep "CentOS Linux" > /dev/null 2> /dev/null; then
 
     if [ -z $uninstall ]; then
         echo " - Installing by copying 96rapiddisk into /usr/lib/dracut/modules.d/..."
-        rm -rf /usr/lib/dracut/modules.d/96rapiddisk
+        if [ -d /usr/lib/dracut/modules.d/96rapiddisk ] && [ -z $force ] ; then
+            myerror "Error: /usr/lib/dracut/modules.d/96rapiddisk already exists, use '--force'. Exiting..."
+        fi
         cp -rf "${cwd}"/centos/96rapiddisk /usr/lib/dracut/modules.d/
         echo " - Editing /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh..."
         sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh
@@ -137,6 +140,9 @@ if hostnamectl | grep "CentOS Linux" > /dev/null 2> /dev/null; then
         chmod +x /usr/lib/dracut/modules.d/96rapiddisk/*
     else
         echo " - Uninstalling by removing dir /usr/lib/dracut/modules.d/96rapiddisk..."
+        if [ ! -d /usr/lib/dracut/modules.d/96rapiddisk ] && [ -z $force ] ; then
+            myerror "Error: /usr/lib/dracut/modules.d/96rapiddisk does not exist, use '--force'. Exiting..."
+        fi
         rm -rf /usr/lib/dracut/modules.d/96rapiddisk
     fi
 
