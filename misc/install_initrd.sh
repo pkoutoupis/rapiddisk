@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ihelp () {
+ihelp()  {
 
     # echo "$(basename $0) - installs hook and boot script to enable rapiddisk cache on boot volume."
     # echo
@@ -30,14 +30,13 @@ ihelp () {
 
 }
 
+is_num()  {
 
-is_num () {
-
-    [ "$1" ] && [ -z "${1//[0-9]}" ]
+    [ "$1" ] && [ -z "${1//[0-9]/}" ]
 
 } # Credits: https://stackoverflow.com/questions/806906/how-do-i-test-if-a-variable-is-a-number-in-bash
 
-myerror () {
+myerror()  {
 
     echo ""
     echo "$1"
@@ -47,7 +46,7 @@ myerror () {
 
 }
 
-finalstuff () {
+finalstuff()  {
 
     echo " - Updating initramfs for kernel version ${kernel_version}..."
     echo ""
@@ -61,73 +60,73 @@ finalstuff () {
 
 }
 
-for i in "$@" ; do
+for i in "$@"; do
     case $i in
-      --kernel=*)
+        --kernel=*)
             kernel_version="${i#*=}"
             shift # past argument=value
-      ;;
-      --uninstall)
+            ;;
+        --uninstall)
             uninstall=1
             # shift # past argument with no value
-      ;;
-      --boot=*)
+            ;;
+        --boot=*)
             boot_device="${i#*=}"
             shift # past argument=value
-      ;;
-      --size=*)
+            ;;
+        --size=*)
             ramdisk_size="${i#*=}"
             shift # past argument=value
-      ;;
-      --force)
+            ;;
+        --force)
             force=1
             shift # past argument with no value
-      ;;
-      *)
+            ;;
+        *)
             myerror "Error: Unknown argument. Exiting..."
             # unknown option
-      ;;
+            ;;
     esac
 done # Credits https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
 
-if ! whoami | grep root 2>/dev/null 1>/dev/null ; then
+if ! whoami | grep root 2> /dev/null 1> /dev/null; then
     myerror "Sorry, this must be run as root."
 fi
 
 cwd="$(dirname $0)"
 
 # This option is always mandatory (ubuntu/centos installing/uninstalling) so it is checked before all the others
-if [ -z "$kernel_version" ] ; then
+if [ -z "$kernel_version" ]; then
     myerror "Error: missing argument '--kernel'."
 fi
 
 # if we are NOT uninstalling we need some more checks
-if [ -z $uninstall ] ; then
-    if [ -z "$ramdisk_size" ] ; then
+if [ -z $uninstall ]; then
+    if [ -z "$ramdisk_size" ]; then
         myerror "Error: missing argument '--size'."
     fi
 
-    if [ -z "$boot_device" ] ; then
+    if [ -z "$boot_device" ]; then
         myerror "Error: missing argument '--boot'."
     fi
 
-    if ! is_num "$ramdisk_size" ; then
+    if ! is_num "$ramdisk_size"; then
         myerror "Error: The ramdisk size must be a positive integer. Exiting..."
     fi
 
     # TODO this check must be improved
-    if ! echo "$boot_device" | grep -E '^/dev/[[:alpha:]]{1,4}[[:digit:]]{0,99}$' >/dev/null 2>/dev/null ; then
+    if ! echo "$boot_device" | grep -E '^/dev/[[:alpha:]]{1,4}[[:digit:]]{0,99}$' > /dev/null 2> /dev/null; then
         myerror "Error: boot_device must be in the form '/dev/xxx' or '/dev/xxxn with n as a positive integer. Exiting..."
     fi
 fi
 
 # Looks for the OS
-if hostnamectl | grep "CentOS Linux" >/dev/null 2>/dev/null ; then
+if hostnamectl | grep "CentOS Linux" > /dev/null 2> /dev/null; then
 
     # CentOS
     echo " - CentOS detected!"
 
-    if [ -z $uninstall ] ; then
+    if [ -z $uninstall ]; then
         echo " - Installing by copying 96rapiddisk into /usr/lib/dracut/modules.d/..."
         rm -rf /usr/lib/dracut/modules.d/96rapiddisk
         cp -rf "${cwd}"/centos/96rapiddisk /usr/lib/dracut/modules.d/
@@ -148,46 +147,46 @@ if hostnamectl | grep "CentOS Linux" >/dev/null 2>/dev/null ; then
     echo " - Done under CentOS."
     exit 0
 
-elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null ; then
+elif hostnamectl | grep "Ubuntu" > /dev/null 2> /dev/null; then
 
     # Ubuntu
     echo " - Ubuntu detected!"
 
     # These checks are intended to find the best place to put the scripts under Ubuntu
-    if [ -d /etc/initramfs-tools/hooks ] && [ -d /etc/initramfs-tools/scripts/init-premount ] ; then
-      hook_dest=/etc/initramfs-tools/hooks/rapiddisk_hook
-      bootscript_dest=/etc/initramfs-tools/scripts/init-premount/rapiddisk
-    elif [ -d /usr/share/initramfs-tools/hooks ] && [ -d /usr/share/initramfs-tools/scripts/init-premount ] ; then
-      hook_dest=/usr/share/initramfs-tools/hooks/rapiddisk_hook
-      bootscript_dest=/usr/share/initramfs-tools/scripts/init-premount/rapiddisk
+    if [ -d /etc/initramfs-tools/hooks ] && [ -d /etc/initramfs-tools/scripts/init-premount ]; then
+        hook_dest=/etc/initramfs-tools/hooks/rapiddisk_hook
+        bootscript_dest=/etc/initramfs-tools/scripts/init-premount/rapiddisk
+    elif [ -d /usr/share/initramfs-tools/hooks ] && [ -d /usr/share/initramfs-tools/scripts/init-premount ]; then
+        hook_dest=/usr/share/initramfs-tools/hooks/rapiddisk_hook
+        bootscript_dest=/usr/share/initramfs-tools/scripts/init-premount/rapiddisk
     else
-      myerror "Error: I can't find any suitable place for initramfs scripts."
+        myerror "Error: I can't find any suitable place for initramfs scripts."
     fi
 
-    if [ -n "$uninstall" ] ; then
-      echo " - Starting uninstall process..."
+    if [ -n "$uninstall" ]; then
+        echo " - Starting uninstall process..."
 
-      if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] ; then
+        if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ]; then
             echo " - Uninstalling scripts..."
-            rm -f "$hook_dest" 2>/dev/null
-            rm -f "$bootscript_dest" 2>/dev/null
-      fi
+            rm -f "$hook_dest" 2> /dev/null
+            rm -f "$bootscript_dest" 2> /dev/null
+        fi
 
-      # TODO this check is not much useful since update-initrd includes many modules automatically and can lead to false
-      #  positves
+        # TODO this check is not much useful since update-initrd includes many modules automatically and can lead to false
+        #  positves
 
-      #if lsinitramfs /boot/initrd.img-"$kernel_version" | grep rapiddisk >/dev/null 2>/dev/null ; then
-      #    echo ""
-      #    echo "Error: /boot/initrd.img-$kernel_version still contains rapiddisk stuff."
-      #    echo
-      #    exit 1
-      #fi
+        #if lsinitramfs /boot/initrd.img-"$kernel_version" | grep rapiddisk >/dev/null 2>/dev/null ; then
+        #    echo ""
+        #    echo "Error: /boot/initrd.img-$kernel_version still contains rapiddisk stuff."
+        #    echo
+        #    exit 1
+        #fi
 
-      finalstuff
-      exit 0
+        finalstuff
+        exit 0
     fi
 
-    if [ ! -x "${cwd}/hooks/rapiddisk_hook" ] || [ ! -x "${cwd}/scripts/init-premount/rapiddisk" ] ; then
+    if [ ! -x "${cwd}/hooks/rapiddisk_hook" ] || [ ! -x "${cwd}/scripts/init-premount/rapiddisk" ]; then
         myerror "Error: I can't find the scripts to be installed. Exiting..."
     fi
 
@@ -208,33 +207,32 @@ elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null ; then
 
     ##############################################################################
 
-    if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] && [ -z $force ] ; then
-		myerror "Error: Initrd hook and/or boot scripts are already installed. You should use the '--force' option. Exiting..."
+    if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] && [ -z $force ]; then
+        myerror "Error: Initrd hook and/or boot scripts are already installed. You should use the '--force' option. Exiting..."
     else
-		echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
+        echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
 
-		if ! cp "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
-			myerror "Error: Could not copy rapiddisk_hook to ${hook_dest}. Exiting..."
-		fi
+        if ! cp "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}"; then
+            myerror "Error: Could not copy rapiddisk_hook to ${hook_dest}. Exiting..."
+        fi
 
-		chmod +x "${hook_dest}"
+        chmod +x "${hook_dest}"
 
-		echo " - Copying ${cwd}/ubuntu/rapiddisk to ${bootscript_dest}..."
+        echo " - Copying ${cwd}/ubuntu/rapiddisk to ${bootscript_dest}..."
 
-		if ! cp "${cwd}/ubuntu/rapiddisk" "${bootscript_dest}" ; then
-			myerror "Error: Could not copy rapiddisk_hook to ${bootscript_dest}. Exiting..."
-		fi
+        if ! cp "${cwd}/ubuntu/rapiddisk" "${bootscript_dest}"; then
+            myerror "Error: Could not copy rapiddisk_hook to ${bootscript_dest}. Exiting..."
+        fi
 
-		sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${bootscript_dest}"
-		sed -i 's,BOOTDEVICE,'"${boot_device}"',' "${bootscript_dest}"
+        sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${bootscript_dest}"
+        sed -i 's,BOOTDEVICE,'"${boot_device}"',' "${bootscript_dest}"
 
-		chmod +x "${bootscript_dest}"
-	fi
+        chmod +x "${bootscript_dest}"
+    fi
 
-	finalstuff
+    finalstuff
 else
-	myerror "Operating system not supported. Exiting..."
+    myerror "Operating system not supported. Exiting..."
 fi
 
 exit 0
-
