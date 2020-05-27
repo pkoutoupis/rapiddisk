@@ -58,7 +58,7 @@ finalstuff()  {
     echo ""
     update-grub
     echo ""
-    echo "Done."
+    echo " - Done. A reboot is needed."
 
 }
 
