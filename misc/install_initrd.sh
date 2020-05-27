@@ -58,7 +58,7 @@ finalstuff()  {
     echo ""
     update-grub
     echo ""
-    echo " - Done. A reboot is needed."
+    echo " - Done under Ubuntu. A reboot is needed."
 
 }
 
@@ -151,7 +151,7 @@ if hostnamectl | grep "CentOS Linux" > /dev/null 2> /dev/null; then
     #dracut --add-drivers "rapiddisk rapiddisk-cache" --kver "$kernel_version" -f
     dracut --kver "$kernel_version" -f
 
-    echo " - Done under CentOS."
+    echo " - Done under CentOS. A reboot is needed."
     exit 0
 
 elif hostnamectl | grep "Ubuntu" > /dev/null 2> /dev/null; then
