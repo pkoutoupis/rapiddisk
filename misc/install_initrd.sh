@@ -130,7 +130,7 @@ if hostnamectl | grep "CentOS Linux" >/dev/null 2>/dev/null ; then
     if [ -z $uninstall ] ; then
         echo " - Installing by copying 96rapiddisk into /usr/lib/dracut/modules.d/..."
         rm -rf /usr/lib/dracut/modules.d/96rapiddisk
-        cp -rf "${cwd}"/96rapiddisk /usr/lib/dracut/modules.d/
+        cp -rf "${cwd}"/centos/96rapiddisk /usr/lib/dracut/modules.d/
         echo " - Editing /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh..."
         sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh
         sed -i 's,BOOTDEVICE,'"${boot_device}"',' /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh
@@ -209,31 +209,32 @@ elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null ; then
     ##############################################################################
 
     if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] && [ -z $force ] ; then
-      myerror "Error: Initrd hook and/or boot scripts are already installed. You should use the '--force' option. Exiting..."
+		myerror "Error: Initrd hook and/or boot scripts are already installed. You should use the '--force' option. Exiting..."
     else
-      echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
+		echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
 
-      if ! cp "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
-        myerror "Error: Could not copy rapiddisk_hook to ${hook_dest}. Exiting..."
-      fi
+		if ! cp "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
+			myerror "Error: Could not copy rapiddisk_hook to ${hook_dest}. Exiting..."
+		fi
 
-      chmod +x "${hook_dest}"
+		chmod +x "${hook_dest}"
 
-      echo " - Copying ${cwd}/ubuntu/rapiddisk to ${bootscript_dest}..."
+		echo " - Copying ${cwd}/ubuntu/rapiddisk to ${bootscript_dest}..."
 
-      if ! cp "${cwd}/ubuntu/rapiddisk" "${bootscript_dest}" ; then
-        myerror "Error: Could not copy rapiddisk_hook to ${bootscript_dest}. Exiting..."
-      fi
+		if ! cp "${cwd}/ubuntu/rapiddisk" "${bootscript_dest}" ; then
+			myerror "Error: Could not copy rapiddisk_hook to ${bootscript_dest}. Exiting..."
+		fi
 
-      sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${bootscript_dest}"
-      sed -i 's,BOOTDEVICE,'"${boot_device}"',' "${bootscript_dest}"
+		sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${bootscript_dest}"
+		sed -i 's,BOOTDEVICE,'"${boot_device}"',' "${bootscript_dest}"
 
-      chmod +x "${bootscript_dest}"
-    fi
+		chmod +x "${bootscript_dest}"
+	fi
 
-    finalstuff
+	finalstuff
 else
-    myerror "Operating system not supported. Exiting..."
+	myerror "Operating system not supported. Exiting..."
 fi
 
 exit 0
+
