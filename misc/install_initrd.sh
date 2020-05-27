@@ -232,7 +232,6 @@ elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null ; then
     fi
 
     finalstuff
-
 else
     myerror "Operating system not supported. Exiting..."
 fi
