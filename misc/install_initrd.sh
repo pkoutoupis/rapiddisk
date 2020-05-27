@@ -40,6 +40,7 @@ is_num()  {
 myerror()  {
 
     echo ""
+    echo "*************"
     echo "$1"
     echo ""
     ihelp
@@ -166,16 +167,18 @@ elif hostnamectl | grep "Ubuntu" > /dev/null 2> /dev/null; then
         hook_dest=/usr/share/initramfs-tools/hooks/rapiddisk_hook
         bootscript_dest=/usr/share/initramfs-tools/scripts/init-premount/rapiddisk
     else
-        myerror "Error: I can't find any suitable place for initramfs scripts."
+        myerror "Error: I can't find any suitable place for initramfs scripts. Exiting..."
     fi
 
     if [ -n "$uninstall" ]; then
         echo " - Starting uninstall process..."
 
-        if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ]; then
+        if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] && [ -z $force ]; then
             echo " - Uninstalling scripts..."
             rm -f "$hook_dest" 2> /dev/null
             rm -f "$bootscript_dest" 2> /dev/null
+        else
+            myerror "Error: hook and/or boot scripts are not installed, use '--force'. Exiting..."
         fi
 
         # TODO this check is not much useful since update-initrd includes many modules automatically and can lead to false
@@ -190,10 +193,6 @@ elif hostnamectl | grep "Ubuntu" > /dev/null 2> /dev/null; then
 
         finalstuff
         exit 0
-    fi
-
-    if [ ! -x "${cwd}/hooks/rapiddisk_hook" ] || [ ! -x "${cwd}/scripts/init-premount/rapiddisk" ]; then
-        myerror "Error: I can't find the scripts to be installed. Exiting..."
     fi
 
     ##############################################################################
@@ -215,6 +214,8 @@ elif hostnamectl | grep "Ubuntu" > /dev/null 2> /dev/null; then
 
     if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] && [ -z $force ]; then
         myerror "Error: Initrd hook and/or boot scripts are already installed. You should use the '--force' option. Exiting..."
+    elif [ ! -x "${cwd}/ubuntu/rapiddisk_hook" ] || [ ! -x "${cwd}/ubuntu/rapiddisk" ]; then
+        myerror "Error: I can't find the scripts to be installed. Exiting..."
     else
         echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
 
