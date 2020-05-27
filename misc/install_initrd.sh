@@ -70,7 +70,7 @@ for i in "$@"; do
             ;;
         --uninstall)
             uninstall=1
-            # shift # past argument with no value
+            shift # past argument with no value
             ;;
         --boot=*)
             boot_device="${i#*=}"
@@ -198,7 +198,7 @@ elif hostnamectl | grep "Ubuntu" > /dev/null 2> /dev/null; then
     ##############################################################################
     # TODO The following piece of code was there to check if the user specified
     # the same device present in /etc/fstab - but if in fstab UUIDs are used, or
-    # the LABEL= syntax, it looses meaning.
+    # the LABEL= syntax, it loses meaning.
     ##############################################################################
 
     ##current_boot_device="$(grep -vE '^#' /etc/fstab|grep -m 1 -Eo '.*\s+/\s+'|awk 'BEGIN { OFS="\\s" } { print $1 }')"
