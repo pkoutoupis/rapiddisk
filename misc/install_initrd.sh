@@ -57,7 +57,7 @@ finalstuff () {
     echo ""
     update-grub
     echo ""
-    echo "Done."
+    echo " - All done. A reboot is needed."
 
 }
 
@@ -94,11 +94,11 @@ if ! whoami | grep root 2>/dev/null 1>/dev/null ; then
     myerror "Sorry, this must be run as root."
 fi
 
-cwd="$(basedir $0)"
+cwd="$(dirname $0)"
 
 # This option is always mandatory (ubuntu/centos installing/uninstalling) so it is checked before all the others
 if [ -z "$kernel_version" ] ; then
-    myerror "Error: missing argument '--kernel'."
+	myerror "Error: missing argument '--kernel'."
 fi
 
 # if we are NOT uninstalling we need some more checks
@@ -147,7 +147,6 @@ if hostnamectl | grep "CentOS Linux" >/dev/null 2>/dev/null ; then
 
     echo " - Done under CentOS."
     exit 0
-
 elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null ; then
 
     # Ubuntu
@@ -165,29 +164,30 @@ elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null ; then
     fi
 
     if [ -n "$uninstall" ] ; then
-      echo " - Starting uninstall process..."
+		echo " - Starting uninstall process..."
 
-      if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] ; then
-            echo " - Uninstalling scripts..."
-            rm -f "$hook_dest" 2>/dev/null
-            rm -f "$bootscript_dest" 2>/dev/null
-      fi
+		if [ ! -x "$hook_dest" ] || [ ! -x "$bootscript_dest" ] && [ -z "$force" ] ; then
+			myerror "Error: Initrd hook and/or boot scripts are NOT installed. You should use the '--force' option. Exiting..."
+		else
+			echo " - Uninstalling scripts..."
+			rm -f "$hook_dest" 2>/dev/null
+			rm -f "$bootscript_dest" 2>/dev/null
+		fi
+		# TODO this check is not much useful since update-initrd includes many modules automatically and can lead to false
+		#  positves
 
-      # TODO this check is not much useful since update-initrd includes many modules automatically and can lead to false
-      #  positves
+		#if lsinitramfs /boot/initrd.img-"$kernel_version" | grep rapiddisk >/dev/null 2>/dev/null ; then
+		#    echo ""
+		#    echo "Error: /boot/initrd.img-$kernel_version still contains rapiddisk stuff."
+		#    echo
+		#    exit 1
+		#fi
 
-      #if lsinitramfs /boot/initrd.img-"$kernel_version" | grep rapiddisk >/dev/null 2>/dev/null ; then
-      #    echo ""
-      #    echo "Error: /boot/initrd.img-$kernel_version still contains rapiddisk stuff."
-      #    echo
-      #    exit 1
-      #fi
+		finalstuff
+		exit 0
+	fi
 
-      finalstuff
-      exit 0
-    fi
-
-    if [ ! -x "${cwd}/hooks/rapiddisk_hook" ] || [ ! -x "${cwd}/scripts/init-premount/rapiddisk" ] ; then
+	if [ ! -x "${cwd}/ubuntu/rapiddisk_hook" ] || [ ! -x "${cwd}/ubuntu/rapiddisk" ] ; then
         myerror "Error: I can't find the scripts to be installed. Exiting..."
     fi
 
@@ -208,27 +208,25 @@ elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null ; then
 
     ##############################################################################
 
-    if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] && [ -z $force ] ; then
-      myerror "Error: Initrd hook and/or boot scripts are already installed. You should use the '--force' option. Exiting..."
+    if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] && [ -z "$force" ] ; then
+		myerror "Error: Initrd hook and/or boot scripts are already installed. You should use the '--force' option. Exiting..."
     else
-      echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
+		echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
+		if ! cp "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
+			myerror "Error: Could not copy rapiddisk_hook to ${hook_dest}. Exiting..."
+		fi
 
-      if ! cp "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
-        myerror "Error: Could not copy rapiddisk_hook to ${hook_dest}. Exiting..."
-      fi
+		chmod +x "${hook_dest}"
 
-      chmod +x "${hook_dest}"
+		echo " - Copying ${cwd}/ubuntu/rapiddisk to ${bootscript_dest}..."
+		if ! cp "${cwd}/ubuntu/rapiddisk" "${bootscript_dest}" ; then
+	        myerror "Error: Could not copy rapiddisk_hook to ${bootscript_dest}. Exiting..."
+		fi
 
-      echo " - Copying ${cwd}/ubuntu/rapiddisk to ${bootscript_dest}..."
+		sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${bootscript_dest}"
+		sed -i 's,BOOTDEVICE,'"${boot_device}"',' "${bootscript_dest}"
 
-      if ! cp "${cwd}/ubuntu/rapiddisk" "${bootscript_dest}" ; then
-        myerror "Error: Could not copy rapiddisk_hook to ${bootscript_dest}. Exiting..."
-      fi
-
-      sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${bootscript_dest}"
-      sed -i 's,BOOTDEVICE,'"${boot_device}"',' "${bootscript_dest}"
-
-      chmod +x "${bootscript_dest}"
+		chmod +x "${bootscript_dest}"
     fi
 
     finalstuff
@@ -237,3 +235,4 @@ else
 fi
 
 exit 0
+
