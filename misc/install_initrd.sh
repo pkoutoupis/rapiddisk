@@ -94,7 +94,7 @@ if ! whoami | grep root 2>/dev/null 1>/dev/null ; then
     myerror "Sorry, this must be run as root."
 fi
 
-cwd="$(basedir $0)"
+cwd="$(dirname $0)"
 
 # This option is always mandatory (ubuntu/centos installing/uninstalling) so it is checked before all the others
 if [ -z "$kernel_version" ] ; then
