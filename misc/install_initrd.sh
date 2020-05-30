@@ -107,7 +107,6 @@ if [ -z "$uninstall" ]; then
 				myerror "Error: could not find the root device from /etc/fstab. Use the '--root' option. Exiting..."
 				;;
 		esac
-		
 
 		# TODO this check must be improved
 		if ! echo "$root_device" | grep -P '^/dev/\w{1,4}\d{0,99}$' >/dev/null 2>/dev/null ; then
@@ -118,7 +117,7 @@ if [ -z "$uninstall" ]; then
 		echo ' - Is it ok to use it? [yN]'
 		read yn
 
-		( [ "$yn" = "y" ] || [ "$yn" = "Y" ] ) || myerror "Error: the root device we found was not ok. Use the '--root' option. Exiting..."
+		{ [ "$yn" = "y" ] || [ "$yn" = "Y" ] ; } || myerror "Error: the root device we found was not ok. Use the '--root' option. Exiting..."
 	fi
 
 	[ -n "$ramdisk_size" ] ||  myerror "Error: missing argument '--size'. Exiting..."
