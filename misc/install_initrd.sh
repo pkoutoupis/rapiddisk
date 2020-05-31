@@ -151,7 +151,11 @@ if hostnamectl | grep "CentOS Linux" > /dev/null 2> /dev/null; then
 		fi
 		# rm -rf /usr/lib/dracut/modules.d/96rapiddisk
 		touchfile="/usr/lib/dracut/modules.d/96rapiddisk/$kernel_version"
-		[ -f "$touchfile" ] && rm -f "$touchfile" || myerror "Error: $touchfile does not exist. Exiting..."
+		if [ -f "$touchfile" ] ; then
+			rm -f "$touchfile"
+		else
+			myerror "Error: $touchfile does not exist. Exiting..."
+		fi
 	fi
 	echo " - Running 'dracut --kver $kernel_version -f'"
 	dracut --kver "$kernel_version" -f
