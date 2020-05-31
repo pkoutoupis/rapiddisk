@@ -15,10 +15,11 @@ esac
 . /usr/share/initramfs-tools/hook-functions
 
 # Begin real processing below this line
-
-manual_add_modules rapiddisk
-manual_add_modules rapiddisk-cache
-copy_exec /sbin/rapiddisk /sbin
+if [ "$version" = "KERNELVERSION" ] ; then
+	manual_add_modules rapiddisk
+	manual_add_modules rapiddisk-cache
+	copy_exec /sbin/rapiddisk /sbin/rapiddisk_KERNELVERSION
+fi
 
 exit 0
 

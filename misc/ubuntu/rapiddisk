@@ -14,12 +14,13 @@ esac
 
 # Begin real processing below this line
 
-modprobe -v rapiddisk
-modprobe -v rapiddisk-cache
+if [ -x /usr/sbin/rapiddisk_KERNELVERSION ] ; then
+	modprobe -v rapiddisk
+	modprobe -v rapiddisk-cache
 
-rapiddisk --attach RAMDISKSIZE
-rapiddisk --cache-map rd0 BOOTDEVICE wa
-rapiddisk --list
+	rapiddisk_KERNELVERSION --attach RAMDISKSIZE
+	rapiddisk_KERNELVERSION --cache-map rd0 BOOTDEVICE wa
+fi
 
 exit 0
 

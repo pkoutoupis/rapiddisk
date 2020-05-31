@@ -2,7 +2,12 @@
 
 # called by dracut
 check() {
-	return 0
+	for i in `ls "$moddir"` ; do
+		if [ "$kernel" = "$i" ] ; then
+			return 0
+		fi
+	done
+	return 255
 }
 
 depends() {

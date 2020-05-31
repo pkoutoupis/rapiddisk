@@ -134,25 +134,26 @@ if hostnamectl | grep "CentOS Linux" > /dev/null 2> /dev/null; then
 
 	if [ -z "$uninstall" ]; then
 		echo " - Installing by copying 96rapiddisk into /usr/lib/dracut/modules.d/..."
-		if [ -d /usr/lib/dracut/modules.d/96rapiddisk ] && [ -z "$force" ] ; then
-			myerror "Error: /usr/lib/dracut/modules.d/96rapiddisk already exists, use '--force'. Exiting..."
-		fi
+		#if [ -d /usr/lib/dracut/modules.d/96rapiddisk ] && [ -z "$force" ] ; then
+		#	myerror "Error: /usr/lib/dracut/modules.d/96rapiddisk already exists, use '--force'. Exiting..."
+		#fi
 		cp -rf "${cwd}"/centos/96rapiddisk /usr/lib/dracut/modules.d/
 		echo " - Editing /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh..."
 		sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh
 		sed -i 's,BOOTDEVICE,'"${root_device}"',' /usr/lib/dracut/modules.d/96rapiddisk/run_rapiddisk.sh
 		echo " - chmod +x /usr/lib/dracut/modules.d/96rapiddisk/* ..."
 		chmod +x /usr/lib/dracut/modules.d/96rapiddisk/*
+		touch "/usr/lib/dracut/modules.d/96rapiddisk/$kernel_version"
 	else
 		echo " - Uninstalling by removing dir /usr/lib/dracut/modules.d/96rapiddisk..."
 		if [ ! -d /usr/lib/dracut/modules.d/96rapiddisk ] && [ -z "$force" ] ; then
 			myerror "Error: /usr/lib/dracut/modules.d/96rapiddisk does not exist, use '--force'. Exiting..."
 		fi
-		rm -rf /usr/lib/dracut/modules.d/96rapiddisk
+		# rm -rf /usr/lib/dracut/modules.d/96rapiddisk
+		touchfile="/usr/lib/dracut/modules.d/96rapiddisk/$kernel_version"
+		[ -f "$touchfile" ] && rm -f "$touchfile" || myerror "Error: $touchfile does not exist. Exiting..."
 	fi
-
 	echo " - Running 'dracut --kver $kernel_version -f'"
-	#dracut --add-drivers "rapiddisk rapiddisk-cache" --kver "$kernel_version" -f
 	dracut --kver "$kernel_version" -f
 
 	echo " - Done under CentOS. A reboot is needed."
@@ -164,11 +165,11 @@ elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null; then
 
 	# These checks are intended to find the best place to put the scripts under Ubuntu
 	if [ -d /etc/initramfs-tools/hooks ] && [ -d /etc/initramfs-tools/scripts/init-premount ]; then
-		hook_dest=/etc/initramfs-tools/hooks/rapiddisk_hook
-		bootscript_dest=/etc/initramfs-tools/scripts/init-premount/rapiddisk
+		hook_dest=/etc/initramfs-tools/hooks/rapiddisk_hook_"$kernel_version"
+		bootscript_dest=/etc/initramfs-tools/scripts/init-premount/rapiddisk_"$kernel_version"
 	elif [ -d /usr/share/initramfs-tools/hooks ] && [ -d /usr/share/initramfs-tools/scripts/init-premount ]; then
-		hook_dest=/usr/share/initramfs-tools/hooks/rapiddisk_hook
-		bootscript_dest=/usr/share/initramfs-tools/scripts/init-premount/rapiddisk
+		hook_dest=/usr/share/initramfs-tools/hooks/rapiddisk_hook_"$kernel_version"
+		bootscript_dest=/usr/share/initramfs-tools/scripts/init-premount/rapiddisk_"$kernel_version"
 	else
 		myerror "Error: I can't find any suitable place for initramfs scripts. Exiting..."
 	fi
@@ -218,6 +219,9 @@ elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null; then
 
 			sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${bootscript_dest}"
 			sed -i 's,BOOTDEVICE,'"${root_device}"',' "${bootscript_dest}"
+			
+			sed -i 's/KERNELVERSION/'"${kernel_version}"'/g' "${hook_dest}"
+			sed -i 's/KERNELVERSION/'"${kernel_version}"'/g' "${bootscript_dest}"
 
 			chmod +x "${bootscript_dest}" 2>/dev/null
 		fi
