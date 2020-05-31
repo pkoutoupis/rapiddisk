@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright © 2011 - 2019 Petros Koutoupis
+ ** Copyright © 2011 - 2020 Petros Koutoupis
  ** All rights reserved.
  **
  ** This file is part of RapidDisk.
@@ -87,86 +87,86 @@ void online_menu(char *string)
 	       "\trapiddisk --flush rd2\n\n");
 }
 
-int parse_input(int argcin, char *argvin[])
+int exec_cmdline_arg(int argcin, char *argvin[])
 {
-	int err = 0, mode = WRITETHROUGH;
-	struct RD_PROFILE *rd;	 /* These are dummy pointers to  */
-	struct RC_PROFILE *rc;	 /* help create the linked  list */
+	int rc = INVALID_VALUE, mode = WRITETHROUGH;
+	struct RD_PROFILE *disk;	/* These are dummy pointers to  */
+	struct RC_PROFILE *cache;	/* help create the linked  list */
 
 	printf("%s %s\n%s\n\n", UTIL, VERSION_NUM, COPYRIGHT);
 	if ((argcin < 2) || (argcin > 5)) {
 		online_menu(argvin[0]);
-		return err;
+		return rc;
 	}
 
 	if (((strcmp(argvin[1], "-h")) == 0) || ((strcmp(argvin[1],"-H")) == 0) ||
 	    ((strcmp(argvin[1], "--help")) == 0)) {
 		online_menu(argvin[0]);
-		return err;
+		return SUCCESS;
 	}
 	if (((strcmp(argvin[1], "-v")) == 0) || ((strcmp(argvin[1],"-V")) == 0) ||
 	    ((strcmp(argvin[1], "--version")) == 0)) {
-		return err;
+		return SUCCESS;
 	}
 
-	rd = (struct RD_PROFILE *)search_targets();
-	rc = (struct RC_PROFILE *)search_cache();
+	disk = (struct RD_PROFILE *)search_targets();
+	cache = (struct RC_PROFILE *)search_cache();
 
 	if (strcmp(argvin[1], "--list") == 0) {
-		if (rd == NULL)
+		if (disk == NULL)
 			printf("Unable to locate any RapidDisk devices.\n");
 		else
-			err = list_devices(rd, rc);
+			rc = list_devices(disk, cache);
 		goto out;
 #if !defined NO_JANSSON
 	} else if (strcmp(argvin[1], "--list-json") == 0) {
-		err = list_devices_json(rd, rc);
+		rc = list_devices_json(disk, cache);
 		goto out;
 #endif
 	} else if (strcmp(argvin[1], "--short-list") == 0) {
-		if (rd == NULL)
+		if (disk == NULL)
 			printf("Unable to locate any RapidDisk devices.\n");
 		else
-			err = short_list_devices(rd, rc);
+			rc = short_list_devices(disk, cache);
 		goto out;
 	}
 
 	if (strcmp(argvin[1], "--attach") == 0) {
 		if (argcin != 3) goto invalid_out;
-		err = attach_device(rd, strtoul(argvin[2], (char **)NULL, 10));
+		rc = attach_device(disk, strtoul(argvin[2], (char **)NULL, 10));
 	} else if (strcmp(argvin[1], "--detach") == 0) {
 		if (argcin != 3) goto invalid_out;
-		if (rd == NULL)
+		if (disk == NULL)
 			printf("Unable to locate any RapidDisk devices.\n");
 		else
-			err = detach_device(rd, rc, argvin[2]);
+			rc = detach_device(disk, cache, argvin[2]);
 	} else if (strcmp(argvin[1], "--resize") == 0) {
 		if (argcin != 4) goto invalid_out;
-		if (rd == NULL)
+		if (disk == NULL)
 			printf("Unable to locate any RapidDisk devices.\n");
 		else
-			err = resize_device(rd, argvin[2], strtoul(argvin[3], (char **)NULL, 10));
+			rc = resize_device(disk, argvin[2], strtoul(argvin[3], (char **)NULL, 10));
 	} else if (strcmp(argvin[1], "--cache-map") == 0) {
 		if ((argcin < 4) || (argcin > 5)) goto invalid_out;
 		if (argcin == 5)
 			if (strcmp(argvin[4], "wa") == 0)
 				mode = WRITEAROUND;
-		err = cache_map(rd, rc, argvin[2], argvin[3], mode);
+		rc = cache_map(disk, cache, argvin[2], argvin[3], mode);
 	} else if (strcmp(argvin[1], "--cache-unmap") == 0) {
 		if (argcin != 3) goto invalid_out;
-		err = cache_unmap(rc, argvin[2]);
+		rc = cache_unmap(cache, argvin[2]);
 	} else if (strcmp(argvin[1], "--flush") == 0) {
 		if (argcin != 3) goto invalid_out;
-		err = rdsk_flush(rd, rc, argvin[2]);
+		rc = rdsk_flush(disk, cache, argvin[2]);
 	} else if (strcmp(argvin[1], "--stat-cache") == 0) {
 		if (argcin != 3) goto invalid_out;
-		err = stat_cache_mapping(rc, argvin[2]);
+		rc = stat_cache_mapping(cache, argvin[2]);
 	} else {
 		goto invalid_out;
 	}
 
 out:
-	return err;
+	return rc;
 invalid_out:
 	printf("Error. Invalid argument(s) entered.\n");
 	return -EINVAL;
@@ -174,16 +174,15 @@ invalid_out:
 
 int main(int argc, char *argv[])
 {
-	int err = 0;
+	int rc = INVALID_VALUE;
 	FILE *fp;
 	unsigned char string[BUFSZ];
 
 	if (getuid() != 0) {
-		printf("\nYou must be root or contain sudo permissions to "
-		       "initiate this\napplication. technically you shouldn't "
-		       "be running as root anyway.\n\n");
+		printf("\nYou must be root or contain sudo permissions to initiate this\n\n");
 		return -EACCES;
 	}
+
 	if (access(SYS_RDSK, F_OK) == -1) {
 		printf("Please ensure that the RapidDisk module is loaded and retry.\n");
 		return -EPERM;
@@ -201,6 +200,6 @@ int main(int argc, char *argv[])
 		return -EPERM;
 	}
 
-	err = parse_input(argc, argv);
-	return err;
+	rc = exec_cmdline_arg(argc, argv);
+	return rc;
 }

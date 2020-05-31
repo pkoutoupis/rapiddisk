@@ -1,6 +1,6 @@
 /* rxio.c */
 
-/** Copyright © 2016 - 2018 Petros Koutoupis
+/** Copyright © 2016 - 2020 Petros Koutoupis
  ** All rights reserved.
  **
  ** This program is free software: you can redistribute it and/or modify
@@ -31,17 +31,17 @@
 #include <string.h>
 
 int main (){
-    int fd, err;
+	int fd, rc;
 
-    if((fd = open("/dev/rd0", O_WRONLY)) < 0){
-        printf("%s\n", strerror(errno));
-        return errno;
-    }
+	if((fd = open("/dev/rd0", O_WRONLY)) < 0){
+		printf("%s\n", strerror(errno));
+		return errno;
+	}
 
-    err = ioctl(fd, BLKFLSBUF, 0);
-    printf("Sent ioctl() BLKFLSBUF and got return: %d\n", err);
+	rc = ioctl(fd, BLKFLSBUF, 0);
+	printf("Sent ioctl() BLKFLSBUF and got return: %d\n", rc);
 
-    close (fd);
+	close (fd);
 
-    return 0;
+	return rc;
 }

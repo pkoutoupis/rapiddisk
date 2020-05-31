@@ -1,6 +1,6 @@
 /* rxio.c */
 
-/** Copyright © 2016 - 2018 Petros Koutoupis
+/** Copyright © 2016 - 2020 Petros Koutoupis
  ** All rights reserved.
  **
  ** This program is free software: you can redistribute it and/or modify
@@ -35,47 +35,47 @@
 #define BYTES_PER_BLOCK   512
 
 int main (){
-    int fd;
-    unsigned long long size;
-    unsigned char *buf;
-    off_t offset = 0;
+	int fd;
+	unsigned long long size;
+	unsigned char *buf;
+	off_t offset = 0;
 
-    buf = (char *)malloc(XFER_SIZE);
-    memset(buf, 0x2F, XFER_SIZE);
+	buf = (char *)malloc(XFER_SIZE);
+	memset(buf, 0x2F, XFER_SIZE);
 
-    if((fd = open("/dev/rd0", O_RDWR, O_NONBLOCK)) < 0){
-        printf("%s\n", strerror(errno));
-        return errno;
-    }
+	if((fd = open("/dev/rd0", O_RDWR, O_NONBLOCK)) < 0){
+		printf("%s\n", strerror(errno));
+		return errno;
+	}
 
-    if((ioctl(fd, BLKGETSIZE, &size)) == -1){
-        printf("%s\n", strerror(errno));
-        return errno;
-    }else{
-        printf("total block count: %llu\n", size);
-        printf("total bytes count: %llu\n", (size * BYTES_PER_BLOCK));
-    }
+	if((ioctl(fd, BLKGETSIZE, &size)) == -1){
+		printf("%s\n", strerror(errno));
+		return errno;
+	}else{
+		printf("total block count: %llu\n", size);
+		printf("total bytes count: %llu\n", (size * BYTES_PER_BLOCK));
+	}
 
-    if((write (fd, buf, XFER_SIZE)) <= 0){
-        printf("%s\n", strerror(errno));
-        return errno;
-    }
-    printf ("wrote %d bytes at offset %lu\n", XFER_SIZE, offset);
+	if((write (fd, buf, XFER_SIZE)) <= 0){
+		printf("%s\n", strerror(errno));
+		return errno;
+	}
+	printf ("wrote %d bytes at offset %lu\n", XFER_SIZE, offset);
 
-    offset = (offset + 65536);
-    if((lseek (fd, offset, SEEK_SET)) != offset){
-        printf("%s\n", strerror(errno));
-        return errno;
-    }
-    printf ("seeked to offset %lu\n", offset);
+	offset = (offset + 65536);
+	if((lseek (fd, offset, SEEK_SET)) != offset){
+		printf("%s\n", strerror(errno));
+		return errno;
+	}
+	printf ("seeked to offset %lu\n", offset);
 
-    if((read(fd, buf, XFER_SIZE)) <= 0){
-        printf("%s\n", strerror(errno));
-        return errno;
-    }
-    printf ("read %d bytes at offset %lu\n", XFER_SIZE, offset);
+	if((read(fd, buf, XFER_SIZE)) <= 0){
+		printf("%s\n", strerror(errno));
+		return errno;
+	}
+	printf ("read %d bytes at offset %lu\n", XFER_SIZE, offset);
 
-    close (fd);
+	close (fd);
 
-    return 0;
+	return 0;
 }

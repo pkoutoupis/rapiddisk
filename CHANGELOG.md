@@ -1,3 +1,14 @@
+### Release 6.1 ###
+
+- kernel: added support for 5.7 kernel
+- utility: fixed GCC compilation warnings
+- utility: code style cleanup
+- installer: additional dkms installation/removal cleanup (thank you Shub77)
+- documentation: fixed / updated README to reflect newer dkms installation/removal instructions
+- documentation: updated copyright dates
+- documentation: added AUTHORS file
+- misc: added experimental scripts to enable rapiddisk/cache on root device during boot (thank you Shub77)
+
 ### Release 6.0-1 ###
 
 - kernel: Fix dkms version in module/Makefile.

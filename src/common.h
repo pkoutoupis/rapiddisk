@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright © 2011 - 2019 Petros Koutoupis
+ ** Copyright © 2011 - 2020 Petros Koutoupis
  ** All rights reserved.
  **
  ** This file is part of RapidDisk.
@@ -39,17 +39,15 @@
 #include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
-#include <syslog.h>
 
 #define UTIL			"rapiddisk"
-#define COPYRIGHT		"Copyright 2011 - 2019 Petros Koutoupis"
-#define VERSION_NUM	  	"6.0"
-#define SUCCESS			0x0
+#define COPYRIGHT		"Copyright 2011 - 2020 Petros Koutoupis"
+#define VERSION_NUM	  	"6.1"
+#define SUCCESS			0
+#define INVALID_VALUE		-1
 #define NAMELEN			0x200
-#define BYTES_PER_SECTOR	0x200
 #define BUFSZ			0x10000
 #define SYS_RDSK		"/sys/kernel/rapiddisk/mgmt"
-#define KEY_FILE		"/etc/rapiddisk/key"
 #define WRITETHROUGH		0
 #define WRITEAROUND		1
 

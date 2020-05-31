@@ -1,4 +1,4 @@
-# Copyright © 2011-2018 Petros Koutoupis
+# Copyright © 2011-2020 Petros Koutoupis
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-VERSION = 6.0
+VERSION = 6.1
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build
@@ -49,7 +49,7 @@ uninstall:
 
 clean:
 	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order *.o.* built-in*
-	rm -rf .tmp_versions .rapiddisk.o.d *.unsigned *.sdtinfo.c .ctf/ .cache.mk
+	rm -rf .tmp_versions .rapiddisk.o.d *.unsigned *.sdtinfo.c .ctf/ .cache.mk *.mod
 
 dkms-install:
 ifeq ($(shell which dkms >/dev/null 2>/dev/null; echo $$?),1)
