@@ -1,25 +1,26 @@
 #!/bin/sh
+
 PREREQ=""
+
 prereqs()
 {
 	echo "$PREREQ"
 }
 
 case "${1}" in
-prereqs)
-	prereqs
-	exit 0
-	;;
+	prereqs)
+		prereqs
+		exit 0
+		;;
 esac
 
 # Begin real processing below this line
+if [ -x /usr/sbin/rapiddisk_KERNELVERSION ] ; then
+	modprobe -v rapiddisk
+	modprobe -v rapiddisk-cache
 
-modprobe -v rapiddisk
-modprobe -v rapiddisk-cache
-
-rapiddisk --attach RAMDISKSIZE
-rapiddisk --cache-map rd0 BOOTDEVICE wa
-rapiddisk --list
+	rapiddisk_KERNELVERSION --attach RAMDISKSIZE
+	rapiddisk_KERNELVERSION --cache-map rd0 BOOTDEVICE wa
+fi
 
 exit 0
-
