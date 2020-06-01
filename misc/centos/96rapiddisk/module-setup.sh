@@ -2,11 +2,12 @@
 
 # called by dracut
 check() {
-	for i in `ls "$moddir"` ; do
-		if [ "$kernel" = "$i" ] ; then
-			return 0
-		fi
-	done
+	for i in $moddir/*
+		do
+			if [ "${moddir}/${kernel}" = "$i" ] ; then
+				return 0
+			fi
+		done
 	return 255
 }
 
@@ -24,6 +25,6 @@ installkernel() {
 install() {
 	inst /sbin/rapiddisk
 	inst_hook pre-mount 00 "$moddir/run_rapiddisk.sh"
-	inst "$moddir/run_rapiddisk.sh" "/sbin/run_rapiddisk.sh"
+	inst "$moddir/run_rapiddisk.sh" "/sbin/${kernel}_run_rapiddisk.sh"
 	return 0
 }
