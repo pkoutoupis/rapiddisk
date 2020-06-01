@@ -57,22 +57,22 @@ myerror()  {
 centos_install () {
 
 	mkdir -p "${module_destination}/${module_name}"
-	cp "${cwd}/${os_name}/${module_name}/run_rapiddisk.sh" "${module_destination}/${module_name}/${module_k_command}"
+	cp "${cwd}/${os_name}/${module_name}/run_rapiddisk.sh" "${module_destination}/${module_name}/"
+	cp "${cwd}/${os_name}/${module_name}/run_rapiddisk.sh.orig" "${module_destination}/${module_name}/"
 	cp "${cwd}/${os_name}/${module_name}/module-setup.sh" "${module_destination}/${module_name}/"
 	echo " - Editing module's file..."
-	sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${module_destination}/${module_name}/${module_k_command}"
-	sed -i 's,BOOTDEVICE,'"${root_device}"',' "${module_destination}/${module_name}/${module_k_command}"
 	echo " - chmod +x module's files..."
-	chmod +x "${module_destination}/${module_name}/*"
-	echo " - Activating the script for the chosen kernel version..."
-	touch "${module_destination}/${module_name}/${kernel_version_file}"
+	chmod +x "${module_destination}/${module_name}"/*
+	echo " - Activating it for kernel version $kernel_version."
+	echo >"${module_destination}/${module_name}/${kernel_version_file}" "${ramdisk_size}"
+	echo >>"${module_destination}/${module_name}/${kernel_version_file}" "${root_device}"
 
 }
 
 centos_end () {
 
 	echo " - Running 'dracut --kver $kernel_version -f'"
-#	dracut --kver "$kernel_version" -f
+	dracut --kver "$kernel_version" -f
 	echo " - Done under CentOS. A reboot is needed."
 
 }
@@ -81,7 +81,7 @@ ubuntu_install () {
 
 	echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
 
-	if ! cp "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}"; then
+	if ! cp "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
 		myerror "could not copy rapiddisk_hook to ${hook_dest}."
 	fi
 
@@ -248,6 +248,7 @@ if [ "$os_name" = "centos" ] ; then
 	module_destination="/usr/lib/dracut/modules.d"
 	module_name="96rapiddisk"
 	module_command="run_rapiddisk.sh"
+	kernel_version_file="$kernel_version"
 
 	# check what to do
 
@@ -257,8 +258,7 @@ if [ "$os_name" = "centos" ] ; then
 		# now we can perform some parameters'checks which would be senseless before
 		install_options_checks
 
-		kernel_version_file="$kernel_version"
-		module_k_command="${module_destination}/${module_name}/${$kernel_version}_run_rapiddisk.sh"
+		module_k_command="${module_destination}/${module_name}/${kernel_version}_run_rapiddisk.sh"
 		
 		# with --force, we do install
 		if [ ! -z "$force" ] ; then
@@ -267,7 +267,6 @@ if [ "$os_name" = "centos" ] ; then
 			exit 0
 		fi
 
-		# check for dracut rapiddisk module situation
 		if [ -d "${module_destination}/${module_name}" ] ; then
 			# module installed, check for kernel activation file
 			module_installed=1
@@ -281,11 +280,6 @@ if [ "$os_name" = "centos" ] ; then
 			# nothing to do
 			myerror "module already installed and already active for kernel version $kernel_version. Use '--force' to
 			reinstall."
-		elif [ ! -z "$module_installed" ] ; then
-			# module installed, but inactive for the kernel version specified
-			echo " - Module already installed, activating it for kernel version $kernel_version."
-			touch "${module_destination}/${module_name}/${kernel_version_file}" || myerror "error while activating rapiddisk
-			module for kernel version $kernel_version."
 		else
 			# the module is not installed, do that and activate it for this kernel version
 			centos_install
@@ -300,15 +294,19 @@ if [ "$os_name" = "centos" ] ; then
 			fi
 		fi
 		echo " - Removing rapiddisk from ${kernel_version} initrd file..."
-		echo rm -f "${module_destination}/${module_name}/${kernel_version_file}"
+		rm -f "${module_destination}/${module_name}/${kernel_version_file}"
 		centos_end
 		exit 0
 	elif [ "$install_mode" = "global_uninstall" ] ; then
 		echo " - Global uninstalling and rebuilding initrd for kernel ${kernel_version}..."
-		echo rm -rf "${module_destination}/${module_name}"
-		echo " - Options rebuilding all the initrd files.."
-		echo rm -rf "${module_destination}/${module_name}"
-		echo drakut -f
+		rm -rf "${module_destination}/${module_name}"
+		echo " - Rebuilding all the initrd files.."
+		
+		# TODO there MUST be a better method to find and update all the initrd files...
+		for i in /lib/modules/* ; do 
+			echo " - dracut --kver $(echo $i|sed 's,/lib/modules/,,') -f"
+			dracut --kver $(echo $i|sed 's,/lib/modules/,,') -f
+		done
 		exit 0
 	fi
 elif [ "$os_name" = "ubuntu" ] ; then
