@@ -155,7 +155,7 @@ install_options_checks () {
 		echo ' - Is it ok to use it? [yN]'
 		read -r yn
 
-		if [ "$yn" != "y" ] || [ "$yn" != "Y" ] ; then
+		if [ ! "$yn" = "y" ] && [ ! "$yn" = "Y" ] ; then
 			ihelp
 			myerror "the root device we found was not ok. Use the '--root' option."
 		fi
@@ -171,6 +171,7 @@ if hostnamectl | grep "CentOS Linux" >/dev/null 2>/dev/null; then
 	os_name="centos"
 elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null; then
 	os_name="ubuntu"
+	kernel_installed="$(dpkg-query --list | grep -P 'linux-image-\d' |grep '^.i'| awk '{ print $2 }'| sed 's,linux-image-,,')"
 else
 	myerror "operating system not supported."
 fi
@@ -240,6 +241,23 @@ if [ -z "$kernel_version" ] && [ ! "$install_mode" = "global_uninstall" ] ; then
 	myerror "missing argument '--kernel'."
 fi
 
+# check if the kernel version specified is installed
+if [ ! "$install_mode" = "global_uninstall" ] ; then
+	
+	for v in $kernel_installed
+	do
+		if [ $v = "$kernel_version" ] ; then
+			kernel_found=1
+			break
+		fi
+	done
+
+	if [ -z $kernel_found ] ; then
+		myerror "the kernel version you specified is not installed."
+	fi
+fi
+
+
 cwd="$(dirname $0)"
 
 if [ "$os_name" = "centos" ] ; then
@@ -251,7 +269,6 @@ if [ "$os_name" = "centos" ] ; then
 	kernel_version_file="$kernel_version"
 
 	# check what to do
-
 	if [ "$install_mode" = "simple_install" ] ; then
 		# installing on CentOS
 
@@ -334,7 +351,7 @@ elif [ "$os_name" = "ubuntu" ] ; then
 
 		# without --force we just perform this more check
 		if [ -z "$force" ] ; then
-			if [ -x "$hook_dest" ] && [ -x "$bootscript_dest" ] ; then
+			if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] ; then
 				myerror "initrd hook and/or boot scripts are already installed. You should use the '--force' option."
 			fi
 		fi
@@ -345,23 +362,25 @@ elif [ "$os_name" = "ubuntu" ] ; then
 		ubuntu_end
 		exit 0
 	elif [ "$install_mode" = "simple_uninstall" ] ; then
-		echo " - Uninstalling for kernel $kernel_version ${hook_dest}..."
-		if [ -x "$hook_dest" ] || [ ! -z "$force" ] ; then
-			rm -f "$hook_dest"
+		if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] || [ ! -z "$force" ] ; then
+			echo " - Uninstalling for kernel $kernel_version ${hook_dest}..."
+			rm -f "$hook_dest" 2>/dev/null
+			echo " - Uninstalling for kernel $kernel_version ${bootscript_dest}..."
+			rm -f "$bootscript_dest" 2>/dev/null
 			ubuntu_end
 			exit 0
 		else
-			myerror "$hook_dest not present.  You should use the '--force' option."
+			myerror "$hook_dest or $bootscript_dest not present. You should use the '--force' option."
 		fi
 	elif [ "$install_mode" = "global_uninstall" ] ; then
 		echo " - Global uninstalling for all kernel versions.."
 		echo " - Deleting all files and rebuilding all the initrd files.."
 		hook_install_dir="$(dirname $hook_dest)"
 		bootscript_install_dir="$(dirname $bootscript_dest)"
-		rm -f "${hook_install_dir}"/rapiddisk* "${bootscript_install_dir}"/rapiddisk*
+		rm -f "${hook_install_dir:?}"/rapiddisk* "${bootscript_install_dir:?}"/rapiddisk*
 		kernel_version=all
 		ubuntu_end
-		exit 0	
+		exit 0
 	fi
 fi
 
