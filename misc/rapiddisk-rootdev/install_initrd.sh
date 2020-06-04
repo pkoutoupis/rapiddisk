@@ -169,6 +169,7 @@ whoami | grep '^root$' 2>/dev/null 1>/dev/null || myerror "sorry, this must be r
 # Looks for the OS
 if hostnamectl | grep "CentOS Linux" >/dev/null 2>/dev/null; then
 	os_name="centos"
+	kernel_installed="$(rpm -qa kernel-*| sed -E 's/^kernel-[^[:digit:]]+//'|sort -u)"
 elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null; then
 	os_name="ubuntu"
 	kernel_installed="$(dpkg-query --list | grep -P 'linux-image-\d' |grep '^.i'| awk '{ print $2 }'| sed 's,linux-image-,,')"
@@ -316,11 +317,10 @@ if [ "$os_name" = "centos" ] ; then
 		rm -rf "${module_destination:?}/${module_name:?}"
 		echo " - Rebuilding all the initrd files.."
 		
-		# TODO there MUST be a better method to find and update all the initrd files...
-		for i in /lib/modules/* ; do
-			current_kernel="$(echo $i|sed 's,/lib/modules/,,')"
-			echo " - dracut --kver $current_kernel -f"
-			dracut --kver "$current_kernel" -f
+		for k in $kernel_installed
+		do
+			echo " - dracut --kver $k -f"
+			dracut --kver "$k" -f
 		done
 		exit 0
 	fi
