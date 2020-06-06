@@ -1,37 +1,37 @@
 SUBDIRS = src conf doc module test
 
 .PHONY: all
-all:
-	for i in $(SUBDIRS); do cd $$i; make; cd ..; done
+all: $(SUBDIRS)
 
-.PHONY: install
-install:
-	for i in $(SUBDIRS); do cd $$i; make install; cd ..; done
-
-.PHONY: uninstall
-uninstall:
-	for i in $(SUBDIRS); do cd $$i; make uninstall; cd ..; done
+.PHONY: $(SUBDIRS)
+$(SUBDIRS):
+	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 .PHONY: clean
-clean:
-	for i in $(SUBDIRS); do cd $$i; make clean; cd ..; done
+clean: $(SUBDIRS)
+
+.PHONY: install
+install: $(SUBDIRS)
+
+.PHONY: uninstall
+uninstall: $(SUBDIRS)
 
 .PHONY: dkms-install
 dkms-install:
-	cd module; make dkms-install; cd ..
+	$(MAKE) -C module $@
 
 .PHONY: dkms-uninstall
 dkms-uninstall:
-	cd module; make dkms-uninstall; cd ..
+	$(MAKE) -C module $@
 
 .PHONY: tools-install
 tools-install:
-	cd src; make; make install; \
-	cd ../conf; make install; \
-	cd ../doc; make install; cd ..
+	$(MAKE) -C src install
+	$(MAKE) -C conf install
+	$(MAKE) -C doc install
 
 .PHONY: tools-uninstall
 tools-uninstall:
-	cd src; make uninstall; \
-	cd ../conf; make uninstall; \
-	cd ../doc; make uninstall; cd ..
+	$(MAKE) -C src uninstall
+	$(MAKE) -C conf uninstall
+	$(MAKE) -C doc uninstall
