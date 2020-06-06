@@ -46,7 +46,7 @@ install: all
 	$(MKDIR) $(DESTDIR)$(DIR)
 	$(CP) $(BIN) $(DESTDIR)$(DIR)
 	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
-	ln -s $(BIN) $(DESTDIR)$(DIR)/rxadm
+	if [ ! -L $(DESTDIR)$(DIR)/rxadm ] ; then ln -s $(BIN) $(DESTDIR)$(DIR)/rxadm ; fi
 
 .PHONY: uninstall
 uninstall:
