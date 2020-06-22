@@ -77,29 +77,27 @@ centos_end () {
 
 ubuntu_install () {
 
+	echo " - Creating kernel options file ..."
+	echo >"${hooks_dir}/${kernel_version_file}" "${ramdisk_size}"
+	echo >>"${hooks_dir}/${kernel_version_file}" "${root_device}"
+	
 	echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
-
-	if ! cp "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
+	if ! cp -f "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
 		myerror "could not copy rapiddisk_hook to ${hook_dest}."
 	fi
-
 	chmod +x "${hook_dest}" 2>/dev/null
 
-	echo " - Copying ${cwd}/ubuntu/rapiddisk to ${bootscript_dest}..."
-
-	if ! cp "${cwd}/ubuntu/rapiddisk" "${bootscript_dest}"; then
-		# if for any reason the first file was copied, we remove it
-		[ -f "${hook_dest}" ] && rm -f "${hook_dest}" 2>/dev/null
-		myerror "could not copy rapiddisk_hook to ${bootscript_dest}."
+	echo " - Copying ${cwd}/ubuntu/rapiddisk_boot to ${bootscript_dest}..."
+	if ! cp -f "${cwd}/ubuntu/rapiddisk_boot" "${bootscript_dest}" ; then
+		myerror "could not copy rapiddisk_boot to ${bootscript_dest}."
 	fi
-
-	sed -i 's/RAMDISKSIZE/'"${ramdisk_size}"'/' "${bootscript_dest}"
-	sed -i 's,BOOTDEVICE,'"${root_device}"',' "${bootscript_dest}"
-
-	sed -i 's/KERNELVERSION/'"${kernel_version}"'/g' "${hook_dest}"
-	sed -i 's/KERNELVERSION/'"${kernel_version}"'/g' "${bootscript_dest}"
-
 	chmod +x "${bootscript_dest}" 2>/dev/null
+
+	echo " - Copying ${cwd}/ubuntu/rapiddisk_sub.orig to ${subscript_dest_orig}..."
+	if ! cp -f "${cwd}/ubuntu/rapiddisk_sub.orig" "${subscript_dest_orig}"; then
+		myerror "could not copy rapiddisk_sub.orig to ${subscript_dest_orig}."
+	fi
+	chmod -x "${subscript_dest_orig}" 2>/dev/null
 
 }
 
@@ -328,32 +326,32 @@ elif [ "$os_name" = "ubuntu" ] ; then
 	echo " - Ubuntu detected!"
 
 	# prepare some vars
-
 	etc_dir_hooks="/etc/initramfs-tools/hooks"
 	etc_dir_scripts="/etc/initramfs-tools/scripts/init-premount"
 	usr_dir_hooks="/usr/share/initramfs-tools/hooks"
 	usr_dir_scripts="/usr/share/initramfs-tools/scripts/init-premount"
+	kernel_version_file="rapiddisk_kernel_${kernel_version}"
 
-	# These checks are intended to find the best place to put the scripts under Ubuntu
-
-	if [ -d "$etc_dir_hooks" ] && [ -d "$etc_dir_scripts" ]; then
-		hook_dest="${etc_dir_hooks}/rapiddisk_hook_${kernel_version}"
-		bootscript_dest="${etc_dir_scripts}/rapiddisk_${kernel_version}"
-	elif [ -d "$usr_dir_hooks" ] && [ -d "$usr_dir_scripts" ]; then
-		hook_dest="${usr_dir_hooks}/rapiddisk_hook_${kernel_version}"
-		bootscript_dest="${usr_dir_scripts}/rapiddisk_${kernel_version}"
+	# These checks aim to find the best place to put the scripts under Ubuntu
+	if [ -d "$etc_dir_hooks" ] && [ -d "$etc_dir_scripts" ] ; then
+		hooks_dir="$etc_dir_hooks"
+		scripts_dir="$etc_dir_scripts"
+	elif [ -d "$usr_dir_hooks" ] && [ -d "$usr_dir_scripts" ] ; then
+		hooks_dir="$usr_dir_hooks"
+		scripts_dir="$usr_dir_scripts"
 	else
 		myerror "I can't find any suitable place for initramfs scripts."
 	fi
 
+	hook_dest="${hooks_dir}/rapiddisk_hook"
+	bootscript_dest="${scripts_dir}/rapiddisk_boot"
+	subscript_dest_orig="${hooks_dir}/rapiddisk_sub.orig"
+
 	if [ "$install_mode" = "simple_install" ] ; then
 		# installing on Ubuntu
 
-		# without --force we just perform this more check
-		if [ -z "$force" ] ; then
-			if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] ; then
-				myerror "initrd hook and/or boot scripts are already installed. You should use the '--force' option."
-			fi
+		if [ -f "${hooks_dir}/${kernel_version_file}" ] && [ -z $force ] ; then
+			myerror "the config file for kernel version ${kernel_version} is already installed. Use '--force' to reinstall it."
 		fi
 
 		# now we can perform some parameters'checks which would be senseless before
@@ -362,22 +360,17 @@ elif [ "$os_name" = "ubuntu" ] ; then
 		ubuntu_end
 		exit 0
 	elif [ "$install_mode" = "simple_uninstall" ] ; then
-		if [ -x "$hook_dest" ] || [ -x "$bootscript_dest" ] || [ ! -z "$force" ] ; then
-			echo " - Uninstalling for kernel $kernel_version ${hook_dest}..."
-			rm -f "$hook_dest" 2>/dev/null
-			echo " - Uninstalling for kernel $kernel_version ${bootscript_dest}..."
-			rm -f "$bootscript_dest" 2>/dev/null
-			ubuntu_end
-			exit 0
-		else
-			myerror "$hook_dest or $bootscript_dest not present. You should use the '--force' option."
+		if ( [ ! -x "$hook_dest" ] || [ ! -f "$subscript_dest_orig" ] || [ ! -f "${hooks_dir}/${kernel_version_file}" ] || [ ! -f "$bootscript_dest" ] ) && [ -z "$force" ] ; then
+			myerror "it seems there is not a valid installation for kernel version ${kernel_version}. You should use the '--force' option."
 		fi
+		echo " - Uninstalling for kernel $kernel_version..."
+		rm -f "${hooks_dir}/${kernel_version_file}" 2>/dev/null
+		ubuntu_end
+		exit 0
 	elif [ "$install_mode" = "global_uninstall" ] ; then
 		echo " - Global uninstalling for all kernel versions.."
 		echo " - Deleting all files and rebuilding all the initrd files.."
-		hook_install_dir="$(dirname $hook_dest)"
-		bootscript_install_dir="$(dirname $bootscript_dest)"
-		rm -f "${hook_install_dir:?}"/rapiddisk* "${bootscript_install_dir:?}"/rapiddisk*
+		rm -f "${hooks_dir:?}"/rapiddisk* "${scripts_dir:?}"/rapiddisk*
 		kernel_version=all
 		ubuntu_end
 		exit 0

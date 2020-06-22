@@ -1,0 +1,9 @@
+#!/bin/sh
+
+modprobe -v rapiddisk
+modprobe -v rapiddisk-cache
+
+rapiddisk --attach RAMDISKSIZE
+rapiddisk --cache-map rd0 BOOTDEVICE wa
+
+exit 0
