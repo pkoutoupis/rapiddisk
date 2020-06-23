@@ -8,9 +8,10 @@ check() {
 			if [ "${moddir}/${kernel}" = "$i" ] ; then
 				size="$(cat "$i" | head -n 1)"
 				device="$(cat "$i" | tail -n 1)"
-				cp "$moddir/run_rapiddisk.sh.orig" "$moddir/run_rapiddisk.sh"
+				cp -f "$moddir/run_rapiddisk.sh.orig" "$moddir/run_rapiddisk.sh"
 				sed -i 's,RAMDISKSIZE,'$size',' "$moddir/run_rapiddisk.sh"
 				sed -i 's,BOOTDEVICE,'$device',' "$moddir/run_rapiddisk.sh" 
+				chmod +x "$moddir/run_rapiddisk.sh"
 				return 0
 			fi
 		done
@@ -37,6 +38,7 @@ install() {
 	inst /sbin/rapiddisk
 	inst_hook pre-mount 00 "$moddir/run_rapiddisk.sh"
 	inst "$moddir/run_rapiddisk.sh" "/sbin/run_rapiddisk.sh"
+	rm -f "$moddir/run_rapiddisk.sh"
 	return 0
 
 }
