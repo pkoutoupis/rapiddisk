@@ -54,14 +54,15 @@ myerror()  {
 
 centos_install () {
 
+	echo " - Creating module's dir..."
 	mkdir -p "${module_destination}/${module_name}"
-	cp "${cwd}/${os_name}/${module_name}/run_rapiddisk.sh" "${module_destination}/${module_name}/"
-	cp "${cwd}/${os_name}/${module_name}/run_rapiddisk.sh.orig" "${module_destination}/${module_name}/"
-	cp "${cwd}/${os_name}/${module_name}/module-setup.sh" "${module_destination}/${module_name}/"
-	echo " - Editing module's file..."
-	echo " - chmod +x module's files..."
-	chmod +x "${module_destination}/${module_name}"/*
-	echo " - Activating it for kernel version $kernel_version."
+	echo " - Copying module's files in place..."
+	cp -f "${cwd}/${os_name}/${module_name}/run_rapiddisk.sh.orig" "${module_destination}/${module_name}/"
+	cp -f "${cwd}/${os_name}/${module_name}/module-setup.sh" "${module_destination}/${module_name}/"
+	echo " - chmod module's files..."
+	chmod +x "${module_destination}/${module_name}/module-setup.sh"
+	chmod -x "${module_destination}/${module_name}/run_rapiddisk.sh.orig"
+	echo " - Activating rapiddisk for kernel version ${kernel_version}."
 	echo >"${module_destination}/${module_name}/${kernel_version_file}" "${ramdisk_size}"
 	echo >>"${module_destination}/${module_name}/${kernel_version_file}" "${root_device}"
 
@@ -161,10 +162,10 @@ install_options_checks () {
 
 }
 
-# we check for current user == root
+# checks for current user == root
 whoami | grep '^root$' 2>/dev/null 1>/dev/null || myerror "sorry, this must be run as root."
 
-# Looks for the OS
+# looks for the OS name
 if hostnamectl | grep "CentOS Linux" >/dev/null 2>/dev/null; then
 	os_name="centos"
 	kernel_installed="$(rpm -qa kernel-*| sed -E 's/^kernel-[^[:digit:]]+//'|sort -u)"
@@ -188,14 +189,16 @@ for i in "$@"; do
 			;;
 		--global-uninstall)
 			if [ ! -z "$install_mode" ] ; then
-				myerror "only one betweeen '--install, '--uninstall' and ---uninstall-global can be specified."
+				ihelp
+				myerror "only one betweeen '--install, '--uninstall' and --global-uninstall can be specified."
 			fi
 			install_mode=global_uninstall
 			shift # past argument with no value
 			;;
 		--install)
 			if [ ! -z "$install_mode" ] ; then
-				myerror "only one betweeen '--install, '--uninstall' and ---uninstall-global can be specified."
+				ihelp
+				myerror "only one betweeen '--install, '--uninstall' and --global-uninstall can be specified."
 			fi
 			install_mode=simple_install
 			shift # past argument with no value
@@ -242,7 +245,6 @@ fi
 
 # check if the kernel version specified is installed
 if [ ! "$install_mode" = "global_uninstall" ] ; then
-	
 	for v in $kernel_installed
 	do
 		if [ $v = "$kernel_version" ] ; then
@@ -255,7 +257,6 @@ if [ ! "$install_mode" = "global_uninstall" ] ; then
 		myerror "the kernel version you specified is not installed."
 	fi
 fi
-
 
 cwd="$(dirname $0)"
 
@@ -274,31 +275,18 @@ if [ "$os_name" = "centos" ] ; then
 		# now we can perform some parameters'checks which would be senseless before
 		install_options_checks
 
-		# with --force, we do install
-		if [ ! -z "$force" ] ; then
-			centos_install
-			centos_end
-			exit 0
-		fi
-
-		if [ -d "${module_destination}/${module_name}" ] ; then
-			# module installed, check for kernel activation file
-			if [ -f "${module_destination}/${module_name}/${kernel_version_file}" ] ; then
-				# everything is already installed
-				kernel_active=1
+		# without --force, we do some checks
+		if [ -z "$force" ] ; then
+			if [ -d "${module_destination}/${module_name}" ] ; then
+				# module installed, check for kernel activation file
+				if [ -f "${module_destination}/${module_name}/${kernel_version_file}" ] ; then
+					# everything is already installed
+					myerror "module already installed and already active for kernel version $kernel_version. Use '--force' to reinstall."
+				fi
 			fi
 		fi
-
-		if [ ! -z "$kernel_active" ] ; then
-			# nothing to do
-			myerror "module already installed and already active for kernel version $kernel_version. Use '--force' to
-			reinstall."
-		else
-			# the module is not installed, do that and activate it for this kernel version
-			centos_install
-		fi
+		centos_install
 		centos_end
-		exit 0
 	elif [ "$install_mode" = "simple_uninstall" ] ; then
 		echo " - Uninstalling for kernel ${kernel_version}..."
 		if [ -z "$force" ] ; then
@@ -309,18 +297,16 @@ if [ "$os_name" = "centos" ] ; then
 		echo " - Removing rapiddisk from ${kernel_version} initrd file..."
 		rm -f "${module_destination}/${module_name}/${kernel_version_file}"
 		centos_end
-		exit 0
 	elif [ "$install_mode" = "global_uninstall" ] ; then
 		echo " - Global uninstalling and rebuilding initrd for kernel ${kernel_version}..."
 		rm -rf "${module_destination:?}/${module_name:?}"
+
 		echo " - Rebuilding all the initrd files.."
-		
 		for k in $kernel_installed
 		do
 			echo " - dracut --kver $k -f"
 			dracut --kver "$k" -f
 		done
-		exit 0
 	fi
 elif [ "$os_name" = "ubuntu" ] ; then
 	echo " - Ubuntu detected!"
@@ -349,7 +335,6 @@ elif [ "$os_name" = "ubuntu" ] ; then
 
 	if [ "$install_mode" = "simple_install" ] ; then
 		# installing on Ubuntu
-
 		if [ -f "${hooks_dir}/${kernel_version_file}" ] && [ -z $force ] ; then
 			myerror "the config file for kernel version ${kernel_version} is already installed. Use '--force' to reinstall it."
 		fi
@@ -357,24 +342,19 @@ elif [ "$os_name" = "ubuntu" ] ; then
 		# now we can perform some parameters'checks which would be senseless before
 		install_options_checks
 		ubuntu_install
-		ubuntu_end
-		exit 0
 	elif [ "$install_mode" = "simple_uninstall" ] ; then
 		if ( [ ! -x "$hook_dest" ] || [ ! -f "$subscript_dest_orig" ] || [ ! -f "${hooks_dir}/${kernel_version_file}" ] || [ ! -f "$bootscript_dest" ] ) && [ -z "$force" ] ; then
 			myerror "it seems there is not a valid installation for kernel version ${kernel_version}. You should use the '--force' option."
 		fi
 		echo " - Uninstalling for kernel $kernel_version..."
-		rm -f "${hooks_dir}/${kernel_version_file}" 2>/dev/null
-		ubuntu_end
-		exit 0
+		rm -f "${hooks_dir:?}/${kernel_version_file:?}" 2>/dev/null
 	elif [ "$install_mode" = "global_uninstall" ] ; then
 		echo " - Global uninstalling for all kernel versions.."
 		echo " - Deleting all files and rebuilding all the initrd files.."
 		rm -f "${hooks_dir:?}"/rapiddisk* "${scripts_dir:?}"/rapiddisk*
 		kernel_version=all
-		ubuntu_end
-		exit 0
 	fi
+	ubuntu_end
 fi
 
 exit 0
