@@ -1,7 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 
-modprobe rapiddisk
-modprobe rapiddisk-cache
+modprobe -v rapiddisk
+modprobe -v rapiddisk-cache
+
 rapiddisk --attach RAMDISKSIZE
 rapiddisk --cache-map rd0 BOOTDEVICE wa
 
+exit 0
