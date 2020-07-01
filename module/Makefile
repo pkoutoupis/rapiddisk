@@ -22,7 +22,7 @@ ifeq ($(KSRC),)
 endif
 
 ifeq ($(KVER),)
-        KVER := $(shell uname -r)
+	KVER := $(shell uname -r)
 endif
 
 MKDIR := mkdir -pv
@@ -34,9 +34,9 @@ obj-m += rapiddisk.o
 obj-m += rapiddisk-cache.o
 
 all:
-	$(MAKE) -C$(KSRC) M=$(PWD)
+	$(MAKE) -C $(KSRC) M=$(CURDIR)
 
-install:
+install: all
 	$(MKDIR) $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
 	install -o root -g root -m 0755 rapiddisk.ko $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
 	install -o root -g root -m 0755 rapiddisk-cache.ko $(DESTDIR)/lib/modules/$(KVER)/kernel/drivers/block/
@@ -51,18 +51,17 @@ clean:
 	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order *.o.* built-in*
 	rm -rf .tmp_versions .rapiddisk.o.d *.unsigned *.sdtinfo.c .ctf/ .cache.mk *.mod
 
-dkms-install:
+dkms-install: clean uninstall
 ifeq ($(shell which dkms >/dev/null 2>/dev/null; echo $$?),1)
 	$(error No 'dkms' command found)
 else ifeq ($(shell dkms status rapiddisk/$(VERSION) -k $(KVER) | grep '$(KVER)' >/dev/null 2>/dev/null; echo $$?),0)
 	$(error rapiddisk version $(VERSION) is already installed for kernel $(KVER). Use 'make dkms-uninstall' first)
 else
-	[ ! -d $(DKMSDEST) ] && $(MKDIR) $(DKMSDEST) || true
-	$(CP) $(DKMSFILES) $(DKMSDEST)
-	dkms install rapiddisk/$(VERSION) -k $(KVER) .
+	dkms add . || true
+	dkms install rapiddisk/$(VERSION) -k $(KVER)
 endif
 
-dkms-uninstall:
+dkms-uninstall: clean uninstall
 ifeq ($(shell which dkms >/dev/null 2>/dev/null; echo $$?),1)
 	$(error No 'dkms' command found)
 else ifeq ($(shell dkms status rapiddisk/$(VERSION) -k $(KVER) | grep '$(KVER)' >/dev/null 2>/dev/null; echo $$?),0)
