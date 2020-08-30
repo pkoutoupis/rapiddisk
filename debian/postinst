@@ -16,9 +16,9 @@ fi
 case "$1" in
 
   configure)
-    dkms add -m rapiddisk -v 6.1
-    dkms build -m rapiddisk -v 6.1
-    dkms install -m rapiddisk -v 6.1
+    dkms add -m rapiddisk -v 7.0
+    dkms build -m rapiddisk -v 7.0
+    dkms install -m rapiddisk -v 7.0
     echo "rapiddisk max_sectors=2048 nr_requests=1024" >> /etc/modules
     echo "rapiddisk-cache" >> /etc/modules
     echo "dm_mod" >> /etc/modules

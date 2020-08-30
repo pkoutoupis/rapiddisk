@@ -1,13 +1,13 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 6.1
+Version: 7.0.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: gcc,make,kernel-headers,kernel-devel,dkms
-BuildRequires: kernel-headers,kernel-devel,gcc,make
+Requires: gcc,make,kernel-headers,kernel-devel,dkms,jansson
+BuildRequires: kernel-headers,kernel-devel,gcc,make,jansson-devel
 
 %description
 The RapidDisk software defined advanced RAM drive and storage

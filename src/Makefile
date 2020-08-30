@@ -22,12 +22,6 @@ ifeq ($(CC),)
 	CC := gcc -Werror
 endif
 
-ifneq ("$(wildcard /etc/redhat-release)", "")
-	RH_VER_NUM := $(shell /bin/grep -o [0-9].[0-9] /etc/redhat-release|cut -d'.' -f1)
-else
-	RH_VER_NUM := 0
-endif
-
 CHMOD := chmod
 CP := cp
 RM := rm -f
@@ -37,38 +31,33 @@ BIN = rapiddisk
 DIR := /sbin
 
 .PHONY: all
-all: rapiddisk
+all: $(BIN)
 	@echo Make has completed.
 
 .PHONY: install
 install: all
-	@echo Installing all binary files.
+	@echo Installing all rapiddisk binary files.
 	$(MKDIR) $(DESTDIR)$(DIR)
 	$(CP) $(BIN) $(DESTDIR)$(DIR)
 	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
-	if [ ! -L $(DESTDIR)$(DIR)/rxadm ] ; then ln -s $(BIN) $(DESTDIR)$(DIR)/rxadm ; fi
 
 .PHONY: uninstall
 uninstall:
-	@echo Uninstalling rapiddisk files.
+	@echo Uninstalling rapiddisk binary files.
 	$(RM) $(DESTDIR)$(DIR)/$(BIN)*
-	$(RM) $(DESTDIR)$(DIR)/rxadm
 
-core.o: core.c
-ifeq ($(RH_VER_NUM), 6)
-	$(CC) -c core.c -DNO_JANSSON -o core.o
-else
-	$(CC) -c core.c -o core.o
-endif
+rdsk.o: rdsk.c
+	$(CC) -c rdsk.c -o rdsk.o
 
-main.o: core.o
-ifeq ($(RH_VER_NUM), 6)
-	$(CC) main.c -DNO_JANSSON -o rapiddisk core.o
-else
-	$(CC) main.c -o rapiddisk core.o -ljansson
-endif
+volume.o: volume.c
+	$(CC) -c volume.c -o volume.o
 
-rapiddisk: main.o
+$(BIN): rdsk.o
+	$(CC) main.c -o rapiddisk rdsk.o -ljansson
+
+#$(BIN)d:
+#	-lpthread -ljansson -lmicrohttpd
+
 
 .PHONY: clean
 clean:

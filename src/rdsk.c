@@ -32,9 +32,6 @@
 #include <malloc.h>
 #include <linux/fs.h>
 #include <sys/ioctl.h>
-#if !defined NO_JANSSON
-#include <jansson.h>
-#endif
 
 #define FILEDATA		0x40
 #define BYTES_PER_SECTOR	0x200
@@ -232,66 +229,6 @@ int short_list_devices(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 short_list_out:
 	return SUCCESS;
 }
-
-#if !defined NO_JANSSON
-
-/*
- * JSON output format:
- * ./rapiddisk --list-json|sed '1,3d'| jq .
- * {
- *    "volumes": [
- *        {
- *            "rapidDisk": "rd0",
- *            "size": 67108864
- *        },
- *        {
- *            "rapidDisk": "rd1",
- *            "size": 134217728
- *        },
- *        {
- *            "rapidDisk-Cache": "rc-wa_sdb",
- *            "cache": "rd0",
- *            "source": "sdb",
- *            "mode" : "write-around"
- *        }
- *    ]
- * }
- */
-
-int list_devices_json(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
-{
-	json_t *root, *array  = json_array();
-
-	while (rd_prof != NULL) {
-		json_t *object = json_object();
-		json_object_set_new(object, "rapidDisk", json_string(rd_prof->device));
-		json_object_set_new(object, "size", json_integer(rd_prof->size));
-		json_array_append_new(array, object);
-		rd_prof = rd_prof->next;
-	}
-	while (rc_prof != NULL) {
-		json_t *object = json_object();
-		json_object_set_new(object, "rapidDisk-Cache", json_string(rc_prof->device));
-		json_object_set_new(object, "cache", json_string(rc_prof->cache));
-		json_object_set_new(object, "source", json_string(rc_prof->source));
-		json_object_set_new(object, "mode",
-				    json_string((strncmp(rc_prof->device,
-				    "rc-wt_", 5) == 0) ? "write-through" : "write-around"));
-		json_array_append_new(array, object);
-		rc_prof = rc_prof->next;
-	}
-
-	root = json_pack("{s:o}", "volumes", array);
-
-	printf("%s\n", json_dumps(root, 0));
-	//printf("%s\n", json_dumps(root, JSON_INDENT(2)));
-
-	json_decref(array);
-	json_decref(root);
-
-	return SUCCESS;
-}
-#endif
 
 int attach_device(struct RD_PROFILE *prof, unsigned long size)
 {

@@ -20,7 +20,7 @@ ifeq ($(CC),)
 	CC := gcc -Werror
 endif
 
-BIN = rxflush rxio rxioctl
+BIN = cache_test rxflush rxio rxioctl
 
 .PHONY: all
 all: $(BIN)
@@ -33,6 +33,9 @@ install: all
 .PHONY: uninstall
 uninstall:
 	@echo Nothing to do.
+
+cache_test: cache_test.c ../src/cache.o
+	$(CC) cache_test.c -o cache_test ../src/cache.o
 
 rxflush: rxflush.c
 	$(CC) rxflush.c -o rxflush

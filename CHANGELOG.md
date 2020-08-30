@@ -1,3 +1,9 @@
+### Release 7.0.0 ###
+
+- Implement http-driven API to monitor/manage rapiddisk/cache functions
+- Removing support for RHEL / CentOS 6.x
+- Restructure and improve test framework
+
 ### Release 6.1 ###
 
 - kernel: added support for 5.7 kernel

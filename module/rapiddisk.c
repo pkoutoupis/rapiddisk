@@ -41,7 +41,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"6.1"
+#define VERSION_STR		"7.0.0"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -629,7 +629,11 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		error = -EBUSY;
 		if (bdev->bd_openers <= 1) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0)
+			invalidate_bdev(bdev);
+#else
 			kill_bdev(bdev);
+#endif
 #else
 			invalidate_bh_lrus();
 			truncate_inode_pages(bdev->bd_inode->i_mapping, 0);

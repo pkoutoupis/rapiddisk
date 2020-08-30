@@ -40,16 +40,19 @@
 #include <errno.h>
 #include <unistd.h>
 
-#define UTIL			"rapiddisk"
+#define PROCESS			"rapiddisk"
+#define DAEMON			PROCESS "d"
 #define COPYRIGHT		"Copyright 2011 - 2020 Petros Koutoupis"
-#define VERSION_NUM	  	"6.1"
+#define VERSION_NUM	  	"7.0.0"
 #define SUCCESS			0
 #define INVALID_VALUE		-1
 #define NAMELEN			0x200
 #define BUFSZ			0x10000
+#define PAYLOADSZ		0x80000 /* 512K: this is our max read limit for libcurl */
 #define SYS_RDSK		"/sys/kernel/rapiddisk/mgmt"
 #define WRITETHROUGH		0
 #define WRITEAROUND		1
+#define DEFAULT_MGMT_PORT	"9118"
 
 typedef struct RD_PROFILE{	/* For RapidDisk device list     */
 	unsigned char device[16];
@@ -63,4 +66,21 @@ typedef struct RC_PROFILE{	/* For RapidDisk-Cache node list */
 	unsigned char source[NAMELEN];
 	struct RC_PROFILE *next;
 } RC_PROFILE;
+
+typedef char bool;
+
+#define FALSE			0
+#define TRUE			1
+
+#define CMD_PING_DAEMON		"/v1/checkServiceStatus"
+#define CMD_LIST_VOLUMES	"/v1/listAllVolumes"
+#define CMD_LIST_RD_VOLUMES	"/v1/listRapidDiskVolumes"
+#define CMD_RDSK_CREATE		"/v1/createRapidDisk"
+#define CMD_RDSK_REMOVE		"/v1/removeRapidDisk"
+#define CMD_RDSK_RESIZE		"/v1/resizeRapidDisk"
+#define CMD_RDSK_FLUSH		"/v1/flushRapidDisk"
+#define CMD_RCACHE_CREATE	"/v1/createRapidDiskCache"
+#define CMD_RCACHE_REMOVE	"/v1/removeRapidDiskCache"
+#define CMD_SHOW_STATS		"/v1/showStatistics"
+
 #endif

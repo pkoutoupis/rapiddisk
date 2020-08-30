@@ -1,0 +1,14 @@
+Web server API revision 1
+  
+-------------------------
+GET /v1/checkServiceStatus
+
+ex) curl -s --output - 127.0.0.1:8888/v1/checkServiceStatus|tail -n1|jq .
+
+status code: 200 (on success)
+
+Check the status of the daemon:
+{
+  "status": "OK"
+  "version": "0.4.1"
+}
