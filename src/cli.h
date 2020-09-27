@@ -31,6 +31,7 @@
 #define CLI_H
 
 #define PROC_MODULES			"/proc/modules"
+#define SYS_RDSK			"/sys/kernel/rapiddisk/mgmt"
 
 #define ACTION_NONE			0x0
 #define ACTION_ATTACH			0x1
@@ -41,5 +42,28 @@
 #define ACTION_RESIZE			0x6
 #define ACTION_CACHE_STATS		0x7
 #define ACTION_CACHE_UNMAP		0x8
+
+typedef struct RD_PROFILE{      /* For RapidDisk device list     */
+	unsigned char device[0xf];
+	unsigned long long size;
+	struct RD_PROFILE *next;
+} RD_PROFILE;
+
+typedef struct RC_PROFILE{      /* For RapidDisk-Cache node list */
+	unsigned char device[NAMELEN];
+	unsigned char cache[0x20];
+	unsigned char source[NAMELEN];
+	struct RC_PROFILE *next;
+} RC_PROFILE;
+
+int mem_device_list(struct RD_PROFILE *, struct RC_PROFILE *);
+int mem_device_attach(struct RD_PROFILE *, unsigned long);
+int mem_device_detach(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *);
+int mem_device_resize(struct RD_PROFILE *, unsigned char *, unsigned long);
+int mem_device_flush(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
+int cache_device_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, unsigned char *, int);
+int cache_device_unmap(struct RC_PROFILE *, unsigned char *);
+int cache_device_stat(struct RC_PROFILE *, unsigned char *);
+int json_device_list(unsigned char *, struct RD_PROFILE *, struct RC_PROFILE *);
 
 #endif

@@ -28,6 +28,7 @@
  ********************************************************************************/
 
 #include "common.h"
+#include "cli.h"
 #include <jansson.h>
 
 /*
@@ -95,7 +96,7 @@ int json_return_status(unsigned char *message, int status)
  * TODO: add iostat data and memory memory total/free and cpu util data
  */
 
-int json_list_volumes(unsigned char *message, struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
+int json_device_list(unsigned char *message, struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 {
 	json_t *root, *array  = json_array();
 

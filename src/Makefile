@@ -46,14 +46,17 @@ uninstall:
 	@echo Uninstalling rapiddisk binary files.
 	$(RM) $(DESTDIR)$(DIR)/$(BIN)*
 
+json.o: json.c
+	$(CC) -c json.c -o json.o
+
 rdsk.o: rdsk.c
 	$(CC) -c rdsk.c -o rdsk.o
 
 volume.o: volume.c
 	$(CC) -c volume.c -o volume.o
 
-$(BIN): rdsk.o
-	$(CC) main.c -o rapiddisk rdsk.o -ljansson
+$(BIN): main.c json.o rdsk.o
+	$(CC) main.c -o rapiddisk json.o rdsk.o -ljansson
 
 #$(BIN)d:
 #	-lpthread -ljansson -lmicrohttpd

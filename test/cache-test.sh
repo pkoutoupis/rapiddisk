@@ -5,53 +5,57 @@ if [ ! "$BASH_VERSION" ] ; then
 fi
 
 PATH=$PATH:$(pwd)
+RD=rd0
 
 function cleanup()
 {       
-	cache_test -u
-	losetup -d /dev/loop5
+	../src/rapiddisk -u rc-wa_loop7
+	../src/rapiddisk -d ${RD}
+	losetup -d /dev/loop7
 	rm -f /tmp/test1
 }
 
 function createLoopbackDevices()
 {       
 	dd if=/dev/zero of=/tmp/test1 bs=1M count=256
-	losetup /dev/loop5 /tmp/test1
+	losetup /dev/loop7 /tmp/test1
 }
 
 function removeLoopbackDevices()
 {       
-	losetup -d /dev/loop5
+	losetup -d /dev/loop7
 	rm -f /tmp/test1
 }
 
 function createCacheVolumes()
 {
-	cache_test -a /dev/loop5
+	RD=`../src/rapiddisk -a 64|tail -n1|cut -d' ' -f3`
+	../src/rapiddisk -m ${RD} -b /dev/loop7
 	RETVAL=$?
-	if [ $RETVAL -ne 0 ]; then
+	if [ ${RETVAL} -ne 0 ]; then
 		cleanup
-		exit $RETVAL
+		exit ${RETVAL}
 	fi
 }
 
 function removeCacheVolumes()
 {
-	cache_test -u
+	../src/rapiddisk -u rc-wt_loop7
+	../src/rapiddisk -d ${RD}
 	RETVAL=$?
-	if [ $RETVAL -ne 0 ]; then
+	if [ ${RETVAL} -ne 0 ]; then
 		cleanup
-		exit $RETVAL
+		exit ${RETVAL}
 	fi
 }
 
 function statCacheVolumes()
 {       
-	cache_test -s rc-wa_loop5
+	../src/rapiddisk -s rc-wt_loop7
 	RETVAL=$?
-	if [ $RETVAL -ne 0 ]; then
+	if [ ${RETVAL} -ne 0 ]; then
 		cleanup
-		exit $RETVAL
+		exit ${RETVAL}
 	fi
 }
 
@@ -59,8 +63,12 @@ function statCacheVolumes()
 #
 #
 
-modprobe rapiddisk max_sectors=2048 nr_requests=1024 2>&1 >/dev/null
-modprobe rapiddisk-cache 2>&1 >/dev/null
+
+COUNT=`lsmod|grep rapiddisk|wc -l`
+if [ ${COUNT} -ne 2 ]; then
+	insmod ../module/rapiddisk.ko max_sectors=2048 nr_requests=1024 2>&1 >/dev/null
+	insmod ../module/rapiddisk-cache.ko 2>&1 >/dev/null
+fi
 
 echo "Create Loopback Devices..."
 createLoopbackDevices
@@ -74,5 +82,8 @@ removeCacheVolumes
 ls -l /dev/mapper|grep "rc-wa_"
 echo "Remove Loopback Devices..."
 removeLoopbackDevices
+
+rmmod rapiddisk.ko
+rmmod rapiddisk-cache.ko
 
 exit 0

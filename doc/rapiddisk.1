@@ -2,9 +2,9 @@
 .SH NAME
 rapiddisk \- An administration tool to manage the RapidDisk RAM disk devices and RapidDisk-Cache mappings.
 .SH SYNOPSIS
-rapiddisk [ -h | -v ] function [ parameters: unit | size | cache & source | mode ]
+rapiddisk [ -h | -v ] function [ parameters ]
 .SH DESCRIPTION
-rapiddisk is a RapidDisk module management tool. The tool allows the user to list all attached RapidDisk devices, with the ability to dynamically attach a new RapidDisk block devices and detach existing ones. It also is capable of mapping and unmapping an RapidDisk volumes as a Write-Through or Write Around cache to any block device via the RapidDisk-Cache kernel module.
+rapiddisk is a RapidDisk module management tool to manage RapidDisk RAM disk devices. Dynamically create, remove, resize RAM volumes and if desired, map or unmap them as a cache volume to any block device.
 .SS Options
 .TP
 -h | --help
@@ -14,72 +14,69 @@ Invoke the help menu.
 Display the version number.
 .SS Functions
 .TP
---attach
-Dynamically attach new RapidDisk devices.
+-a
+Attach RAM disk device (size in MBytes).
 .TP
---detach
-Dynamically detach RapidDisk devices.
+-b
+Backend block device absolute path (for cache mapping).
 .TP
---list
-List all attached RapidDisk devices.
+-c
+Input capacity for size or resize of RAM disk device (in MBytes).
 .TP
---list-json
-List all attached RapidDisk devices in JSON format (only if enabled during compilation).
+-d
+Detach RAM disk device.
 .TP
---short-list   
-List all attached RapidDisk devices in script friendly format.
-.TP
---flush
+-f
 Erase all data to a specified RapidDisk device (dangerous).
 .TP
---resize
+-j
+Enable JSON formatted output.
+.TP
+-l
+List all attached RAM disk devices.
+.TP
+-m
+Map an RapidDisk device as a caching node to another block device.
+.TP
+-p
+Define cache policy (default: write-through).
+.TP
+-r
 Dynamically grow the size of an existing RapidDisk device.
 .TP
---cache-map
-Map an RapidDisk device as a caching node to another block device.
-.TP
---cache-unmap
-Map an RapidDisk device as a caching node to another block device.
-.TP
---stat-cache
+-s
 Obtain RapidDisk-Cache Mappings statistics.
+.TP
+-u
+Unmap a RapidDisk device from another block device.
 .SS Parameters (if applicable)
 .TP
 [size]
 Specify desired size of attaching RAM disk device in MBytes.
 .TP
-[unit]
-Specify unit number of RAM disk device to detach.
-.TP
-[cache]
-Specify RapidDisk node to use as caching volume.
-.TP
-[source]
-Specify block device to map cache to.
-.TP
 [mode]
 Write Through (wt) or Write Around (wa) for cache.
 .SH EXAMPLE USAGE
 .TP
-rapiddisk --list
+rapiddisk -l
 .TP
-rapiddisk --list-json
+rapiddisk -l -j
 .TP
-rapiddisk --attach 64
+rapiddisk -a 64
 .TP
-rapiddisk --detach rd2
+rapiddisk -d rd2
 .TP
-rapiddisk --resize rd2 128
+rapiddisk -r rd2 -c 128
 .TP
-rapiddisk --cache-map rd1 /dev/sdb
+rapiddisk -m rd1 -b /dev/sdb
 .TP
-rapiddisk --cache-map rd1 /dev/sdb wt
+rapiddisk -m rd1 -b /dev/sdb -p wt
 .TP
-rapiddisk --cache-unmap rc_sdb
+rapiddisk -u rc-wt_sdb
 .TP
-rapiddisk --stat-cache rc_sdb
+rapiddisk -s rc-wt_sdb
 .TP
-rapiddisk --flush rd2
+rapiddisk -f rd2
 .SH EXIT STATUS
 rapiddisk returns a zero exit status if no error occurs during operation. A non-zero value is returned on error.
 .SH AUTHORS

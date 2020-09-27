@@ -32,15 +32,6 @@
 
 struct RD_PROFILE *search_targets(void);
 struct RC_PROFILE *search_cache(void);
-int list_devices(struct RD_PROFILE *, struct RC_PROFILE *);
-int short_list_devices(struct RD_PROFILE *, struct RC_PROFILE *);
-int detach_device(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *);
-int attach_device(struct RD_PROFILE *, unsigned long);
-int resize_device(struct RD_PROFILE *, unsigned char *, unsigned long);
-int cache_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, unsigned char *, int);
-int cache_unmap(struct RC_PROFILE *, unsigned char *);
-int stat_cache_mapping(struct RC_PROFILE *, unsigned char *);
-int rdsk_flush(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
 
 void online_menu(unsigned char *string)
 {
@@ -61,17 +52,16 @@ void online_menu(unsigned char *string)
 	       "\t-l\t\tList all attached RAM disk devices.\n"
 	       "\t-m\t\tMap an RapidDisk device as a caching node to another block device.\n"
 	       "\t-p\t\tDefine cache policy (default: write-through).\n"
-	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n\n"
+	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
 	       "\t-u\t\tUnmap a RapidDisk device from another block device.\n"
-	       "\t-v\t\tEnable verbosity (for debugging purposes).\n"
-	       "\t-V\t\tDisplay the utility version string.\n\n");
+	       "\t-v\t\tDisplay the utility version string.\n\n");
         printf("Example Usage:\n\trapiddisk -a 64\n"
 	       "\trapiddisk -d rd2\n"
 	       "\trapiddisk -r rd2 -c 128\n"
 	       "\trapiddisk -m rd1 -b /dev/sdb\n"
 	       "\trapiddisk -m rd1 -b /dev/sdb -p wt\n"
-	       "\trapiddisk -u rc_sdb\n"
+	       "\trapiddisk -u rc-wt_sdb\n"
 	       "\trapiddisk -f rd2\n\n");
 }
 
@@ -79,8 +69,8 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 {
 	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i;
 	unsigned long size = 0;
-	bool json_flag = FALSE, verbose = FALSE;
-	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0};
+	bool json_flag = FALSE;
+	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, *message = NULL;
 	struct RD_PROFILE *disk;	/* These are dummy pointers to  */
 	struct RC_PROFILE *cache;	/* help create the linked  list */
 
@@ -137,9 +127,6 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			sprintf(device, "%s", optarg);
 			break;
 		case 'v':
-			verbose = TRUE;
-			break;
-		case 'V':
 			return SUCCESS;
 			break;
 		case '?':
@@ -157,7 +144,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		if (size <= 0)
 			goto exec_cmdline_arg_out;
 
-		rc = attach_device(disk, size);
+		rc = mem_device_attach(disk, size);
 		break;
 	case ACTION_DETACH:
 		if (disk == NULL)
@@ -166,28 +153,33 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			if (strlen(device) <= 0)
 				goto exec_cmdline_arg_out;
 
-			rc = detach_device(disk, cache, device);
+			rc = mem_device_detach(disk, cache, device);
 		}
 		break;
 	case ACTION_FLUSH:
-		rc = rdsk_flush(disk, cache, device);
+		rc = mem_device_flush(disk, cache, device);
 		break;
 	case ACTION_LIST:
 		if (disk == NULL)
 			printf("Unable to locate any RapidDisk devices.\n");
 		else {
-			if (strlen(device) <= 0)
-				goto exec_cmdline_arg_out;
-
-			//TODO: Add JSON flag input
-			rc = list_devices(disk, cache);
+			if (json_flag == TRUE) {
+				message = (unsigned char *)calloc(1, BUFSZ);
+				if (!message) {
+					printf("%s: calloc: %s\n", __func__, strerror(errno));
+					return -ENOMEM;
+				}
+				rc = json_device_list(message, disk, cache);
+				printf("%s\n", message);
+			} else
+				rc = mem_device_list(disk, cache);
 		}
 		break;
 	case ACTION_CACHE_MAP:
 		if ((strlen(device) <= 0) || (strlen(backing) <= 0))
 			goto exec_cmdline_arg_out;
 
-		rc = cache_map(disk, cache, device, backing, mode);
+		rc = cache_device_map(disk, cache, device, backing, mode);
 		break;
 	case ACTION_RESIZE:
 		if (disk == NULL)
@@ -198,20 +190,22 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			if (strlen(device) <= 0)
 				goto exec_cmdline_arg_out;
 
-                        rc = resize_device(disk, device, size);
+			rc = mem_device_resize(disk, device, size);
 		break;
 	case ACTION_CACHE_STATS:
 		if (strlen(device) <= 0)
 			goto exec_cmdline_arg_out;
-		rc = stat_cache_mapping(cache, device);
+		rc = cache_device_stat(cache, device);
 		break;
 	case ACTION_CACHE_UNMAP:
-		 rc = cache_unmap(cache, device);
+		 rc = cache_device_unmap(cache, device);
 		break;
 	case ACTION_NONE:
 		online_menu(argvin[0]);
 		break;
 	}
+
+	if (message) free(message);
 
 	return rc;
 

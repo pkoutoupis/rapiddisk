@@ -30,10 +30,23 @@
 #ifndef DAEMON_H
 #define DAEMON_H
 
+#define DEFAULT_MGMT_PORT       "9118"
+
 typedef struct PTHREAD_ARGS {
         bool verbose;
         unsigned char port[0xf];
 } PTHREAD_ARGS;
+
+#define CMD_PING_DAEMON		"/v1/checkServiceStatus"
+#define CMD_LIST_VOLUMES	"/v1/listAllVolumes"
+#define CMD_LIST_RD_VOLUMES	"/v1/listRapidDiskVolumes"
+#define CMD_RDSK_CREATE		"/v1/createRapidDisk"
+#define CMD_RDSK_REMOVE		"/v1/removeRapidDisk"
+#define CMD_RDSK_RESIZE		"/v1/resizeRapidDisk"
+#define CMD_RDSK_FLUSH		"/v1/flushRapidDisk"
+#define CMD_RCACHE_CREATE	"/v1/createRapidDiskCache"
+#define CMD_RCACHE_REMOVE	"/v1/removeRapidDiskCache"
+#define CMD_SHOW_STATS		"/v1/showStatistics"
 
 void *mgmt_thread(void *);
 int json_check_status(unsigned char *);

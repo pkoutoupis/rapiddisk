@@ -2,7 +2,9 @@
 
 - Implement http-driven API to monitor/manage rapiddisk/cache functions
 - Removing support for RHEL / CentOS 6.x
-- Restructure and improve test framework
+- Restructured userspace CLI
+- Restructured and improved test framework
+- Code / documentation cleanup
 
 ### Release 6.1 ###
 

@@ -28,6 +28,7 @@
  ********************************************************************************/
 
 #include "common.h"
+#include "cli.h"
 #include <dirent.h>
 #include <malloc.h>
 #include <linux/fs.h>
@@ -166,7 +167,7 @@ struct RC_PROFILE *search_cache(void)
 	return chead;
 }
 
-int list_devices(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
+int mem_device_list(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 {
 	int num = 1;
 
@@ -197,7 +198,7 @@ list_out:
 	return SUCCESS;
 }
 
-int stat_cache_mapping(struct RC_PROFILE *rc_prof, unsigned char *cache)
+int cache_device_stat(struct RC_PROFILE *rc_prof, unsigned char *cache)
 {
 	unsigned char cmd[NAMELEN] = {0};
 
@@ -211,26 +212,7 @@ int stat_cache_mapping(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	return SUCCESS;
 }
 
-int short_list_devices(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
-{
-	if ((rd_prof == NULL) && (rc_prof == NULL)) {
-		printf("There are no RapidDisk or RapidDisk-Cache devices.\n");
-		goto short_list_out;
-	}
-
-	while (rd_prof != NULL) {
-		printf("%s:%llu\n", rd_prof->device, rd_prof->size);
-		rd_prof = rd_prof->next;
-	}
-	while (rc_prof != NULL) {
-		printf("%s:%s,%s\n", rc_prof->device, rc_prof->cache, rc_prof->source);
-		rc_prof = rc_prof->next;
-	}
-short_list_out:
-	return SUCCESS;
-}
-
-int attach_device(struct RD_PROFILE *prof, unsigned long size)
+int mem_device_attach(struct RD_PROFILE *prof, unsigned long size)
 {
 	int dsk;
 	FILE *fp;
@@ -264,7 +246,7 @@ int attach_device(struct RD_PROFILE *prof, unsigned long size)
 	return SUCCESS;
 }
 
-int detach_device(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned char *string)
+int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned char *string)
 {
 	int rc = INVALID_VALUE;
 	FILE *fp;
@@ -323,7 +305,7 @@ int detach_device(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned cha
 	return SUCCESS;
 }
 
-int resize_device(struct RD_PROFILE *prof, unsigned char *string, unsigned long size)
+int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned long size)
 {
 	int rc = INVALID_VALUE;
 	FILE *fp;
@@ -361,8 +343,8 @@ int resize_device(struct RD_PROFILE *prof, unsigned char *string, unsigned long 
 	return 0;
 }
 
-int cache_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
-	        unsigned char *cache, unsigned char *source, int mode)
+int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
+		     unsigned char *cache, unsigned char *source, int mode)
 {
 	int rc = INVALID_VALUE, node, fd;
 	unsigned long long source_sz = 0, cache_sz = 0;
@@ -460,7 +442,7 @@ int cache_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 		source_sz, source, cache, cache_sz, mode, name);
 
 	if ((rc = system(string)) == SUCCESS) {
-		printf("Command to map %s with %s and %s has been sent.\nVerify with \"--list\"\n\n",
+		printf("Command to map %s with %s and %s has been sent.\nVerify with \"-l\"\n\n",
 			name, cache, source);
 	} else
 		printf("Error. Unable to create map. Please verify all input values are correct.\n\n");
@@ -468,7 +450,7 @@ int cache_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 	return rc;
 }
 
-int cache_unmap(struct RC_PROFILE *prof, unsigned char *string)
+int cache_device_unmap(struct RC_PROFILE *prof, unsigned char *string)
 {
 	int rc = INVALID_VALUE;
 	FILE *fp;
@@ -505,7 +487,7 @@ int cache_unmap(struct RC_PROFILE *prof, unsigned char *string)
 
 	sprintf(cmd, "dmsetup remove %s\n", string);
 	if ((rc = system(cmd)) == SUCCESS)
-		printf("Command to unmap %s has been sent\nVerify with \"--list\"\n\n", string);
+		printf("Command to unmap %s has been sent\nVerify with \"-l\"\n\n", string);
 	else {
 		printf("Error. Unable to unmap %s. Please check to make sure "
 		       "nothing is wrong.n\n", string);
@@ -513,7 +495,7 @@ int cache_unmap(struct RC_PROFILE *prof, unsigned char *string)
 	return rc;
 }
 
-int rdsk_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned char *string)
+int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned char *string)
 {
 	int fd, rc = INVALID_VALUE;
 	unsigned char file[NAMELEN] = {0}, *buf;
