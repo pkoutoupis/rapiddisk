@@ -10,6 +10,7 @@
 *.order
 *.swp
 src/rapiddisk
+src/rapiddiskd
 test/rxflush
 test/rxio
 test/rxioctl

@@ -31,19 +31,19 @@ BIN = rapiddisk
 DIR := /sbin
 
 .PHONY: all
-all: $(BIN)
+all: $(BIN) $(BIN)d
 	@echo Make has completed.
 
 .PHONY: install
 install: all
-	@echo Installing all rapiddisk binary files.
+	@echo Installing all $(BIN) binary files.
 	$(MKDIR) $(DESTDIR)$(DIR)
 	$(CP) $(BIN) $(DESTDIR)$(DIR)
 	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
 
 .PHONY: uninstall
 uninstall:
-	@echo Uninstalling rapiddisk binary files.
+	@echo Uninstalling $(BIN) binary files.
 	$(RM) $(DESTDIR)$(DIR)/$(BIN)*
 
 json.o: json.c
@@ -56,12 +56,12 @@ volume.o: volume.c
 	$(CC) -c volume.c -o volume.o
 
 $(BIN): main.c json.o rdsk.o
-	$(CC) main.c -o rapiddisk json.o rdsk.o -ljansson
+	$(CC) main.c -o $(BIN) json.o rdsk.o -ljansson
 
-#$(BIN)d:
-#	-lpthread -ljansson -lmicrohttpd
+$(BIN)d: daemon.c json.o net.o
+	$(CC) daemon.c -o $(BIN)d json.o net.o -lpthread -ljansson -lmicrohttpd
 
 
 .PHONY: clean
 clean:
-	rm -f *.o $(BIN)
+	rm -f *.o $(BIN) $(BIN)d

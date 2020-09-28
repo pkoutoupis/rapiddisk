@@ -5,6 +5,7 @@ After=network.target
 [Service]
 ExecStart=/sbin/rapiddiskd
 Type=forking
+Restart=always
 
 [Install]
 WantedBy=default.target

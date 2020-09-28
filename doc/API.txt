@@ -10,5 +10,68 @@ status code: 200 (on success)
 Check the status of the daemon:
 {
   "status": "OK"
-  "version": "0.4.1"
+  "version": "7.0.0"
 }
+
+-------------------------
+GET /v1/listAllVolumes
+
+ex) curl -s --output - 127.0.0.1:8888/v1/listAllVolumes|tail -n1|jq .
+
+status code: 200 (on success)
+
+-------------------------
+GET /v1/listRapidDiskVolumes
+
+ex) curl -s --output - 127.0.0.1:8888/v1/listRapidDiskVolumes|tail -n1|jq .
+
+status code: 200 (on success)
+
+-------------------------
+POST /v1/createRapidDisk/@size
+
+ex) curl -X POST -s 127.0.0.1:8888/v1/createRapidDisk/128|tail -n1|jq .
+
+status code: 200 (on success)
+
+-------------------------
+POST /v1/resizeRapidDisk/@volume/@size
+
+ex) curl -X POST -s 127.0.0.1:8888/v1/resizeRapidDisk/rd0/128|tail -n1|jq .
+
+status code: 200 (on success)
+
+-------------------------
+POST /v1/flushRapidDisk/@volume
+
+ex) curl -X POST -s 127.0.0.1:8888/v1/flushRapidDisk/rd0|tail -n1|jq .
+
+status code: 200 (on success)
+
+-------------------------
+DELETE /v1/removeRapidDisk/@volume
+
+ex) curl -X DELETE -s 127.0.0.1:8888/v1/removeRapidDisk/rd0|tail -n1|jq .
+
+status code: 200 (on success)
+
+-------------------------
+POST /v1/createRapidDiskCache/@volume/@source
+
+ex) curl -X POST -s 127.0.0.1:8888/v1/createRapidDiskCache/rd0/sdb|tail -n1|jq .
+
+status code: 200 (on success)
+
+-------------------------
+DELETE /v1/removeRapidDiskCache/@volume
+
+ex) curl -X DELETE -s 127.0.0.1:8888/v1/removeRapidDiskCache/rc-wt_sdb|tail -n1|jq .
+
+status code: 200 (on success)
+
+-------------------------
+GET /v1/showStatistics
+
+ex) curl -s --output - 127.0.0.1:8888/v1/showStatistics|tail -n1|jq .
+
+status code: 200 (on success)

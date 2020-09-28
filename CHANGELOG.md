@@ -1,10 +1,11 @@
 ### Release 7.0.0 ###
 
-- Implement http-driven API to monitor/manage rapiddisk/cache functions
-- Removing support for RHEL / CentOS 6.x
-- Restructured userspace CLI
-- Restructured and improved test framework
-- Code / documentation cleanup
+- module: Updated for 5.8 kernels and later
+- daemon: Implement http-driven API to monitor/manage rapiddisk/cache functions
+- utility: Removing support for RHEL / CentOS 6.x
+- utility: Restructured userspace CLI
+- test: Restructured and improved test framework
+- misc: Code / documentation cleanup
 
 ### Release 6.1 ###
 

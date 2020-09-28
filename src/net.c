@@ -49,15 +49,17 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 
 	unsigned char *page = (unsigned char *)calloc(1, BUFSZ);
 	if (page == NULL) {
-		printf("%s: %s: calloc: %s\n", BIN, __func__, strerror(errno));
+		printf("%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
 		return INVALID_VALUE;
 	}
 
+/*
 	if (strcmp(url, CMD_PING_DAEMON) == SUCCESS) {
 		json_check_status(page);
 	} else if (strcmp(url, CMD_LIST_VOLUMES) == SUCCESS) {
 		json_list_devices(volumes, page);
 	}
+*/
 
 answer_to_connection_out:
 	response = MHD_create_response_from_buffer(strlen(page), (void *)page, MHD_RESPMEM_MUST_COPY);

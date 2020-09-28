@@ -29,7 +29,6 @@
 
 #include "common.h"
 #include "cli.h"
-#include <dirent.h>
 #include <malloc.h>
 #include <linux/fs.h>
 #include <sys/ioctl.h>

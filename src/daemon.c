@@ -33,6 +33,7 @@
 #include "daemon.h"
 #include <pthread.h>
 #include <signal.h>
+#include <libgen.h>
 
 #define THREAD_CHECK_DELAY	10  /* in seconds */
 
@@ -44,12 +45,12 @@ struct PTHREAD_ARGS *args;
 void online_menu(void)
 {
         printf("%s is a daemon intended to listen for API requests.\n\n"
-               "Usage: %s [ -h | -V ] [ options ]\n\n", DAEMON, DAEMON);
+               "Usage: %s [ -h | -v ] [ options ]\n\n", DAEMON, DAEMON);
         printf("Functions:\n"
                "\t-h\tPrint this exact help menu.\n"
                "\t-p\tChange port to listen on (default: 9118).\n"
-               "\t-v\tEnable debug messages to stdout (this is ugly).\n"
-               "\t-V\tPrint out version information.\n\n");
+               "\t-V\tEnable debug messages to stdout (this is ugly).\n"
+               "\t-v\tPrint out version information.\n\n");
 }
 
 /*
@@ -118,7 +119,7 @@ int main(int argc, char *argv[])
 	pid_t pid;
 	int rc = SUCCESS, i;
 	pthread_t mgmt_tid = INVALID_VALUE;
-	unsigned char path[DEFAULT_STRSZ] = {0};
+	unsigned char path[NAMELEN] = {0};
 
 	printf("%s %s\n%s\n\n", DAEMON, VERSION_NUM, COPYRIGHT);
 
@@ -146,20 +147,20 @@ int main(int argc, char *argv[])
 	}
 	sprintf(args->path, "%s", dirname(path));
 
-	while ((i = getopt(argc, argv, "hvp:V")) != INVALID_VALUE) {
+	while ((i = getopt(argc, argv, "hp:vV")) != INVALID_VALUE) {
 		switch (i) {
 		case 'h':
 			online_menu();
 			return SUCCESS;
 			break;
-		case 'v':
-			args->verbose = 1;
-			break;
 		case 'p':
 			sprintf(args->port, "%s", optarg);
 			break;
-		case 'V':
+		case 'v':
 			return SUCCESS;
+			break;
+		case 'V':
+			args->verbose = 1;
 			break;
 		case '?':
 			online_menu();

@@ -39,6 +39,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #define PROCESS			"rapiddisk"
 #define DAEMON			PROCESS "d"

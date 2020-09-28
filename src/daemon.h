@@ -30,11 +30,14 @@
 #ifndef DAEMON_H
 #define DAEMON_H
 
+#include <syslog.h>
+
 #define DEFAULT_MGMT_PORT       "9118"
 
 typedef struct PTHREAD_ARGS {
-        bool verbose;
-        unsigned char port[0xf];
+	bool verbose;
+	unsigned char port[0xf];
+	unsigned char path[NAMELEN];
 } PTHREAD_ARGS;
 
 #define CMD_PING_DAEMON		"/v1/checkServiceStatus"
