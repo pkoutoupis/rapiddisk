@@ -33,21 +33,10 @@
 #include <linux/fs.h>
 #include <sys/ioctl.h>
 
-#define FILEDATA		0x40
-#define BYTES_PER_SECTOR	0x200
-
-struct RD_PROFILE *head =  (struct RD_PROFILE *) NULL;
-struct RD_PROFILE *end =   (struct RD_PROFILE *) NULL;
-struct RC_PROFILE *chead = (struct RC_PROFILE *) NULL;
-struct RC_PROFILE *cend =  (struct RC_PROFILE *) NULL;
-
-unsigned char *sys_block  = "/sys/block";
-unsigned char *etc_mtab   = "/etc/mtab";
-unsigned char *dev_mapper = "/dev/mapper";
-
-unsigned char *read_info(unsigned char *, unsigned char *);
-struct RD_PROFILE *search_targets(void);
-struct RC_PROFILE *search_cache(void);
+struct RD_PROFILE *rdsk_head =  (struct RD_PROFILE *) NULL;
+struct RD_PROFILE *rdsk_end =   (struct RD_PROFILE *) NULL;
+struct RC_PROFILE *cache_head = (struct RC_PROFILE *) NULL;
+struct RC_PROFILE *cache_end =  (struct RC_PROFILE *) NULL;
 
 unsigned char *read_info(unsigned char *name, unsigned char *string)
 {
@@ -55,7 +44,7 @@ unsigned char *read_info(unsigned char *name, unsigned char *string)
 	unsigned char file[NAMELEN] = {0};
 	unsigned char buf[0xFF] = {0};
 	static unsigned char obuf[0xFF] = {0};
-	FILE *fp;
+	FILE *fp = NULL;
 
 	memset(&buf, 0, sizeof(buf));
 	memset(&obuf, 0, sizeof(obuf));
@@ -75,14 +64,14 @@ unsigned char *read_info(unsigned char *name, unsigned char *string)
 	return obuf;
 }
 
-struct RD_PROFILE *search_targets(void)
+struct RD_PROFILE *search_rdsk_targets(void)
 {
 	int rc, n = 0;
 	unsigned char file[NAMELEN] = {0};
 	struct dirent **list;
-	struct RD_PROFILE *prof;
+	struct RD_PROFILE *prof = NULL;
 
-	if ((rc = scandir(sys_block, &list, NULL, NULL)) < 0) {
+	if ((rc = scandir(SYS_BLOCK, &list, NULL, NULL)) < 0) {
 		printf("%s: scandir: %s\n", __func__, strerror(errno));
 		return NULL;
 	}
@@ -94,30 +83,30 @@ struct RD_PROFILE *search_targets(void)
 				return NULL;
 			}
 			strcpy(prof->device, (unsigned char *)list[n]->d_name);
-			sprintf(file, "%s/%s", sys_block, list[n]->d_name);
+			sprintf(file, "%s/%s", SYS_BLOCK, list[n]->d_name);
 			prof->size = (BYTES_PER_SECTOR * strtoull(read_info(file, "size"), NULL, 10));
 
-			if (head == NULL)
-				head = prof;
+			if (rdsk_head == NULL)
+				rdsk_head = prof;
 			else
-				end->next = prof;
-			end = prof;
+				rdsk_end->next = prof;
+			rdsk_end = prof;
 			prof->next = NULL;
 		}
 		if (list[n] != NULL) free(list[n]);
 	}
-	return head;
+	return rdsk_head;
 }
 
-struct RC_PROFILE *search_cache(void)
+struct RC_PROFILE *search_cache_targets(void)
 {
 	int num, num2, num3, n = 0, i, z;
 	struct dirent **list, **nodes, **maps;
 	unsigned char file[NAMELEN] = {0};
-	struct RC_PROFILE *prof;
+	struct RC_PROFILE *prof = NULL;
 
-	if ((num = scandir(dev_mapper, &list, NULL, NULL)) < 0) return NULL;
-	if ((num2 = scandir(sys_block, &nodes, NULL, NULL)) < 0) {
+	if ((num = scandir(DEV_MAPPER, &list, NULL, NULL)) < 0) return NULL;
+	if ((num2 = scandir(SYS_BLOCK, &nodes, NULL, NULL)) < 0) {
 		printf("%s: scandir: %s\n", __func__, strerror(errno));
 		return NULL;
 	}
@@ -132,10 +121,10 @@ struct RC_PROFILE *search_cache(void)
 			strcpy(prof->device, (unsigned char *)list[n]->d_name);
 			for (i = 0;i < num2; i++) {
 				if (strncmp(nodes[i]->d_name, "dm-", 3) == SUCCESS) {
-					sprintf(file, "%s/%s", sys_block, nodes[i]->d_name);
+					sprintf(file, "%s/%s", SYS_BLOCK, nodes[i]->d_name);
 					if (strncmp(read_info(file, "dm/name"), prof->device,
 					    sizeof(prof->device)) == 0) {
-						sprintf(file, "%s/%s/slaves", sys_block, nodes[i]->d_name);
+						sprintf(file, "%s/%s/slaves", SYS_BLOCK, nodes[i]->d_name);
 						if ((num3 = scandir(file, &maps, NULL, NULL)) < 0) {
 							printf("%s: scandir: %s\n", __func__,
 							       strerror(errno));
@@ -153,17 +142,17 @@ struct RC_PROFILE *search_cache(void)
 					}
 				}
 			}
-			if (chead == NULL)
-				chead = prof;
+			if (cache_head == NULL)
+				cache_head = prof;
 			else
-				cend->next = prof;
-			cend = prof;
+				cache_end->next = prof;
+			cache_end = prof;
 			prof->next = NULL;
 		}
 		if (list[n] != NULL) free(list[n]);
 	}
 	for (i = 0;i < num2; i++) if (nodes[i] != NULL) free(nodes[i]);
-	return chead;
+	return cache_head;
 }
 
 int mem_device_list(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
@@ -214,8 +203,8 @@ int cache_device_stat(struct RC_PROFILE *rc_prof, unsigned char *cache)
 int mem_device_attach(struct RD_PROFILE *prof, unsigned long size)
 {
 	int dsk;
-	FILE *fp;
-	unsigned char string[BUFSZ], name[16];
+	FILE *fp = NULL;
+	unsigned char string[BUFSZ] = {0}, name[16] = {0};
 
 	/* echo "rapiddisk attach 64" > /sys/kernel/rapiddisk/mgmt <- in sectors*/
 	for (dsk = 0; prof != NULL; dsk++) {
@@ -248,8 +237,8 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long size)
 int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned char *string)
 {
 	int rc = INVALID_VALUE;
-	FILE *fp;
-	unsigned char *buf;
+	FILE *fp = NULL;
+	unsigned char *buf = NULL;
 
 	/* echo "rapiddisk detach 1" > /sys/kernel/rapiddisk/mgmt */
 	while (rd_prof != NULL) {
@@ -277,8 +266,8 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned
 	}
 
 	/* Here we are starting to check to see if the device is mounted */
-	if ((fp = fopen(etc_mtab, "r")) == NULL) {
-		printf("%s: fopen: %s: %s\n", __func__, etc_mtab, strerror(errno));
+	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
+		printf("%s: fopen: %s: %s\n", __func__, ETC_MTAB, strerror(errno));
 		return -ENOENT;
 	}
 	fread(buf, BUFSZ, 1, fp);
@@ -301,13 +290,15 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned
 	printf("Detached device %s\n", string);
 	fclose(fp);
 
+	if (buf) free(buf);
+
 	return SUCCESS;
 }
 
 int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned long size)
 {
 	int rc = INVALID_VALUE;
-	FILE *fp;
+	FILE *fp = NULL;
 
 	/* echo "rapiddisk resize 1 128" > /sys/kernel/rapiddisk/mgmt */
 	while (prof != NULL) {
@@ -347,8 +338,8 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 {
 	int rc = INVALID_VALUE, node, fd;
 	unsigned long long source_sz = 0, cache_sz = 0;
-	FILE *fp;
-	unsigned char *buf, string[BUFSZ], name[NAMELEN] = {0}, str[NAMELEN - 6] = {0}, *dup, *token;
+	FILE *fp = NULL;
+	unsigned char *buf, string[BUFSZ] = {0}, name[NAMELEN] = {0}, str[NAMELEN - 6] = {0}, *dup = NULL, *token = NULL;
 
 	while (rd_prof != NULL) {
 		if (strcmp(cache, rd_prof->device) == SUCCESS) {
@@ -382,8 +373,8 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
 		return INVALID_VALUE;
 	}
-	if ((fp = fopen(etc_mtab, "r")) == NULL) {
-		printf("%s: fopen: %s: %s\n", __func__, etc_mtab, strerror(errno));
+	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
+		printf("%s: fopen: %s: %s\n", __func__, ETC_MTAB, strerror(errno));
 		return INVALID_VALUE;
 	}
 	fread(buf, BUFSZ, 1, fp);
@@ -452,8 +443,8 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 int cache_device_unmap(struct RC_PROFILE *prof, unsigned char *string)
 {
 	int rc = INVALID_VALUE;
-	FILE *fp;
-	unsigned char *buf;
+	FILE *fp = NULL;
+	unsigned char *buf = NULL;
 	unsigned char cmd[NAMELEN] = {0};
 
 	/* dmsetup remove rc-wt_sdb */
@@ -473,8 +464,8 @@ int cache_device_unmap(struct RC_PROFILE *prof, unsigned char *string)
 	}
 
 	/* Here we are starting to check to see if the device is mounted */
-	if ((fp = fopen(etc_mtab, "r")) == NULL) {
-		printf("%s: fopen: %s: %s\n", __func__, etc_mtab, strerror(errno));
+	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
+		printf("%s: fopen: %s: %s\n", __func__, ETC_MTAB, strerror(errno));
 		return -ENOENT;
 	}
 	fread(buf, BUFSZ, 1, fp);
@@ -497,8 +488,8 @@ int cache_device_unmap(struct RC_PROFILE *prof, unsigned char *string)
 int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned char *string)
 {
 	int fd, rc = INVALID_VALUE;
-	unsigned char file[NAMELEN] = {0}, *buf;
-	FILE *fp;
+	unsigned char file[NAMELEN] = {0}, *buf = NULL;
+	FILE *fp = NULL;
 
 	while (rd_prof != NULL) {
 		if (strcmp(string, rd_prof->device) == SUCCESS)
@@ -526,8 +517,8 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned c
 	}
 
 	/* Here we are starting to check to see if the device is mounted */
-	if ((fp = fopen(etc_mtab, "r")) == NULL) {
-		printf("%s: fopen: %s: %s\n", __func__, etc_mtab, strerror(errno));
+	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
+		printf("%s: fopen: %s: %s\n", __func__, ETC_MTAB, strerror(errno));
 		return -ENOENT;
 	}
 	fread(buf, BUFSZ, 1, fp);

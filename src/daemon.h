@@ -41,7 +41,7 @@ typedef struct PTHREAD_ARGS {
 } PTHREAD_ARGS;
 
 #define CMD_PING_DAEMON		"/v1/checkServiceStatus"
-#define CMD_LIST_VOLUMES	"/v1/listAllVolumes"
+#define CMD_LIST_RESOURCES	"/v1/listAllResources"
 #define CMD_LIST_RD_VOLUMES	"/v1/listRapidDiskVolumes"
 #define CMD_RDSK_CREATE		"/v1/createRapidDisk"
 #define CMD_RDSK_REMOVE		"/v1/removeRapidDisk"
@@ -49,9 +49,8 @@ typedef struct PTHREAD_ARGS {
 #define CMD_RDSK_FLUSH		"/v1/flushRapidDisk"
 #define CMD_RCACHE_CREATE	"/v1/createRapidDiskCache"
 #define CMD_RCACHE_REMOVE	"/v1/removeRapidDiskCache"
-#define CMD_SHOW_STATS		"/v1/showStatistics"
+#define CMD_RCACHE_STATS	"/v1/showRapidDiskCacheStats"
 
 void *mgmt_thread(void *);
-int json_check_status(unsigned char *);
-int json_return_status(unsigned char *, int);
+int json_status_check(unsigned char *);
 #endif

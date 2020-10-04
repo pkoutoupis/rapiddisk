@@ -30,9 +30,6 @@
 #include "common.h"
 #include "cli.h"
 
-struct RD_PROFILE *search_targets(void);
-struct RC_PROFILE *search_cache(void);
-
 void online_menu(unsigned char *string)
 {
 	printf("%s is an administration tool to manage RapidDisk RAM disk devices and\n"
@@ -71,12 +68,14 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	unsigned long size = 0;
 	bool json_flag = FALSE;
 	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, *message = NULL;
-	struct RD_PROFILE *disk;	/* These are dummy pointers to  */
-	struct RC_PROFILE *cache;	/* help create the linked  list */
+	struct RD_PROFILE *disk = NULL;
+	struct RC_PROFILE *cache = NULL;
+	struct MEM_PROFILE *mem = NULL;
+	struct VOLUME_PROFILE *volumes = NULL;
 
 	printf("%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	while ((i = getopt(argcin, argvin, "a:b:c:d:f:hjlm:p:r:s:u:vV")) != INVALID_VALUE) {
+	while ((i = getopt(argcin, argvin, "a:b:c:d:f:hjlm:p:qr:s:u:vV")) != INVALID_VALUE) {
 		switch (i) {
 		case 'h':
 			online_menu(argvin[0]);
@@ -114,6 +113,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			if (strcmp(optarg, "wa") == 0)
 				mode = WRITEAROUND;
 			break;
+		case 'q':
+			action = ACTION_QUERY_RESOURCES;
+			break;
 		case 'r':
 			action = ACTION_RESIZE;
 			sprintf(device, "%s", optarg);
@@ -136,8 +138,8 @@ int exec_cmdline_arg(int argcin, char *argvin[])
                 }
 	}
 
-	disk = (struct RD_PROFILE *)search_targets();
-	cache = (struct RC_PROFILE *)search_cache();
+	disk = (struct RD_PROFILE *)search_rdsk_targets();
+	cache = (struct RC_PROFILE *)search_cache_targets();
 
 	switch(action) {
 	case ACTION_ATTACH:
@@ -145,22 +147,31 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			goto exec_cmdline_arg_out;
 
 		rc = mem_device_attach(disk, size);
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_DETACH:
-		if (disk == NULL)
-			printf("Unable to locate any RapidDisk devices.\n");
-		else {
+		if (disk == NULL) {
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else
+				printf("Unable to locate any RapidDisk devices.\n");
+		} else {
 			if (strlen(device) <= 0)
 				goto exec_cmdline_arg_out;
 
 			rc = mem_device_detach(disk, cache, device);
 		}
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_FLUSH:
 		rc = mem_device_flush(disk, cache, device);
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_LIST:
-		if (disk == NULL)
+		if ((disk == NULL) && (json_flag != TRUE))
 			printf("Unable to locate any RapidDisk devices.\n");
 		else {
 			if (json_flag == TRUE) {
@@ -170,7 +181,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 					return -ENOMEM;
 				}
 				rc = json_device_list(message, disk, cache);
-				printf("%s\n", message);
+				printf("%s", message);
 			} else
 				rc = mem_device_list(disk, cache);
 		}
@@ -180,31 +191,67 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			goto exec_cmdline_arg_out;
 
 		rc = cache_device_map(disk, cache, device, backing, mode);
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_RESIZE:
-		if (disk == NULL)
-			printf("Unable to locate any RapidDisk devices.\n");
-		else
+		if (disk == NULL) {
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else
+				printf("Unable to locate any RapidDisk devices.\n");
+		} else {
 			if (size <= 0)
 				goto exec_cmdline_arg_out;
 			if (strlen(device) <= 0)
 				goto exec_cmdline_arg_out;
 
 			rc = mem_device_resize(disk, device, size);
+		}
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_CACHE_STATS:
 		if (strlen(device) <= 0)
 			goto exec_cmdline_arg_out;
 		rc = cache_device_stat(cache, device);
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_CACHE_UNMAP:
-		 rc = cache_device_unmap(cache, device);
+		rc = cache_device_unmap(cache, device);
+		if (json_flag == TRUE)
+			json_status_return(rc);
+		break;
+	case ACTION_QUERY_RESOURCES:
+		mem = (struct MEM_PROFILE *)calloc(1, sizeof(struct MEM_PROFILE));
+		if (get_memory_usage(mem) != SUCCESS) {
+			if (json_flag == TRUE) {
+				json_status_return(-EIO);
+				return -EIO;
+                        } else {
+				printf("Error. Unable to retrieve memory usage data.\n");
+				return -EIO;
+			}
+		}
+		volumes = (struct VOLUME_PROFILE *)search_volumes_targets();
+		if (json_flag == TRUE) {
+			message = (unsigned char *)calloc(1, BUFSZ);
+			if (!message) {
+				json_status_return(-ENOMEM);
+				return -ENOMEM;
+			}
+			rc = json_resources_list(message, mem, volumes);
+			printf("%s", message);
+		} else
+			rc =  resources_list(mem, volumes);
 		break;
 	case ACTION_NONE:
 		online_menu(argvin[0]);
 		break;
 	}
 
+	if (mem) free(mem);
 	if (message) free(message);
 
 	return rc;

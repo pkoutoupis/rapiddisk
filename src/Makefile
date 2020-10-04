@@ -49,17 +49,23 @@ uninstall:
 json.o: json.c
 	$(CC) -c json.c -o json.o
 
+json-server.o: json.c
+	$(CC) -c json.c -DSERVER -o json-server.o
+
+net.o: net.c
+	$(CC) -c net.c -o net.o
+
 rdsk.o: rdsk.c
 	$(CC) -c rdsk.c -o rdsk.o
 
-volume.o: volume.c
-	$(CC) -c volume.c -o volume.o
+sys.o: sys.c
+	$(CC) -c sys.c -o sys.o
 
-$(BIN): main.c json.o rdsk.o
-	$(CC) main.c -o $(BIN) json.o rdsk.o -ljansson
+$(BIN): main.c json.o rdsk.o sys.o
+	$(CC) main.c -o $(BIN) json.o rdsk.o sys.o -ljansson
 
-$(BIN)d: daemon.c json.o net.o
-	$(CC) daemon.c -o $(BIN)d json.o net.o -lpthread -ljansson -lmicrohttpd
+$(BIN)d: daemon.c json-server.o net.o
+	$(CC) daemon.c -o $(BIN)d json-server.o net.o -lpthread -ljansson -lmicrohttpd
 
 
 .PHONY: clean

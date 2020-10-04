@@ -35,6 +35,7 @@
 #include <microhttpd.h>
 
 bool verbose;
+unsigned char path[NAMELEN] = {0};
 
 /*
  * The responses to our GET requests. Although, we are not SPECIFICALLY checking that they are GETs.
@@ -45,7 +46,11 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
                                  size_t *upload_data_size, void **con_cls)
 {
 	struct MHD_Response *response;
-	int rc;
+	int rc, status = MHD_HTTP_OK;
+	unsigned long long size = 0;
+	unsigned char device[NAMELEN] = {0}, source[NAMELEN] = {0}, command[NAMELEN * 4] = {0};
+	unsigned char *dup = NULL, *token = NULL;
+	FILE *stream;
 
 	unsigned char *page = (unsigned char *)calloc(1, BUFSZ);
 	if (page == NULL) {
@@ -53,19 +58,173 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 		return INVALID_VALUE;
 	}
 
-/*
 	if (strcmp(url, CMD_PING_DAEMON) == SUCCESS) {
-		json_check_status(page);
-	} else if (strcmp(url, CMD_LIST_VOLUMES) == SUCCESS) {
-		json_list_devices(volumes, page);
+		json_status_check(page);
+	} else if (strcmp(url, CMD_LIST_RESOURCES) == SUCCESS) {
+		sprintf(command, "%s/rapiddisk -q -j|tail -n1", path);
+		stream = popen(command, "r");
+		if (stream) {
+			while (fgets(page, BUFSZ, stream) != NULL);
+			pclose(stream);
+                } else
+			status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+	} else if (strcmp(url, CMD_LIST_RD_VOLUMES) == SUCCESS) {
+		sprintf(command, "%s/rapiddisk -l -j|tail -n1", path);
+		stream = popen(command, "r");
+		if (stream) {
+			while (fgets(page, BUFSZ, stream) != NULL);
+			pclose(stream);
+                } else
+			status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+	} else if ((strncmp(url, CMD_RDSK_CREATE, sizeof(CMD_RDSK_CREATE) - 1) == SUCCESS) && \
+		   (strncmp(url, CMD_RCACHE_CREATE, sizeof(CMD_RCACHE_CREATE) - 1) != SUCCESS)) {
+		dup = strdup(url);
+		token = strtok((char *)dup, "/");
+		token = strtok(NULL, "/");    /* skip first "/" delimeter */
+		token = strtok(NULL, "/");    /* and second delimeter     */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		size = strtoull(token, (char **)NULL, 10);
+		sprintf(command, "%s/rapiddisk -a %llu -j|tail -n1", path, size);
+		stream = popen(command, "r");
+		if (stream) {
+			while (fgets(page, BUFSZ, stream) != NULL);
+			pclose(stream);
+                } else
+			status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+	} else if ((strncmp(url, CMD_RDSK_REMOVE, sizeof(CMD_RDSK_REMOVE) - 1) == SUCCESS) && \
+		   (strncmp(url, CMD_RCACHE_REMOVE, sizeof(CMD_RCACHE_REMOVE) - 1) != SUCCESS)) {
+		dup = strdup(url);
+		token = strtok((char *)dup, "/");
+		token = strtok(NULL, "/");    /* skip first "/" delimeter */
+		token = strtok(NULL, "/");    /* and second delimeter     */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		sprintf(command, "%s/rapiddisk -d %s -j|tail -n1", path, token);
+		stream = popen(command, "r");
+		if (stream) {
+			while (fgets(page, BUFSZ, stream) != NULL);
+			pclose(stream);
+		} else
+			status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+	} else if (strncmp(url, CMD_RDSK_RESIZE, sizeof(CMD_RDSK_RESIZE) - 1) == SUCCESS) {
+		dup = strdup(url);
+		token = strtok((char *)dup, "/");
+		token = strtok(NULL, "/");    /* skip first "/" delimeter */
+		token = strtok(NULL, "/");    /* and second delimeter     */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		sprintf(device, "%s", token);
+		token = strtok(NULL, "/");    /* time to get the size     */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		size = strtoull(token, (char **)NULL, 10);
+		sprintf(command, "%s/rapiddisk -r %s -c %llu -j|tail -n1", path, device, size);
+		stream = popen(command, "r");
+		if (stream) {
+			while (fgets(page, BUFSZ, stream) != NULL);
+			pclose(stream);
+		} else
+			status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+	} else if (strncmp(url, CMD_RDSK_FLUSH, sizeof(CMD_RDSK_FLUSH) - 1) == SUCCESS) {
+		dup = strdup(url);
+		token = strtok((char *)dup, "/");
+		token = strtok(NULL, "/");    /* skip first "/" delimeter */
+		token = strtok(NULL, "/");    /* and second delimeter     */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		sprintf(command, "%s/rapiddisk -f %s -j|tail -n1", path, token);
+		stream = popen(command, "r");
+		if (stream) {
+			while (fgets(page, BUFSZ, stream) != NULL);
+			pclose(stream);
+		} else
+			status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+	} else if (strncmp(url, CMD_RCACHE_CREATE, sizeof(CMD_RCACHE_CREATE) - 1) == SUCCESS) {
+		dup = strdup(url);
+		token = strtok((char *)dup, "/");
+		token = strtok(NULL, "/");    /* skip first "/" delimeter */
+		token = strtok(NULL, "/");    /* and second delimeter     */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		sprintf(device, "%s", token);
+		token = strtok(NULL, "/");    /* get the backing store    */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		sprintf(source, "%s", token);
+		token = strtok(NULL, "/");    /* get the caching policy   */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		if (strcmp(token, "write-through") == SUCCESS) {
+			sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wt -j|tail -n1", path, device, source);
+		} else if (strcmp(token, "write-around") == SUCCESS) {
+			sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wa -j|tail -n1", path, device, source);
+		} else {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		stream = popen(command, "r");
+		if (stream) {
+			while (fgets(page, BUFSZ, stream) != NULL);
+			pclose(stream);
+		} else
+			status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+	} else if (strncmp(url, CMD_RCACHE_REMOVE, sizeof(CMD_RCACHE_REMOVE) - 1) == SUCCESS) {
+		dup = strdup(url);
+		token = strtok((char *)dup, "/");
+		token = strtok(NULL, "/");    /* skip first "/" delimeter */
+		token = strtok(NULL, "/");    /* and second delimeter     */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		sprintf(command, "%s/rapiddisk -u %s -j|tail -n1", path, token);
+		stream = popen(command, "r");
+		if (stream) {
+			while (fgets(page, BUFSZ, stream) != NULL);
+			pclose(stream);
+		} else
+			status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+	} else if (strncmp(url, CMD_RCACHE_STATS, sizeof(CMD_RCACHE_STATS) - 1) == SUCCESS) {
+		dup = strdup(url);
+		token = strtok((char *)dup, "/");
+		token = strtok(NULL, "/");    /* skip first "/" delimeter */
+		token = strtok(NULL, "/");    /* and second delimeter     */
+		if (!token) {
+			status = MHD_HTTP_BAD_REQUEST;
+			goto answer_to_connection_out;
+		}
+		sprintf(command, "%s/rapiddisk -s %s -j|tail -n1", path, token);
+		stream = popen(command, "r");
+		if (stream) {
+			while (fgets(page, BUFSZ, stream) != NULL);
+			pclose(stream);
+		} else
+			status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 	}
-*/
 
 answer_to_connection_out:
 	response = MHD_create_response_from_buffer(strlen(page), (void *)page, MHD_RESPMEM_MUST_COPY);
-	rc = MHD_queue_response (connection, MHD_HTTP_OK, response);
+	rc = MHD_queue_response (connection, status, response);
 	MHD_destroy_response (response);
 	if (page) free(page);
+	if (dup) free(dup);
 
 	return rc;
 }
@@ -77,6 +236,7 @@ void *mgmt_thread(void *arg)
 {
 	struct PTHREAD_ARGS *args = (struct PTHREAD_ARGS *)arg;
 	verbose = args->verbose;
+	sprintf(path, "%s", args->path);
 
 	struct MHD_Daemon *daemon;
 

@@ -60,7 +60,7 @@ int proc_find(void)
 {
 	DIR *dir;
 	struct dirent *list;
-	char buf[NAMELEN * 2] = {0}, name[NAMELEN] = {0,}, state;
+	char buf[NAMELEN * 2] = {0}, name[NAMELEN] = {0}, state;
 	long pid;
 	int count = 0, rc = SUCCESS;
 	FILE *fp = NULL;
@@ -122,6 +122,11 @@ int main(int argc, char *argv[])
 	unsigned char path[NAMELEN] = {0};
 
 	printf("%s %s\n%s\n\n", DAEMON, VERSION_NUM, COPYRIGHT);
+
+	if (getuid() != 0) {
+		printf("\nYou must be root or contain sudo permissions to initiate this\n\n");
+		return -EACCES;
+	}
 
 	/* Make sure that only a single instance is running */
 	if ((rc = proc_find())) {

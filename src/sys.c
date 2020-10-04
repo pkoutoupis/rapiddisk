@@ -28,33 +28,95 @@
  ********************************************************************************/
 
 #include "common.h"
-#include "daemon.h"
+#include "cli.h"
+#include <linux/fs.h>
+#include <sys/ioctl.h>
 #include <sys/sysinfo.h>
 #include <sys/time.h>
 
-#define FILEDATA        0x40
+struct VOLUME_PROFILE *volume_head =  (struct VOLUME_PROFILE *) NULL;
+struct VOLUME_PROFILE *volume_end =   (struct VOLUME_PROFILE *) NULL;
 
-int get_current_time(struct SYS_STATS *stats)
+int get_memory_usage(struct MEM_PROFILE *mem)
 {       
-        struct timeval tv; 
-        unsigned long long timestamp;
-        
-        gettimeofday(&tv, NULL);
-        timestamp = (((unsigned long long)(tv.tv_sec) * 1000) + \
-                     ((unsigned long long)(tv.tv_usec) / 1000));
-        sprintf(stats->timestamp, "%llu", timestamp);
-        return SUCCESS;
+	struct sysinfo si; 
+	if (sysinfo(&si) < 0) { 
+		printf("%s (%d): Unable to retrieve memory usage.\n", __func__, __LINE__); 
+
+		return INVALID_VALUE;
+	}
+	mem->mem_total = si.totalram;
+	mem->mem_free = si.freeram;
+	return SUCCESS;
 }
 
-int get_memory_usage(struct SYS_STATS *stats)
-{       
-        struct sysinfo si; 
-        if (sysinfo(&si) < 0) { 
-                syslog(LOG_ERR, "%s: %s (%d): Unable to retrieve memory usage.\n",
-                              DAEMON, __func__, __LINE__);
-                return INVALID_VALUE;
+struct VOLUME_PROFILE *search_volumes_targets(void)
+{
+	int rc, n = 0, i;
+        unsigned char file[NAMELEN] = {0};
+        struct dirent **list;
+        struct VOLUME_PROFILE *volume = NULL;
+
+        if ((rc = scandir(SYS_BLOCK, &list, NULL, NULL)) < 0) {
+                printf("%s: scandir: %s\n", __func__, strerror(errno));
+                return NULL;
         }
-        stats->mem_total = si.totalram;
-        stats->mem_free = si.freeram;
-        return SUCCESS;
+        for (;n < rc; n++) {
+                if ((strncmp(list[n]->d_name, "sd", 2) == SUCCESS) || \
+		    (strncmp(list[n]->d_name, "nvme", 4) == SUCCESS) || \
+		    (strncmp(list[n]->d_name, "pmem", 4) == SUCCESS)) {
+                        volume = (struct VOLUME_PROFILE *)calloc(1, sizeof(struct VOLUME_PROFILE));
+                        if (volume == NULL) {
+                                printf("%s: calloc: %s\n", __func__, strerror(errno));
+                                return NULL;
+                        }
+                        strcpy(volume->device, (unsigned char *)list[n]->d_name);
+                        sprintf(file, "%s/%s", SYS_BLOCK, list[n]->d_name);
+                        volume->size = (BYTES_PER_SECTOR * strtoull(read_info(file, "size"), NULL, 10));
+                        sprintf(file, "%s/%s/device", SYS_BLOCK, list[n]->d_name);
+			sprintf(volume->model, "%s", read_info(file, "model"));
+			/* trim whitespace of model string */
+			for (i = 0; i < strlen(volume->model); i++) {
+				if ((strncmp(volume->model + i, " ", 1) == SUCCESS) || (strncmp(volume->model + i, "\n", 1) == SUCCESS))
+					volume->model[i] = '\0';
+			}
+			sprintf(volume->vendor, "%s", read_info(file, "vendor"));
+			/* trim whitespace of vendor string */
+			for (i = 0; i < strlen(volume->vendor); i++) {
+				if ((strncmp(volume->vendor+ i, " ", 1) == SUCCESS) || (strncmp(volume->vendor + i, "\n", 1) == SUCCESS))
+					volume->vendor[i] = '\0';
+			}
+
+                        if (volume_head == NULL)
+                                volume_head = volume;
+                        else
+                                volume_end->next = volume;
+                        volume_end = volume;
+                        volume->next = NULL;
+                }
+                if (list[n] != NULL) free(list[n]);
+        }
+        return volume_head;
+}
+
+int resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volumes)
+{
+	int num = 1;
+
+	printf("List of memory usage:\n\n");
+	if (mem != NULL) {
+		printf(" Memory total: %llu\n Memory free: %llu\n", mem->mem_total, mem->mem_free);
+	}
+
+	printf("\nList of block device(s):\n\n");
+
+	while (volumes != NULL) {
+		printf(" Block Device %d:\n\tDevice: %s\n\tSize (MB): %llu\n"
+		       "\tVendor: %s\n\tModel: %s\n", num, volumes->device,
+		       ((volumes->size / 1024) / 1024), volumes->vendor, volumes->model);
+		num++;
+		volumes = volumes->next;
+	}
+	printf("\n");
+	return SUCCESS;
 }
