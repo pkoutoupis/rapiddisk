@@ -1153,7 +1153,7 @@ static void cache_dtr(struct dm_target *ti)
 	if (dmc->reads + dmc->writes > 0) {
 		DMINFO("stats:\n\treads(%lu), writes(%lu)\n",
 		       dmc->reads, dmc->writes);
-		DMINFO("\tcache hits(%lu),replacement(%lu), write replacement(%lu)\n"
+		DMINFO("\tcache hits(%lu), replacement(%lu), write replacement(%lu)\n"
 			"\tread invalidates(%lu), write invalidates(%lu)\n",
 			dmc->cache_hits, dmc->replace, dmc->cache_wr_replace,
 			dmc->rd_invalidates, dmc->wr_invalidates);
@@ -1182,7 +1182,7 @@ static void rc_status_info(struct cache_context *dmc, status_type_t type,
 	int sz = 0;
 
 	DMEMIT("stats:\n\treads(%lu), writes(%lu)\n", dmc->reads, dmc->writes);
-	DMEMIT("\tcache hits(%lu) replacement(%lu), write replacement(%lu)\n"
+	DMEMIT("\tcache hits(%lu), replacement(%lu), write replacement(%lu)\n"
 		"\tread invalidates(%lu), write invalidates(%lu)\n"
 		"\tuncached reads(%lu), uncached writes(%lu)\n"
 		"\tdisk reads(%lu), disk writes(%lu)\n"

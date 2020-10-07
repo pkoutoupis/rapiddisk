@@ -122,9 +122,9 @@ Flush the memory of an existing rapiddisk volume. Example output:
 } 
 
 -------------------------
-DELETE /v1/removeRapidDisk/@volume
+POST /v1/removeRapidDisk/@volume
 
-ex) curl -X DELETE -s 127.0.0.1:9118/v1/removeRapidDisk/rd0|jq .
+ex) curl -X POST -s 127.0.0.1:9118/v1/removeRapidDisk/rd0|jq .
 
 status code: 200 (on success)
 
@@ -137,7 +137,7 @@ Remove an existing rapiddisk volume. Example output:
 -------------------------
 POST /v1/createRapidDiskCache/@volume/@source/@policy
 
-ex) curl -X POST -s 127.0.0.1:9118/v1/createRapidDiskCache/rd0/sdb/write-through|tail -n1|jq .
+ex) curl -X POST -s 127.0.0.1:9118/v1/createRapidDiskCache/rd0/sdb/write-through|jq .
 
 Supported caching policies:
 * write-through
@@ -152,9 +152,9 @@ Create a rapiddisk-cache volume. Example output:
 } 
 
 -------------------------
-DELETE /v1/removeRapidDiskCache/@volume
+POST /v1/removeRapidDiskCache/@volume
 
-ex) curl -X DELETE -s 127.0.0.1:9118/v1/removeRapidDiskCache/rc-wt_sdb|tail -n1|jq .
+ex) curl -X POST -s 127.0.0.1:9118/v1/removeRapidDiskCache/rc-wt_sdb|jq .
 
 status code: 200 (on success)
 
@@ -173,6 +173,27 @@ status code: 200 (on success)
 
 Retrieve cache statistics from an existing rapiddisk-cache volume. Example output:
 
-{ 
-  "status": "Success"
-} 
+{
+  "statistics": [
+    {
+      "cache_stats": [
+        {
+          "device": "rc-wt_loop7",
+          "reads": 527,
+          "writes": 1,
+          "cache_hits": 264,
+          "replacement": 0,
+          "write_replacement": 0,
+          "read_invalidates": 1,
+          "write_invalidates": 1,
+          "uncached_reads": 1,
+          "uncached_writes": 0,
+          "disk_reads": 263,
+          "disk_writes": 1,
+          "cache_reads": 264,
+          "cache_writes": 263
+        }
+      ]
+    }
+  ]
+}

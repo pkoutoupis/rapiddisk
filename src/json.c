@@ -84,7 +84,7 @@ int json_status_return(int status)
  * }
  */
 
-int json_device_list(unsigned char *message, struct RD_PROFILE *rd, struct RC_PROFILE *rc)
+int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
 {
 	json_t *root, *array = json_array();
 	json_t *rd_array = json_array(), *rc_array = json_array();
@@ -115,7 +115,7 @@ int json_device_list(unsigned char *message, struct RD_PROFILE *rd, struct RC_PR
 
 	root = json_pack("{s:o}", "volumes", array);
 
-	sprintf(message, "%s\n", json_dumps(root, 0));
+	printf("%s\n", json_dumps(root, 0));
 
 	json_decref(rd_array);
 	json_decref(rc_array);
@@ -151,7 +151,7 @@ int json_device_list(unsigned char *message, struct RD_PROFILE *rd, struct RC_PR
  * }
  */
 
-int json_resources_list(unsigned char *message, struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volume)
+int json_resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volume)
 {
 	json_t *root, *array = json_array(), *mem_array = json_array(), *vol_array = json_array();
 	json_t *mem_object = json_object(), *vol_object = json_object() ;
@@ -179,11 +179,74 @@ int json_resources_list(unsigned char *message, struct MEM_PROFILE *mem, struct 
 
 	root = json_pack("{s:o}", "resources", array);
 
-	sprintf(message, "%s\n", json_dumps(root, 0));
+	printf("%s\n", json_dumps(root, 0));
 
 	json_decref(mem_array);
 	json_decref(vol_array);
 	json_decref(array);
+	json_decref(root);
+
+	return SUCCESS;
+}
+
+/*
+ * JSON output format:
+ *  {
+ *    "statistics": [
+ *      {
+ *        "cache_stats": [
+ *          {
+ *            "device": "rc-wt_loop7",
+ *            "reads": 527,
+ *            "writes": 1,
+ *            "cache_hits": 264,
+ *            "replacement": 0,
+ *            "write_replacement": 0,
+ *            "read_invalidates": 1,
+ *            "write_invalidates": 1,
+ *            "uncached_reads": 1,
+ *            "uncached_writes": 0,
+ *            "disk_reads": 263,
+ *            "disk_writes": 1,
+ *            "cache_reads": 264,
+ *            "cache_writes": 263
+ *          }
+ *        ]
+ *      }
+ *    ]
+ *  }
+ */
+
+int json_cache_statistics(struct RC_STATS *stats)
+{
+	json_t *root, *array = json_array(), *stats_array = json_array(), *stats_object = json_object();
+
+	if (stats != NULL) {
+		json_t *object = json_object();
+		json_object_set_new(object, "device", json_string(stats->device));
+		json_object_set_new(object, "reads", json_integer(stats->reads));
+		json_object_set_new(object, "writes", json_integer(stats->writes));
+		json_object_set_new(object, "cache_hits", json_integer(stats->cache_hits));
+		json_object_set_new(object, "replacement", json_integer(stats->replacement));
+		json_object_set_new(object, "write_replacement", json_integer(stats->write_replacement));
+		json_object_set_new(object, "read_invalidates", json_integer(stats->read_invalidates));
+		json_object_set_new(object, "write_invalidates", json_integer(stats->write_invalidates));
+		json_object_set_new(object, "uncached_reads", json_integer(stats->uncached_reads));
+		json_object_set_new(object, "uncached_writes", json_integer(stats->uncached_writes));
+		json_object_set_new(object, "disk_reads", json_integer(stats->disk_reads));
+		json_object_set_new(object, "disk_writes", json_integer(stats->disk_writes));
+		json_object_set_new(object, "cache_reads", json_integer(stats->cache_reads));
+		json_object_set_new(object, "cache_writes", json_integer(stats->cache_writes));
+		json_array_append_new(stats_array, object);
+	}
+	json_object_set_new(stats_object, "cache_stats", stats_array);
+	json_array_append_new(array, stats_object);
+
+	root = json_pack("{s:o}", "statistics", array);
+
+	printf("%s\n", json_dumps(root, 0));
+
+        json_decref(stats_array);
 	json_decref(root);
 
 	return SUCCESS;

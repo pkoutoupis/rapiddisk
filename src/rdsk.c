@@ -196,8 +196,90 @@ int cache_device_stat(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	}
 	sprintf(cmd, "dmsetup status %s", cache);
 	system(cmd);
-	printf("\n");
 	return SUCCESS;
+}
+
+int cache_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
+{
+	int rc = INVALID_VALUE;
+	unsigned char cmd[NAMELEN] = {0};
+	FILE *stream;
+	unsigned char *buf = NULL, *dup = NULL, *token = NULL;
+	struct RC_STATS *stats = NULL;
+
+	if (rc_prof == NULL) {
+		printf("  No RapidDisk-Cache Mappings exist.\n\n");
+		return 1;
+	}
+
+	buf = (unsigned char *)calloc(1, BUFSZ);
+	if (buf == NULL) {
+		printf("%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
+		return INVALID_VALUE;
+	}
+
+	stats = (struct RC_STATS *)calloc(1, sizeof(struct RC_STATS));
+	if (stats == NULL) {
+		printf("%s: calloc: %s\n", __func__, strerror(errno));
+		return INVALID_VALUE;
+	}
+
+	/* This whole thing is ugly */
+	sprintf(cmd, "OUTPUT=`dmsetup status %s|tail -n +2|sed -e 's/\\t//g' -e 's/ /_/g' -e 's/(/ /g' -e 's/)//g' -e 's/,_/ /g'`; echo $OUTPUT", cache);
+	stream = popen(cmd, "r");
+	if (stream) {
+		while (fgets(buf, BUFSZ, stream) != NULL);
+		pclose(stream);
+	}
+
+	sprintf(stats->device, "%s", cache);
+	dup = strdup(buf);
+	token = strtok((char *)dup, " "); /* reads */
+	token = strtok(NULL, " ");
+	stats->reads = atoi(token);
+	token = strtok(NULL, " ");        /* writes */
+	token = strtok(NULL, " ");
+	stats->writes = atoi(token);
+	token = strtok(NULL, " ");        /* cache hits */
+	token = strtok(NULL, " ");
+	stats->cache_hits = atoi(token);
+	token = strtok(NULL, " ");        /* replacement */
+	token = strtok(NULL, " ");
+	stats->replacement = atoi(token);
+	token = strtok(NULL, " ");        /* writes replacement */
+	token = strtok(NULL, " ");
+	stats->write_replacement = atoi(token);
+	token = strtok(NULL, " ");        /* read invalidates */
+	token = strtok(NULL, " ");
+	stats->read_invalidates = atoi(token);
+	token = strtok(NULL, " ");        /* write invalidates */
+	token = strtok(NULL, " ");
+	stats->write_invalidates = atoi(token);
+	token = strtok(NULL, " ");        /* uncached reads */
+	token = strtok(NULL, " ");
+	stats->uncached_reads = atoi(token);
+	token = strtok(NULL, " ");        /* uncached writes */
+	token = strtok(NULL, " ");
+	stats->uncached_writes = atoi(token);
+	token = strtok(NULL, " ");        /* disk reads */
+	token = strtok(NULL, " ");
+	stats->disk_reads = atoi(token);
+	token = strtok(NULL, " ");        /* disk writes */
+	token = strtok(NULL, " ");
+	stats->disk_writes = atoi(token);
+	token = strtok(NULL, " ");        /* cache reads */
+	token = strtok(NULL, " ");
+	stats->cache_reads = atoi(token);
+	token = strtok(NULL, " ");        /* cache writes */
+	token = strtok(NULL, " ");
+	stats->cache_writes = atoi(token);
+
+	rc = json_cache_statistics(stats);
+
+	if (dup) free(dup);
+	if (stats) free(stats);
+	if (buf) free(buf);
+	return rc;
 }
 
 int mem_device_attach(struct RD_PROFILE *prof, unsigned long size)

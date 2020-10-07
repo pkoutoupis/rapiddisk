@@ -67,7 +67,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i;
 	unsigned long size = 0;
 	bool json_flag = FALSE;
-	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, *message = NULL;
+	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0};
 	struct RD_PROFILE *disk = NULL;
 	struct RC_PROFILE *cache = NULL;
 	struct MEM_PROFILE *mem = NULL;
@@ -174,15 +174,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		if ((disk == NULL) && (json_flag != TRUE))
 			printf("Unable to locate any RapidDisk devices.\n");
 		else {
-			if (json_flag == TRUE) {
-				message = (unsigned char *)calloc(1, BUFSZ);
-				if (!message) {
-					printf("%s: calloc: %s\n", __func__, strerror(errno));
-					return -ENOMEM;
-				}
-				rc = json_device_list(message, disk, cache);
-				printf("%s", message);
-			} else
+			if (json_flag == TRUE)
+				rc = json_device_list(disk, cache);
+			else
 				rc = mem_device_list(disk, cache);
 		}
 		break;
@@ -214,9 +208,10 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	case ACTION_CACHE_STATS:
 		if (strlen(device) <= 0)
 			goto exec_cmdline_arg_out;
-		rc = cache_device_stat(cache, device);
 		if (json_flag == TRUE)
-			json_status_return(rc);
+			rc = cache_device_stat_json(cache, device);
+		else
+			rc = cache_device_stat(cache, device);
 		break;
 	case ACTION_CACHE_UNMAP:
 		rc = cache_device_unmap(cache, device);
@@ -235,15 +230,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			}
 		}
 		volumes = (struct VOLUME_PROFILE *)search_volumes_targets();
-		if (json_flag == TRUE) {
-			message = (unsigned char *)calloc(1, BUFSZ);
-			if (!message) {
-				json_status_return(-ENOMEM);
-				return -ENOMEM;
-			}
-			rc = json_resources_list(message, mem, volumes);
-			printf("%s", message);
-		} else
+		if (json_flag == TRUE)
+			rc = json_resources_list(mem, volumes);
+		else
 			rc =  resources_list(mem, volumes);
 		break;
 	case ACTION_NONE:
@@ -252,7 +241,6 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	}
 
 	if (mem) free(mem);
-	if (message) free(message);
 
 	return rc;
 

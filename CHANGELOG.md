@@ -1,6 +1,7 @@
 ### Release 7.0.0 ###
 
 - module: Updated for 5.8 kernels and later
+- module: fixed cache status format typo
 - daemon: Implement http-driven API to monitor/manage rapiddisk/cache functions
 - utility: Removing support for RHEL / CentOS 6.x
 - utility: Restructured userspace CLI

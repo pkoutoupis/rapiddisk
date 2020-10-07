@@ -66,6 +66,27 @@ typedef struct RC_PROFILE {      /* For RapidDisk-Cache node list */
 	struct RC_PROFILE *next;
 } RC_PROFILE;
 
+typedef struct RC_STATS {
+	unsigned char device[NAMELEN];
+	unsigned int reads;
+	unsigned int writes;
+	unsigned int cache_hits;
+	unsigned int replacement;
+	unsigned int write_replacement;
+	unsigned int read_invalidates;
+	unsigned int write_invalidates;
+	unsigned int uncached_reads;
+	unsigned int uncached_writes;
+	unsigned int disk_reads;
+	unsigned int disk_writes;
+	unsigned int cache_reads;
+	unsigned int cache_writes;
+
+	/* Unsupported in this release */
+	unsigned int read_ops;
+	unsigned int write_ops;
+} RC_STATS;
+
 typedef struct MEM_PROFILE {
         unsigned long long mem_total;
         unsigned long long mem_free;
@@ -90,8 +111,10 @@ int mem_device_flush(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
 int cache_device_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, unsigned char *, int);
 int cache_device_unmap(struct RC_PROFILE *, unsigned char *);
 int cache_device_stat(struct RC_PROFILE *, unsigned char *);
-int json_device_list(unsigned char *, struct RD_PROFILE *, struct RC_PROFILE *);
-int json_resources_list(unsigned char *, struct MEM_PROFILE *, struct VOLUME_PROFILE *);
+int cache_device_stat_json(struct RC_PROFILE *, unsigned char *);
+int json_device_list(struct RD_PROFILE *, struct RC_PROFILE *);
+int json_resources_list(struct MEM_PROFILE *, struct VOLUME_PROFILE *);
+int json_cache_statistics(struct RC_STATS *);
 int json_status_return(int);
 int get_memory_usage(struct MEM_PROFILE *);
 struct VOLUME_PROFILE *search_volumes_targets(void);
