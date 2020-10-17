@@ -1,0 +1,199 @@
+Web server API revision 1
+  
+-------------------------
+GET /v1/checkServiceStatus
+
+ex) curl -s --output - 127.0.0.1:9118/v1/checkServiceStatus|jq .
+
+status code: 200 (on success)
+
+Check the status of the daemon. Example output:
+
+{
+  "status": "OK",
+  "version": "7.0.0"
+}
+
+-------------------------
+GET /v1/listAllResources
+
+ex) curl -s --output - 127.0.0.1:9118/v1/listAllResources|jq .
+
+status code: 200 (on success)
+
+Retrieve system resource information. Example output:
+
+{
+  "resources": [
+    {
+      "memory": [
+        {
+          "mem_total": 2084130816,
+          "mem_free": 229003264
+        }
+      ]
+    },
+    {
+      "volumes": [
+        {
+          "device": "sda",
+          "size": 26843545600,
+          "vendor": "ATA",
+          "model": "VBOX"
+        }
+      ]
+    }
+  ]
+}
+
+-------------------------
+GET /v1/listRapidDiskVolumes
+
+ex) curl -s --output - 127.0.0.1:9118/v1/listRapidDiskVolumes|jq .
+
+status code: 200 (on success)
+
+Retrieve rapiddisk/cache information. Example output:
+
+{
+  "volumes": [
+    {
+      "rapiddisk": [
+        {
+          "device": "rd1",
+          "size": 67108864
+        },
+        {
+          "device": "rd0",
+          "size": 67108864
+        }
+      ]
+    },
+    {
+      "rapiddisk_cache": [
+        {
+          "device": "rc-wa_loop7",
+          "cache": "rd0",
+          "source": "loop7",
+          "mode": "write-around"
+        }
+      ]
+    }
+  ]
+}
+
+-------------------------
+POST /v1/createRapidDisk/@size
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/createRapidDisk/128|jq .
+
+status code: 200 (on success)
+
+Create a rapiddisk volume. Example output:
+
+{
+  "status": "Success"
+}
+
+-------------------------
+POST /v1/resizeRapidDisk/@volume/@size
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/resizeRapidDisk/rd0/128|jq .
+
+status code: 200 (on success)
+
+Resize an existing rapiddisk volume. Example output:
+
+{ 
+  "status": "Success"
+} 
+
+-------------------------
+POST /v1/flushRapidDisk/@volume
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/flushRapidDisk/rd0|jq .
+
+status code: 200 (on success)
+
+Flush the memory of an existing rapiddisk volume. Example output:
+
+{ 
+  "status": "Success"
+} 
+
+-------------------------
+POST /v1/removeRapidDisk/@volume
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/removeRapidDisk/rd0|jq .
+
+status code: 200 (on success)
+
+Remove an existing rapiddisk volume. Example output:
+
+{ 
+  "status": "Success"
+} 
+
+-------------------------
+POST /v1/createRapidDiskCache/@volume/@source/@policy
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/createRapidDiskCache/rd0/sdb/write-through|jq .
+
+Supported caching policies:
+* write-through
+* write-around
+
+status code: 200 (on success)
+
+Create a rapiddisk-cache volume. Example output:
+
+{ 
+  "status": "Success"
+} 
+
+-------------------------
+POST /v1/removeRapidDiskCache/@volume
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/removeRapidDiskCache/rc-wt_sdb|jq .
+
+status code: 200 (on success)
+
+Remove an existing rapiddisk-cache volume. Example output:
+
+{ 
+  "status": "Success"
+} 
+
+-------------------------
+GET /v1/showRapidDiskCacheStats/@volume
+
+ex) curl -s --output - 127.0.0.1:9118/v1/showRapidDiskCacheStats/rc-wt_sdb|tail -n1|jq .
+
+status code: 200 (on success)
+
+Retrieve cache statistics from an existing rapiddisk-cache volume. Example output:
+
+{
+  "statistics": [
+    {
+      "cache_stats": [
+        {
+          "device": "rc-wt_loop7",
+          "reads": 527,
+          "writes": 1,
+          "cache_hits": 264,
+          "replacement": 0,
+          "write_replacement": 0,
+          "read_invalidates": 1,
+          "write_invalidates": 1,
+          "uncached_reads": 1,
+          "uncached_writes": 0,
+          "disk_reads": 263,
+          "disk_writes": 1,
+          "cache_reads": 264,
+          "cache_writes": 263
+        }
+      ]
+    }
+  ]
+}

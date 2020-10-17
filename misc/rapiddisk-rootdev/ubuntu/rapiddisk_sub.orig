@@ -3,7 +3,7 @@
 modprobe -v rapiddisk
 modprobe -v rapiddisk-cache
 
-rapiddisk --attach RAMDISKSIZE
-rapiddisk --cache-map rd0 BOOTDEVICE wa
+rapiddisk -a RAMDISKSIZE
+rapiddisk -m rd0 -b BOOTDEVICE -p wa
 
 exit 0

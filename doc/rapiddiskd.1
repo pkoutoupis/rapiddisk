@@ -1,0 +1,31 @@
+.TH RAPIDDISK 1 "Sep 27 2020" "Linux" "GENERAL COMMANDS"
+.SH NAME
+rapiddiskd \- A daemon intended to listen for API requests.
+.SH SYNOPSIS
+rapiddiskd [ -h | -v ] [ options ]
+.SH DESCRIPTION
+rapiddiskd is a daemon intended to listen for API requests to manage RapidDisk functions.
+.SS Options
+.TP
+-h
+Invoke the help menu.
+.TP
+-p
+Change port to listen on (default: 9118).
+.TP
+-V
+Enable debug messages to stdout (this is ugly)
+.TP
+-v
+Display the version number.
+.SH EXAMPLE USAGE
+.TP
+rapiddiskd -p 8888
+.TP
+rapiddisk -V
+.SH EXIT STATUS
+rapiddisk returns a zero exit status if no error occurs during operation. A non-zero value is returned on error.
+.SH AUTHORS
+Original version: Petros Koutoupis (petros@petroskoutoupis.com)
+.SH SEE ALSO
+View the RapidDisk project page: http://www.rapiddisk.org

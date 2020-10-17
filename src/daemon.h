@@ -21,41 +21,36 @@
  **
  ** @project: rapiddisk
  **
- ** @filename: common.h
+ ** @filename: daemon.h
  ** @description: A header file containing all commonly used variables
  **	 and such.
  **
- ** @date: 14Oct10, petros@petroskoutoupis.com
+ ** @date: 29Jul20, petros@petroskoutoupis.com
  ********************************************************************************/
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef DAEMON_H
+#define DAEMON_H
 
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <errno.h>
-#include <unistd.h>
-#include <dirent.h>
+#include <syslog.h>
 
-#define PROCESS			"rapiddisk"
-#define DAEMON			PROCESS "d"
-#define COPYRIGHT		"Copyright 2011 - 2020 Petros Koutoupis"
-#define VERSION_NUM	  	"7.0.0"
-#define SUCCESS			0
-#define INVALID_VALUE		-1
-#define NAMELEN			0x200
-#define BUFSZ			0x10000
-#define PAYLOADSZ		0x80000 /* 512K: this is our max read limit for libcurl */
-#define WRITETHROUGH		0
-#define WRITEAROUND		1
+#define DEFAULT_MGMT_PORT       "9118"
 
-typedef char bool;
+typedef struct PTHREAD_ARGS {
+	bool verbose;
+	unsigned char port[0xf];
+	unsigned char path[NAMELEN];
+} PTHREAD_ARGS;
 
-#define FALSE			0
-#define TRUE			1
+#define CMD_PING_DAEMON		"/v1/checkServiceStatus"
+#define CMD_LIST_RESOURCES	"/v1/listAllResources"
+#define CMD_LIST_RD_VOLUMES	"/v1/listRapidDiskVolumes"
+#define CMD_RDSK_CREATE		"/v1/createRapidDisk"
+#define CMD_RDSK_REMOVE		"/v1/removeRapidDisk"
+#define CMD_RDSK_RESIZE		"/v1/resizeRapidDisk"
+#define CMD_RDSK_FLUSH		"/v1/flushRapidDisk"
+#define CMD_RCACHE_CREATE	"/v1/createRapidDiskCache"
+#define CMD_RCACHE_REMOVE	"/v1/removeRapidDiskCache"
+#define CMD_RCACHE_STATS	"/v1/showRapidDiskCacheStats"
 
+void *mgmt_thread(void *);
+int json_status_check(unsigned char *);
 #endif

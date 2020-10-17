@@ -8,7 +8,8 @@ Building and Installing the rapiddisk kernel modules and utilities
 Change into the project's parent directory path.
 
 > To build the rapiddisk management utility, you will need to have the
-> `libjansson` development library files installed on your host system.
+> `libjansson` and `libmicrohttpd` development library files installed
+> on your host system.
 >
 > You are required to having either the full kernel source or the kernel
 > headers installed for your current kernel revision.
@@ -95,3 +96,31 @@ Uninstalling modules for DKMS support
 ```console
 # make dkms-uninstall
 ```
+
+Managing the RapidDisk daemon service
+--------------------------------------------------------
+
+After installation, to start the service via systemd:
+
+```console
+# systemctl start rapiddiskd.service
+```
+
+To check the status of the service via systemd:
+
+```console
+# systemctl status rapiddiskd.service
+```
+
+To stop the service via systemd:
+
+```console
+# systemctl stop rapiddiskd.service
+```
+
+To start the service at boot via systemd:
+
+```console
+# systemctl enable rapiddiskd.service
+```
+

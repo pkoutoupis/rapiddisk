@@ -28,147 +28,224 @@
  ********************************************************************************/
 
 #include "common.h"
+#include "cli.h"
 
-unsigned char *proc_mod   = "/proc/modules";
-
-int parse_input(int, char **);
-struct RD_PROFILE *search_targets(void);
-struct RC_PROFILE *search_cache(void);
-int check_uid(int);
-void online_menu(char *);
-int list_devices(struct RD_PROFILE *, struct RC_PROFILE *);
-int list_devices_json(struct RD_PROFILE *, struct RC_PROFILE *);
-int short_list_devices(struct RD_PROFILE *, struct RC_PROFILE *);
-int detach_device(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *);
-int attach_device(struct RD_PROFILE *, unsigned long);
-int resize_device(struct RD_PROFILE *, unsigned char *, unsigned long);
-int cache_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, unsigned char *, int);
-int cache_unmap(struct RC_PROFILE *, unsigned char *);
-int stat_cache_mapping(struct RC_PROFILE *, unsigned char *);
-int rdsk_flush(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
-
-void online_menu(char *string)
+void online_menu(unsigned char *string)
 {
-	printf("%s is an administration tool to manage the RapidDisk RAM disk devices and\n"
+	printf("%s is an administration tool to manage RapidDisk RAM disk devices and\n"
 	       "\tRapidDisk-Cache mappings.\n\n", string);
-	printf("Usage: %s [ -h | -v ] function [ parameters: unit | size | start & end | "
-	       "src & dest |\n\t\tcache & source | mode ]\n\n", string);
-	printf("Description:\n\t%s is a RapidDisk module management tool. The tool allows the\n"
-	       "\tuser to list all attached RapidDisk devices, with the ability to dynamically\n"
-	       "\tattach a new RapidDisk block devices and detach existing ones. It also is\n"
-	       "\tcapable of mapping and unmapping a RapidDisk volume to any block device via\n"
-	       "\tthe RapidDisk-Cache kernel module.\n\n", string);
+	printf("Usage: %s [ -h | -v ] function [ parameters ]\n\n", string);
+	printf("Description:\n\t%s is a RapidDisk module management tool to manage RapidDisk\n"
+	       "\tRAM disk devices. Dynamically create, remove, resize RAM volumes and if\n"
+	       "\tdesired, map or unmap them as a cache volume to any block device.\n\n", string);
 	printf("Functions:\n"
-	       "\t--attach\t\tAttach RAM disk device.\n"
-	       "\t--detach\t\tDetach RAM disk device.\n"
-	       "\t--list\t\t\tList all attached RAM disk devices.\n"
-	       "\t--short-list\t\tList all attached RAM disk devices in script friendly format.\n"
-#if !defined NO_JANSSON
-	       "\t--list-json\t\tList all attached RAM disk devices in JSON format.\n"
-#endif
-	       "\t--flush\t\t\tErase all data to a specified RapidDisk device "
-	       "\033[31;1m(dangerous)\033[0m.\n"
-	       "\t--resize\t\tDynamically grow the size of an existing RapidDisk device.\n\n"
-	       "\t--cache-map\t\tMap an RapidDisk device as a caching node to another block device.\n"
-	       "\t--cache-unmap\t\tMap an RapidDisk device as a caching node to anotther block device.\n"
-	       "\t--stat-cache\t\tObtain RapidDisk-Cache Mappings statistics.\n\n");
-	printf("Parameters:\n"
-	       "\t[size]\t\t\tSpecify desired size of attaching RAM disk device in MBytes.\n"
-	       "\t[unit]\t\t\tSpecify unit number of RAM disk device to detach.\n"
-	       "\t[cache]\t\t\tSpecify RapidDisk node to use as caching volume.\n"
-	       "\t[source]\t\tSpecify block device to map cache to.\n"
-	       "\t[mode]\t\t\tWrite Through (wt) or Write Around (wa) for cache.\n\n");
-	printf("Example Usage:\n\trapiddisk --attach 64\n"
-	       "\trapiddisk --detach rd2\n"
-	       "\trapiddisk --resize rd2 128\n"
-	       "\trapiddisk --cache-map rd1 /dev/sdb\n"
-	       "\trapiddisk --cache-map rd1 /dev/sdb wt\n"
-	       "\trapiddisk --cache-unmap rc_sdb\n"
-	       "\trapiddisk --flush rd2\n\n");
+	       "\t-a\t\tAttach RAM disk device (size in MBytes).\n"
+	       "\t-b\t\tBackend block device absolute path (for cache mapping).\n"
+	       "\t-c\t\tInput capacity for size or resize of RAM disk device (in MBytes).\n"
+	       "\t-d\t\tDetach RAM disk device.\n"
+	       "\t-f\t\tErase all data to a specified RapidDisk device \033[31;1m(dangerous)\033[0m.\n"
+	       "\t-h\t\tDisplay the help menu.\n"
+	       "\t-j\t\tEnable JSON formatted output.\n"
+	       "\t-l\t\tList all attached RAM disk devices.\n"
+	       "\t-m\t\tMap an RapidDisk device as a caching node to another block device.\n"
+	       "\t-p\t\tDefine cache policy (default: write-through).\n"
+	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
+	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
+	       "\t-u\t\tUnmap a RapidDisk device from another block device.\n"
+	       "\t-v\t\tDisplay the utility version string.\n\n");
+        printf("Example Usage:\n\trapiddisk -a 64\n"
+	       "\trapiddisk -d rd2\n"
+	       "\trapiddisk -r rd2 -c 128\n"
+	       "\trapiddisk -m rd1 -b /dev/sdb\n"
+	       "\trapiddisk -m rd1 -b /dev/sdb -p wt\n"
+	       "\trapiddisk -u rc-wt_sdb\n"
+	       "\trapiddisk -f rd2\n\n");
 }
 
 int exec_cmdline_arg(int argcin, char *argvin[])
 {
-	int rc = INVALID_VALUE, mode = WRITETHROUGH;
-	struct RD_PROFILE *disk;	/* These are dummy pointers to  */
-	struct RC_PROFILE *cache;	/* help create the linked  list */
+	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i;
+	unsigned long size = 0;
+	bool json_flag = FALSE;
+	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0};
+	struct RD_PROFILE *disk = NULL;
+	struct RC_PROFILE *cache = NULL;
+	struct MEM_PROFILE *mem = NULL;
+	struct VOLUME_PROFILE *volumes = NULL;
 
-	printf("%s %s\n%s\n\n", UTIL, VERSION_NUM, COPYRIGHT);
-	if ((argcin < 2) || (argcin > 5)) {
-		online_menu(argvin[0]);
-		return rc;
-	}
+	printf("%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	if (((strcmp(argvin[1], "-h")) == 0) || ((strcmp(argvin[1],"-H")) == 0) ||
-	    ((strcmp(argvin[1], "--help")) == 0)) {
-		online_menu(argvin[0]);
-		return SUCCESS;
-	}
-	if (((strcmp(argvin[1], "-v")) == 0) || ((strcmp(argvin[1],"-V")) == 0) ||
-	    ((strcmp(argvin[1], "--version")) == 0)) {
-		return SUCCESS;
-	}
-
-	disk = (struct RD_PROFILE *)search_targets();
-	cache = (struct RC_PROFILE *)search_cache();
-
-	if (strcmp(argvin[1], "--list") == 0) {
-		if (disk == NULL)
-			printf("Unable to locate any RapidDisk devices.\n");
-		else
-			rc = list_devices(disk, cache);
-		goto out;
-#if !defined NO_JANSSON
-	} else if (strcmp(argvin[1], "--list-json") == 0) {
-		rc = list_devices_json(disk, cache);
-		goto out;
-#endif
-	} else if (strcmp(argvin[1], "--short-list") == 0) {
-		if (disk == NULL)
-			printf("Unable to locate any RapidDisk devices.\n");
-		else
-			rc = short_list_devices(disk, cache);
-		goto out;
-	}
-
-	if (strcmp(argvin[1], "--attach") == 0) {
-		if (argcin != 3) goto invalid_out;
-		rc = attach_device(disk, strtoul(argvin[2], (char **)NULL, 10));
-	} else if (strcmp(argvin[1], "--detach") == 0) {
-		if (argcin != 3) goto invalid_out;
-		if (disk == NULL)
-			printf("Unable to locate any RapidDisk devices.\n");
-		else
-			rc = detach_device(disk, cache, argvin[2]);
-	} else if (strcmp(argvin[1], "--resize") == 0) {
-		if (argcin != 4) goto invalid_out;
-		if (disk == NULL)
-			printf("Unable to locate any RapidDisk devices.\n");
-		else
-			rc = resize_device(disk, argvin[2], strtoul(argvin[3], (char **)NULL, 10));
-	} else if (strcmp(argvin[1], "--cache-map") == 0) {
-		if ((argcin < 4) || (argcin > 5)) goto invalid_out;
-		if (argcin == 5)
-			if (strcmp(argvin[4], "wa") == 0)
+	while ((i = getopt(argcin, argvin, "a:b:c:d:f:hjlm:p:qr:s:u:vV")) != INVALID_VALUE) {
+		switch (i) {
+		case 'h':
+			online_menu(argvin[0]);
+			return SUCCESS;
+			break;
+		case 'a':
+			action = ACTION_ATTACH;
+			size = strtoul(optarg, (char **)NULL, 10);
+			break;
+		case 'b':
+			sprintf(backing, "%s", optarg);
+			break;
+		case 'c':
+			size = strtoul(optarg, (char **)NULL, 10);
+			break;
+		case 'd':
+			action = ACTION_DETACH;
+			sprintf(device, "%s", optarg);
+			break;
+		case 'f':
+			action = ACTION_FLUSH;
+			sprintf(device, "%s", optarg);
+			break;
+		case 'j':
+			json_flag = TRUE;
+			break;
+		case 'l':
+			action = ACTION_LIST;
+			break;
+		case 'm':
+			action = ACTION_CACHE_MAP;
+			sprintf(device, "%s", optarg);
+			break;
+		case 'p':
+			if (strcmp(optarg, "wa") == 0)
 				mode = WRITEAROUND;
-		rc = cache_map(disk, cache, argvin[2], argvin[3], mode);
-	} else if (strcmp(argvin[1], "--cache-unmap") == 0) {
-		if (argcin != 3) goto invalid_out;
-		rc = cache_unmap(cache, argvin[2]);
-	} else if (strcmp(argvin[1], "--flush") == 0) {
-		if (argcin != 3) goto invalid_out;
-		rc = rdsk_flush(disk, cache, argvin[2]);
-	} else if (strcmp(argvin[1], "--stat-cache") == 0) {
-		if (argcin != 3) goto invalid_out;
-		rc = stat_cache_mapping(cache, argvin[2]);
-	} else {
-		goto invalid_out;
+			break;
+		case 'q':
+			action = ACTION_QUERY_RESOURCES;
+			break;
+		case 'r':
+			action = ACTION_RESIZE;
+			sprintf(device, "%s", optarg);
+			break;
+		case 's':
+			action = ACTION_CACHE_STATS;
+			sprintf(device, "%s", optarg);
+			break;
+		case 'u':
+			action = ACTION_CACHE_UNMAP;
+			sprintf(device, "%s", optarg);
+			break;
+		case 'v':
+			return SUCCESS;
+			break;
+		case '?':
+			online_menu(argvin[0]);
+			return INVALID_VALUE;
+			break;
+                }
 	}
 
-out:
+	disk = (struct RD_PROFILE *)search_rdsk_targets();
+	cache = (struct RC_PROFILE *)search_cache_targets();
+
+	switch(action) {
+	case ACTION_ATTACH:
+		if (size <= 0)
+			goto exec_cmdline_arg_out;
+
+		rc = mem_device_attach(disk, size);
+		if (json_flag == TRUE)
+			json_status_return(rc);
+		break;
+	case ACTION_DETACH:
+		if (disk == NULL) {
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else
+				printf("Unable to locate any RapidDisk devices.\n");
+		} else {
+			if (strlen(device) <= 0)
+				goto exec_cmdline_arg_out;
+
+			rc = mem_device_detach(disk, cache, device);
+		}
+		if (json_flag == TRUE)
+			json_status_return(rc);
+		break;
+	case ACTION_FLUSH:
+		rc = mem_device_flush(disk, cache, device);
+		if (json_flag == TRUE)
+			json_status_return(rc);
+		break;
+	case ACTION_LIST:
+		if ((disk == NULL) && (json_flag != TRUE))
+			printf("Unable to locate any RapidDisk devices.\n");
+		else {
+			if (json_flag == TRUE)
+				rc = json_device_list(disk, cache);
+			else
+				rc = mem_device_list(disk, cache);
+		}
+		break;
+	case ACTION_CACHE_MAP:
+		if ((strlen(device) <= 0) || (strlen(backing) <= 0))
+			goto exec_cmdline_arg_out;
+
+		rc = cache_device_map(disk, cache, device, backing, mode);
+		if (json_flag == TRUE)
+			json_status_return(rc);
+		break;
+	case ACTION_RESIZE:
+		if (disk == NULL) {
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else
+				printf("Unable to locate any RapidDisk devices.\n");
+		} else {
+			if (size <= 0)
+				goto exec_cmdline_arg_out;
+			if (strlen(device) <= 0)
+				goto exec_cmdline_arg_out;
+
+			rc = mem_device_resize(disk, device, size);
+		}
+		if (json_flag == TRUE)
+			json_status_return(rc);
+		break;
+	case ACTION_CACHE_STATS:
+		if (strlen(device) <= 0)
+			goto exec_cmdline_arg_out;
+		if (json_flag == TRUE)
+			rc = cache_device_stat_json(cache, device);
+		else
+			rc = cache_device_stat(cache, device);
+		break;
+	case ACTION_CACHE_UNMAP:
+		rc = cache_device_unmap(cache, device);
+		if (json_flag == TRUE)
+			json_status_return(rc);
+		break;
+	case ACTION_QUERY_RESOURCES:
+		mem = (struct MEM_PROFILE *)calloc(1, sizeof(struct MEM_PROFILE));
+		if (get_memory_usage(mem) != SUCCESS) {
+			if (json_flag == TRUE) {
+				json_status_return(-EIO);
+				return -EIO;
+                        } else {
+				printf("Error. Unable to retrieve memory usage data.\n");
+				return -EIO;
+			}
+		}
+		volumes = (struct VOLUME_PROFILE *)search_volumes_targets();
+		if (json_flag == TRUE)
+			rc = json_resources_list(mem, volumes);
+		else
+			rc =  resources_list(mem, volumes);
+		break;
+	case ACTION_NONE:
+		online_menu(argvin[0]);
+		break;
+	}
+
+	if (mem) free(mem);
+
 	return rc;
-invalid_out:
-	printf("Error. Invalid argument(s) entered.\n");
+
+exec_cmdline_arg_out:
+	printf("Error. Invalid argument(s) or values entered.\n");
 	return -EINVAL;
 }
 
@@ -188,7 +265,7 @@ int main(int argc, char *argv[])
 		return -EPERM;
 	}
 
-	if ((fp = fopen(proc_mod, "r")) == NULL) {
+	if ((fp = fopen(PROC_MODULES, "r")) == NULL) {
 		printf("%s: fopen: %s\n", __func__, strerror(errno));
 		return -errno;
 	}

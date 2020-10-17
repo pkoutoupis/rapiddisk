@@ -1,0 +1,11 @@
+[Unit]
+Description=an enclosure monitoring daemon
+After=network.target
+
+[Service]
+ExecStart=/sbin/rapiddiskd
+Type=forking
+Restart=always
+
+[Install]
+WantedBy=default.target

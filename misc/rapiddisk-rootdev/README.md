@@ -161,8 +161,8 @@ $ sudo lsinitrd /boot/initramfs-`uname -r`.img -f usr/sbin/run_rapiddisk.sh
 
 modprobe rapiddisk
 modprobe rapiddisk-cache
-rapiddisk --attach 300
-rapiddisk --cache-map rd0 /dev/sda2 wa
+rapiddisk -a 300
+rapiddisk -m rd0 -b /dev/sda2 -p wa
 $
 ```
 

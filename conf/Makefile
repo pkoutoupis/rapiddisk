@@ -1,8 +1,10 @@
 CP := cp
 RM := rm -rf
-MKDIR := mkdir -pv
+MKDIR := mkdir -pv -m 755
+SERVICE = rapiddisk
+CFG_DIR := /etc/$(SERVICE)/
+SYSD_DIR := /etc/systemd/system
 CHMOD := chmod
-DIR := /etc/rapiddisk/
 
 .PHONY: all
 all: 
@@ -10,15 +12,19 @@ all:
 
 .PHONY: install
 install: all
-	@echo Installing rapiddisk cluster files.
-	$(MKDIR) $(DESTDIR)$(DIR)
-	$(CP) rapiddisk.* $(DESTDIR)$(DIR)
-	$(CHMOD) -R 755 $(DESTDIR)$(DIR)
+	@echo Installing rapiddisk cluster and rapiddiskd daemon files.
+	$(MKDIR) $(DESTDIR)$(CFG_DIR)
+	$(CP) $(SERVICE).* $(DESTDIR)$(CFG_DIR)
+	$(CHMOD) -R 755 $(DESTDIR)$(CFG_DIR)
+	$(MKDIR) $(DESTDIR)$(SYSD_DIR)
+	$(CP) $(SERVICE)d.* $(DESTDIR)$(SYSD_DIR)
+	$(CHMOD) -R 755 $(DESTDIR)$(SYSD_DIR)
 
 .PHONY: uninstall
 uninstall: 
-	@echo Uninstalling rapiddisk cluster files.
-	$(RM) $(DESTDIR)$(DIR)
+	@echo Uninstalling rapiddisk cluster and rapiddiskd daemon files.
+	$(RM) $(DESTDIR)$(CFG_DIR)
+	$(RM) $(DESTDIR)$(SYSD_DIR)/$(SERVICE)d.*
 
 .PHONY: clean
 clean:

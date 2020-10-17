@@ -1,13 +1,13 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 6.1
+Version: 7.0.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: gcc,make,kernel-headers,kernel-devel,dkms,libjansson4
-BuildRequires: kernel-headers,kernel-devel,gcc,make,libjansson-devel
+Requires: gcc,make,kernel-headers,kernel-devel,dkms,jansson
+BuildRequires: kernel-headers,kernel-devel,gcc,make,jansson-devel
 
 %description
 The RapidDisk software defined advanced RAM drive and storage
@@ -49,18 +49,17 @@ cp -v Makefile  %{buildroot}/usr/src/rapiddisk-%{version}/
 dkms add -m rapiddisk -v %{version}
 dkms build -m rapiddisk -v %{version}
 dkms install -m rapiddisk -v %{version}
-echo rapiddisk > /etc/modules-load.d/rapiddisk.conf
-echo rapiddisk-cache >> /etc/modules-load.d/rapiddisk.conf
-chmod 755 /etc/modules-load.d/rapiddisk.conf
-modprobe rapiddisk 
-modprobe rapiddisk-cache
+echo -ne "#!/bin/sh\nmodprobe rapiddisk max_sectors=2048 nr_requests=1024 2>&1 >/dev/null" > /etc/sysconfig/modules/rapiddisk.modules
+echo -ne "\nmodprobe rapiddisk-cache 2>&1 >/dev/null" >> /etc/sysconfig/modules/rapiddisk.modules
+chmod +x /etc/sysconfig/modules/rapiddisk.modules
+sh /etc/sysconfig/modules/rapiddisk.modules
 
 %preun
-dkms remove -m rapiddisk -v %{version} --all
+dkms remove -m rapiddisk -v %{version} --all|test 0
 
 %postun
 rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rapiddisk,rapiddisk-cache}.ko
-rm -f /etc/modules-load.d/rapiddisk.conf
+rm -f /etc/sysconfig/modules/rapiddisk.modules
 
 %clean
 rm -rf %{buildroot}
@@ -79,6 +78,14 @@ rm -rf %{buildroot}
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %changelog
+* Sun Oct 11 2020 Petros Koutoupis <petros@petroskoutoupis.com>
+- module: Updated for 5.8 kernels and later
+- module: fixed cache status format typo
+- daemon: Implement http-driven API to monitor/manage rapiddisk/cache functions
+- utility: Removing support for RHEL / CentOS 6.x
+- utility: Restructured userspace CLI
+- test: Restructured and improved test framework
+- misc: Code / documentation cleanup
 * Thu May 26 2020 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: added support for 5.7 kernel
 - utility: fixed GCC compilation warnings
@@ -127,7 +134,7 @@ rm -rf %{buildroot}
 * Mon May 9 2016 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: Refuse misaligned discard requests.
 - kernel: Convert ENOMEM to ENOSPC when cannot alloc pages.
-- kernel: Added 4k physical block size attribute.
+- kernel: Added 4k physical block size attribute
 * Fri Apr 22 2016 Petros Koutoupis <petros@petroskoutoupis.com>
 - Code cleanup.
 - Also need to remove CONFIG_BLK_DEV_RAM_COUNT from distro specific packages.
