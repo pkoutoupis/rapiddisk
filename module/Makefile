@@ -15,7 +15,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-VERSION = 7.0.0
+VERSION = 7.0.1
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build

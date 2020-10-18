@@ -1,3 +1,7 @@
+rapiddisk (7.0.1-1) released; urgency=medium
+
+* misc: Fixed typo in utility Makefile
+
 rapiddisk (7.0.0-1) released; urgency=medium
 * module: Updated for 5.8 kernels and later
 * module: fixed cache status format typo

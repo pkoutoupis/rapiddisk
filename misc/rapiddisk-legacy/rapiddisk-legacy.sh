@@ -8,7 +8,7 @@ fi
 ## usage ##
 function help_menu()
 {
-	echo -e "$1 7.0.0"
+	echo -e "$1 7.0.1"
 	echo -e "Copyright 2011 - 2020 Petros Koutoupis"
 	echo -e ""
 	echo -e "$1 is an administration tool to manage the RapidDisk RAM disk devices and"
