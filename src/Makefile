@@ -38,7 +38,7 @@ all: $(BIN) $(BIN)d
 install: all
 	@echo Installing all $(BIN) binary files.
 	$(MKDIR) $(DESTDIR)$(DIR)
-	$(CP) $(BIN) $(DESTDIR)$(DIR)
+	$(CP) $(BIN)* $(DESTDIR)$(DIR)
 	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
 
 .PHONY: uninstall
