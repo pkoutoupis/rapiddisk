@@ -1,8 +1,14 @@
+rapiddisk (7.1.0-1) released; urgency=medium
+
+* module: Updated for 5.9 kernels and later
+* documentation: Updated copyrights
+
 rapiddisk (7.0.1-1) released; urgency=medium
 
 * misc: Fixed typo in utility Makefile
 
 rapiddisk (7.0.0-1) released; urgency=medium
+
 * module: Updated for 5.8 kernels and later
 * module: fixed cache status format typo
 * daemon: Implement http-driven API to monitor/manage rapiddisk/cache functions
@@ -12,6 +18,7 @@ rapiddisk (7.0.0-1) released; urgency=medium
 * misc: Code / documentation cleanup
 
 rapiddisk (6.1-1) released; urgency=medium
+
 * kernel: added support for 5.7 kernel
 * utility: fixed GCC compilation warnings
 * utility: code style cleanup

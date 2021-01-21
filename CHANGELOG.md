@@ -1,6 +1,7 @@
-### Release 7.x ###
+### Release 7.1.0 ###
 
 - module: Updated for 5.9 kernels and later
+- documentation: Updated copyrights
 
 ### Release 7.0.1 ###
 

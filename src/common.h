@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright © 2011 - 2020 Petros Koutoupis
+ ** Copyright © 2011 - 2021 Petros Koutoupis
  ** All rights reserved.
  **
  ** This file is part of RapidDisk.
@@ -43,8 +43,8 @@
 
 #define PROCESS			"rapiddisk"
 #define DAEMON			PROCESS "d"
-#define COPYRIGHT		"Copyright 2011 - 2020 Petros Koutoupis"
-#define VERSION_NUM	  	"7.0.1"
+#define COPYRIGHT		"Copyright 2011 - 2021 Petros Koutoupis"
+#define VERSION_NUM	  	"7.1.0"
 #define SUCCESS			0
 #define INVALID_VALUE		-1
 #define NAMELEN			0x200

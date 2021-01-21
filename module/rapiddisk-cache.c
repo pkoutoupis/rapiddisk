@@ -1,5 +1,5 @@
 /*******************************************************************************
- ** Copyright © 2011 - 2020 Petros Koutoupis
+ ** Copyright © 2011 - 2021 Petros Koutoupis
  ** All rights reserved.
  **
  ** This program is free software: you can redistribute it and/or modify
@@ -59,7 +59,7 @@
 	} \
 } while (0)
 
-#define VERSION_STR	"7.0.1"
+#define VERSION_STR	"7.1.0"
 #define DM_MSG_PREFIX	"rapiddisk-cache"
 
 #define READCACHE	1
@@ -1239,7 +1239,7 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 
 static struct target_type cache_target = {
 	.name    = "rapiddisk-cache",
-	.version = {7, 0, 1},
+	.version = {7, 1, 0},
 	.module  = THIS_MODULE,
 	.ctr	 = cache_ctr,
 	.dtr	 = cache_dtr,
@@ -1281,4 +1281,4 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Petros Koutoupis <petros@petroskoutoupis.com>");
 MODULE_DESCRIPTION("RapidDisk-Cache DM target is a write-through caching target with RapidDisk volumes.");
 MODULE_VERSION(VERSION_STR);
-MODULE_INFO(Copyright, "Copyright 2010 - 2020 Petros Koutoupis");
+MODULE_INFO(Copyright, "Copyright 2010 - 2021 Petros Koutoupis");
