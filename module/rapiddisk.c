@@ -41,7 +41,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"7.0.1"
+#define VERSION_STR		"7.0.0"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -102,7 +102,11 @@ static int rdsk_ioctl(struct block_device *, fmode_t,
 		      unsigned int, unsigned long);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
+static blk_qc_t rdsk_submit_bio(struct bio *);
+#else
 static blk_qc_t rdsk_make_request(struct request_queue *, struct bio *);
+#endif
 #else
 static void rdsk_make_request(struct request_queue *, struct bio *);
 #endif
@@ -477,7 +481,11 @@ static void
 #else
 static int
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
+rdsk_submit_bio(struct bio *bio)
+#else
 rdsk_make_request(struct request_queue *q, struct bio *bio)
+#endif
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
 	struct rdsk_device *rdsk = bio->bi_disk->private_data;
@@ -664,6 +672,9 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 
 static const struct block_device_operations rdsk_fops = {
 	.owner = THIS_MODULE,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
+	.submit_bio = rdsk_submit_bio,
+#endif
 	.ioctl = rdsk_ioctl,
 };
 
@@ -708,7 +719,11 @@ static int attach_device(int size)
 	INIT_RADIX_TREE(&rdsk->rdsk_pages, GFP_ATOMIC);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
+	rdsk->rdsk_queue = blk_alloc_queue(NUMA_NO_NODE);
+#else
 	rdsk->rdsk_queue = blk_alloc_queue(rdsk_make_request, NUMA_NO_NODE);
+#endif
 	if (!rdsk->rdsk_queue)
 		goto out_free_dev;
 #else

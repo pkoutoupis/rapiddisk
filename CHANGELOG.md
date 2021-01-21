@@ -1,3 +1,7 @@
+### Release 7.x ###
+
+- module: Updated for 5.9 kernels and later
+
 ### Release 7.0.1 ###
 
 - misc: Fixed typo in utility Makefile
