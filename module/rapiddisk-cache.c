@@ -38,18 +38,13 @@
 #include <linux/bio.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
-#include <linux/hash.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
-#include <linux/pagemap.h>
-#include <linux/random.h>
 #include <linux/version.h>
 #include <linux/seq_file.h>
 #include <linux/hardirq.h>
-#include <asm/kmap_types.h>
 #include <linux/dm-io.h>
 #include <linux/device-mapper.h>
-#include <linux/bio.h>
 
 #define ASSERT(x) do { \
 	if (unlikely(!(x))) { \
