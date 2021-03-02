@@ -41,7 +41,7 @@ unsigned char path[NAMELEN] = {0};
  * The responses to our GET requests. Although, we are not SPECIFICALLY checking that they are GETs.
  * We are just check the URL and the string command.
  */
-static int answer_to_connection(void *cls, struct MHD_Connection *connection, const char *url,
+static enum MHD_Result answer_to_connection(void *cls, struct MHD_Connection *connection, const char *url,
                                 const char *method, const char *version, const char *upload_data,
                                  size_t *upload_data_size, void **con_cls)
 {
