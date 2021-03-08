@@ -31,7 +31,6 @@
 #include "daemon.h"
 #include <jansson.h>
 #include <sys/socket.h>
-#include <linux/version.h>
 #include <microhttpd.h>
 
 bool verbose;
