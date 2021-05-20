@@ -487,7 +487,7 @@ rdsk_submit_bio(struct bio *bio)
 rdsk_make_request(struct request_queue *q, struct bio *bio)
 #endif
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(5,12,0))
 	struct rdsk_device *rdsk = bio->bi_disk->private_data;
 #else
 	struct block_device *bdev = bio->bi_bdev;
@@ -511,7 +511,7 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 #else
 	sector = bio->bi_sector;
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(5,12,0))
 	if ((sector + bio_sectors(bio)) > get_capacity(bio->bi_disk))
 #else
 	if ((sector + bio_sectors(bio)) > get_capacity(bdev->bd_disk))
