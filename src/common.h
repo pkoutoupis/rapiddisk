@@ -44,7 +44,7 @@
 #define PROCESS			"rapiddisk"
 #define DAEMON			PROCESS "d"
 #define COPYRIGHT		"Copyright 2011 - 2021 Petros Koutoupis"
-#define VERSION_NUM	  	"7.1.0"
+#define VERSION_NUM	  	"7.2.0"
 #define SUCCESS			0
 #define INVALID_VALUE		-1
 #define NAMELEN			0x200
@@ -52,6 +52,7 @@
 #define PAYLOADSZ		0x80000 /* 512K: this is our max read limit for libcurl */
 #define WRITETHROUGH		0
 #define WRITEAROUND		1
+#define WRITEBACK		2
 
 typedef char bool;
 

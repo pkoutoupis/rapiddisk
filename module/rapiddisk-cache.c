@@ -54,7 +54,7 @@
 	} \
 } while (0)
 
-#define VERSION_STR	"7.1.0"
+#define VERSION_STR	"7.2.0"
 #define DM_MSG_PREFIX	"rapiddisk-cache"
 
 #define READCACHE	1
@@ -1234,7 +1234,7 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 
 static struct target_type cache_target = {
 	.name    = "rapiddisk-cache",
-	.version = {7, 1, 0},
+	.version = {7, 2, 0},
 	.module  = THIS_MODULE,
 	.ctr	 = cache_ctr,
 	.dtr	 = cache_dtr,

@@ -174,10 +174,15 @@ int mem_device_list(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 	}
 	num = 1;
 	while (rc_prof != NULL) {
-	printf(" RapidDisk-Cache Target %d: %s\tCache: %s  Target: %s (%s)\n",
-			num, rc_prof->device, rc_prof->cache, rc_prof->source,
-			(strncmp(rc_prof->device, "rc-wt_", 5) == 0) ? \
-			"WRITE THROUGH" : "WRITE AROUND");
+		if (strstr(rc_prof->device, "rc-wb") != NULL) {
+			printf(" dm-writecache Target   %d: %s\tCache: %s  Target: %s (WRITEBACK)\n",
+				num, rc_prof->device, rc_prof->cache, rc_prof->source);
+		} else {
+			printf(" RapidDisk-Cache Target %d: %s\tCache: %s  Target: %s (%s)\n",
+				num, rc_prof->device, rc_prof->cache, rc_prof->source,
+				(strncmp(rc_prof->device, "rc-wt_", 5) == 0) ? \
+				"WRITE THROUGH" : "WRITE AROUND");
+		}
 		num++;
 		rc_prof = rc_prof->next;
 	}
@@ -502,16 +507,23 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 	}
 	if (mode == WRITETHROUGH)
 		sprintf(name, "rc-wt_%s", str);
+	else if (mode == WRITEBACK)    /* very dangerous mode */
+		sprintf(name, "rc-wb_%s", str);
 	else
 		sprintf(name, "rc-wa_%s", str);
 
 	memset(string, 0x0, BUFSZ);
-	/* echo 0 4194303 rapiddisk-cache /dev/sdb /dev/rd0 0 196608|dmsetup create rc-wt_sdb    */
-	/* Param after echo 0 & 1: starting and ending offsets of source device                  *
-	 * Param 3: always rapiddisk-cache; Param 4 & 5: path to source device and RapidDisk dev *
-	 * Param 6: is the size of the cache  */
-	sprintf(string, "echo 0 %llu rapiddisk-cache %s /dev/%s %llu %d|dmsetup create %s\n",
-		source_sz, source, cache, cache_sz, mode, name);
+	if (mode == WRITEBACK)    /* very dangerous mode */
+		sprintf(string, "echo 0 %llu writecache s %s /dev/%s 4096 0|dmsetup create %s\n",
+			source_sz, source, cache, name);
+	else {
+		/* echo 0 4194303 rapiddisk-cache /dev/sdb /dev/rd0 0 196608|dmsetup create rc-wt_sdb    */
+		/* Param after echo 0 & 1: starting and ending offsets of source device                  *
+		 * Param 3: always rapiddisk-cache; Param 4 & 5: path to source device and RapidDisk dev *
+		 * Param 6: is the size of the cache  */
+		sprintf(string, "echo 0 %llu rapiddisk-cache %s /dev/%s %llu %d|dmsetup create %s\n",
+			source_sz, source, cache, cache_sz, mode, name);
+	}
 
 	if ((rc = system(string)) == SUCCESS) {
 		printf("Command to map %s with %s and %s has been sent.\nVerify with \"-l\"\n\n",
@@ -555,6 +567,12 @@ int cache_device_unmap(struct RC_PROFILE *prof, unsigned char *string)
 	if ((strstr(buf, string) != NULL)) {
 		printf("%s is currently mounted. Please \"umount\" and retry.\n", string);
 		return -EBUSY;
+	}
+
+	if (strstr(string, "rc-wb") != NULL) {
+		sprintf(cmd, "dmsetup message %s 0 flush\n", string);
+		if ((rc = system(cmd)) != SUCCESS)
+			printf("Unable to flush dirty cache data to %s\n", string);
 	}
 
 	sprintf(cmd, "dmsetup remove %s\n", string);
