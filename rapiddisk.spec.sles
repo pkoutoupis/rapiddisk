@@ -83,6 +83,7 @@ rm -rf %{buildroot}
 - module: Updated for 5.12 kernels and later (thank you Michael)
 - utility: remove unused headers (thank you Marcel Huber)
 - utility: add CLI support for dm-writecache wrapper
+- utility: Fixed property check bug when parsing sysfs block subtree params (github issue #55)
 * Thu Jan 21 2021 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Updated for 5.9 kernels and later
 - documentation: Updated copyrights
