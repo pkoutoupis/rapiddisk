@@ -89,6 +89,7 @@ int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
 	json_t *root, *array = json_array();
 	json_t *rd_array = json_array(), *rc_array = json_array();
         json_t *rd_object = json_object(), *rc_object = json_object() ;
+	unsigned char mode[0x20] = {0x0};
 
 	while (rd != NULL) {
 		json_t *object = json_object();
@@ -105,8 +106,15 @@ int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
 		json_object_set_new(object, "device", json_string(rc->device));
 		json_object_set_new(object, "cache", json_string(rc->cache));
 		json_object_set_new(object, "source", json_string(rc->source));
-		json_object_set_new(object, "mode", json_string((strncmp(rc->device,
-				    "rc-wt_", 5) == 0) ? "write-through" : "write-around"));
+		memset(mode, 0x0, sizeof(mode));
+                if (strncmp(rc->device, "rc-wt_", 5) == 0) {
+                        sprintf(mode, "write-through");
+                } else if (strncmp(rc->device, "rc-wb_", 5) == 0) {
+                        sprintf(mode, "writeback");
+                } else {
+                        sprintf(mode, "write-around");
+                }
+                json_object_set_new(object, "mode", json_string(mode));
 		json_array_append_new(rc_array, object);
 		rc = rc->next;
 	}

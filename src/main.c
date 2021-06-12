@@ -30,6 +30,8 @@
 #include "common.h"
 #include "cli.h"
 
+bool writeback_enabled;
+
 void online_menu(unsigned char *string)
 {
 	printf("%s is an administration tool to manage RapidDisk RAM disk devices and\n"
@@ -48,7 +50,8 @@ void online_menu(unsigned char *string)
 	       "\t-j\t\tEnable JSON formatted output.\n"
 	       "\t-l\t\tList all attached RAM disk devices.\n"
 	       "\t-m\t\tMap an RapidDisk device as a caching node to another block device.\n"
-	       "\t-p\t\tDefine cache policy (default: write-through).\n"
+	       "\t-p\t\tDefine cache policy: write-through, write-around or writeback \033[31;1m(dangerous)\033[0m\n"
+	       "\t\t\t(default: write-through).\n"
 	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
 	       "\t-u\t\tUnmap a RapidDisk device from another block device.\n"
@@ -58,6 +61,7 @@ void online_menu(unsigned char *string)
 	       "\trapiddisk -r rd2 -c 128\n"
 	       "\trapiddisk -m rd1 -b /dev/sdb\n"
 	       "\trapiddisk -m rd1 -b /dev/sdb -p wt\n"
+	       "\trapiddisk -m rd3 -b /dev/mapper/rc-wa_sdb -p wb\n"
 	       "\trapiddisk -u rc-wt_sdb\n"
 	       "\trapiddisk -f rd2\n\n");
 }
@@ -112,6 +116,14 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		case 'p':
 			if (strcmp(optarg, "wa") == 0)
 				mode = WRITEAROUND;
+			else if (strcmp(optarg, "wb") == 0) {
+				if (writeback_enabled == FALSE) {
+					printf("Please ensure that the dm-writecache module is "
+					       "loaded and retry.\n");
+					return -EPERM;
+				} else
+					mode = WRITEBACK;
+			}
 			break;
 		case 'q':
 			action = ACTION_QUERY_RESOURCES;
@@ -275,6 +287,11 @@ int main(int argc, char *argv[])
 		printf("Please ensure that the RapidDisk-Cache module "
 		       "are loaded and retry.\n");
 		return -EPERM;
+	}
+
+	writeback_enabled = FALSE;
+	if (strstr(string, "dm_writecache") != NULL) {
+		writeback_enabled = TRUE;
 	}
 
 	rc = exec_cmdline_arg(argc, argv);

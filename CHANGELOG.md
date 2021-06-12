@@ -1,3 +1,10 @@
+### Release 7.2.0 ###
+
+- module: Updated for 5.12 kernels and later (thank you Michael)
+- utility: remove unused headers (thank you Marcel Huber)
+- utility: add CLI support for dm-writecache wrapper
+- utility: Fixed property check bug when parsing sysfs block subtree params (github issue #55)
+
 ### Release 7.1.0 ###
 
 - module: Updated for 5.9 kernels and later

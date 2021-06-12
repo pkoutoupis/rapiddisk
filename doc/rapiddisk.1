@@ -39,7 +39,8 @@ List all attached RAM disk devices.
 Map an RapidDisk device as a caching node to another block device.
 .TP
 -p
-Define cache policy (default: write-through).
+Define cache policy: write-through (wt), write-around (wa) or writeback (wb) (dangerous) (default: write-through).
+Writeback caching is supplied by the dm-writecache kernel module and is not intended for production use as it may result in data loss on hardware/power failure.
 .TP
 -r
 Dynamically grow the size of an existing RapidDisk device.
@@ -71,6 +72,8 @@ rapiddisk -r rd2 -c 128
 rapiddisk -m rd1 -b /dev/sdb
 .TP
 rapiddisk -m rd1 -b /dev/sdb -p wt
+.TP
+rapiddisk -m rd3 -b /dev/mapper/rc-wa_sdb -p wb
 .TP
 rapiddisk -u rc-wt_sdb
 .TP

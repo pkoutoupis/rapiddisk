@@ -53,7 +53,7 @@ int get_memory_usage(struct MEM_PROFILE *mem)
 struct VOLUME_PROFILE *search_volumes_targets(void)
 {
 	int rc, n = 0, i;
-        unsigned char file[NAMELEN] = {0};
+        unsigned char file[NAMELEN] = {0}, test[NAMELEN + 32] = {0};
         struct dirent **list;
         struct VOLUME_PROFILE *volume = NULL;
 
@@ -74,13 +74,21 @@ struct VOLUME_PROFILE *search_volumes_targets(void)
                         sprintf(file, "%s/%s", SYS_BLOCK, list[n]->d_name);
                         volume->size = (BYTES_PER_SECTOR * strtoull(read_info(file, "size"), NULL, 10));
                         sprintf(file, "%s/%s/device", SYS_BLOCK, list[n]->d_name);
-			sprintf(volume->model, "%s", read_info(file, "model"));
+			sprintf(test, "%s/model", file);
+			if (access(test, F_OK) != INVALID_VALUE)
+				sprintf(volume->model, "%s", read_info(file, "model"));
+			else
+				sprintf(volume->model, "UNAVAILABLE");
 			/* trim whitespace of model string */
 			for (i = 0; i < strlen(volume->model); i++) {
 				if ((strncmp(volume->model + i, " ", 1) == SUCCESS) || (strncmp(volume->model + i, "\n", 1) == SUCCESS))
 					volume->model[i] = '\0';
 			}
-			sprintf(volume->vendor, "%s", read_info(file, "vendor"));
+			sprintf(test, "%s/vendor", file);
+			if (access(test, F_OK) != INVALID_VALUE)
+				sprintf(volume->vendor, "%s", read_info(file, "vendor"));
+			else
+				sprintf(volume->vendor, "UNAVAILABLE");
 			/* trim whitespace of vendor string */
 			for (i = 0; i < strlen(volume->vendor); i++) {
 				if ((strncmp(volume->vendor+ i, " ", 1) == SUCCESS) || (strncmp(volume->vendor + i, "\n", 1) == SUCCESS))
