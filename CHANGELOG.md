@@ -1,3 +1,8 @@
+### Release 7.2.1 ###
+
+- module: Added support for RHEL 8.4 kernel
+- utility: Added support for libmicrohttpd v0.9.71 and newer while still supporting legacy versions
+
 ### Release 7.2.0 ###
 
 - module: Updated for 5.12 kernels and later (thank you Michael)
