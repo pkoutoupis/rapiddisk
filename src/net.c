@@ -40,7 +40,11 @@ unsigned char path[NAMELEN] = {0};
  * The responses to our GET requests. Although, we are not SPECIFICALLY checking that they are GETs.
  * We are just check the URL and the string command.
  */
+#if !defined LEGACY
+static enum MHD_Result answer_to_connection(void *cls, struct MHD_Connection *connection, const char *url,
+#else
 static int answer_to_connection(void *cls, struct MHD_Connection *connection, const char *url,
+#endif
                                 const char *method, const char *version, const char *upload_data,
                                  size_t *upload_data_size, void **con_cls)
 {
@@ -54,7 +58,11 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 	unsigned char *page = (unsigned char *)calloc(1, BUFSZ);
 	if (page == NULL) {
 		printf("%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
+#if !defined LEGACY
+		return MHD_NO;
+#else
 		return INVALID_VALUE;
+#endif
 	}
 
 	if (strcmp(method, "GET") == SUCCESS) {
