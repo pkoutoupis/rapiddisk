@@ -59,14 +59,17 @@ else
 	$(CC) -c net.c -o net.o
 endif
 
+nvmet.o: nvmet.c
+	$(CC) -c nvmet.c -o nvmet.o
+
 rdsk.o: rdsk.c
 	$(CC) -c rdsk.c -o rdsk.o
 
 sys.o: sys.c
 	$(CC) -c sys.c -o sys.o
 
-$(BIN): main.c json.o rdsk.o sys.o
-	$(CC) main.c -o $(BIN) json.o rdsk.o sys.o -ljansson
+$(BIN): main.c json.o rdsk.o nvmet.o sys.o
+	$(CC) main.c -o $(BIN) json.o nvmet.o rdsk.o sys.o -ljansson
 
 $(BIN)d: daemon.c json-server.o net.o
 	$(CC) daemon.c -o $(BIN)d json-server.o net.o -lpthread -ljansson -lmicrohttpd

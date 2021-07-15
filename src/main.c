@@ -50,8 +50,11 @@ void online_menu(unsigned char *string)
 	       "\t-j\t\tEnable JSON formatted output.\n"
 	       "\t-l\t\tList all attached RAM disk devices.\n"
 	       "\t-m\t\tMap an RapidDisk device as a caching node to another block device.\n"
+	       "\t-n\t\tList RapidDisk enabled NVMe Target exports\n"
 	       "\t-p\t\tDefine cache policy: write-through, write-around or writeback \033[31;1m(dangerous)\033[0m\n"
-	       "\t\t\t(default: write-through).\n"
+	       "\t\t\t(default: write-through). Writeback caching is supplied by the dm-writecache\n"
+	       "\t\t\tkernel module and is not intended for production use as it may result in data\n"
+	       "\t\t\tloss on hardware/power failure.\n"
 	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
 	       "\t-u\t\tUnmap a RapidDisk device from another block device.\n"
@@ -79,7 +82,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	printf("%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	while ((i = getopt(argcin, argvin, "a:b:c:d:f:hjlm:p:qr:s:u:vV")) != INVALID_VALUE) {
+	while ((i = getopt(argcin, argvin, "a:b:c:d:f:hjlm:np:qr:s:u:vV")) != INVALID_VALUE) {
 		switch (i) {
 		case 'h':
 			online_menu(argvin[0]);
@@ -112,6 +115,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		case 'm':
 			action = ACTION_CACHE_MAP;
 			sprintf(device, "%s", optarg);
+			break;
+		case 'n':
+			action = ACTION_LIST_NVMET;
 			break;
 		case 'p':
 			if (strcmp(optarg, "wa") == 0)
@@ -221,7 +227,10 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		if (strlen(device) <= 0)
 			goto exec_cmdline_arg_out;
 		if (json_flag == TRUE)
-			rc = cache_device_stat_json(cache, device);
+			if (strstr(device, "rc-wb") != NULL)
+				rc = cache_wb_device_stat_json(cache, device);
+			else
+				rc = cache_device_stat_json(cache, device);
 		else
 			rc = cache_device_stat(cache, device);
 		break;
@@ -246,6 +255,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			rc = json_resources_list(mem, volumes);
 		else
 			rc =  resources_list(mem, volumes);
+		break;
+	case ACTION_LIST_NVMET:
+		rc = nvmet_view_exports(json_flag);
 		break;
 	case ACTION_NONE:
 		online_menu(argvin[0]);
@@ -272,7 +284,7 @@ int main(int argc, char *argv[])
 		return -EACCES;
 	}
 
-	if (access(SYS_RDSK, F_OK) == -1) {
+	if (access(SYS_RDSK, F_OK) == INVALID_VALUE) {
 		printf("Please ensure that the RapidDisk module is loaded and retry.\n");
 		return -EPERM;
 	}

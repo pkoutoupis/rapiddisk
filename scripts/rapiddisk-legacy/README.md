@@ -1,19 +1,16 @@
-Description
-------------------
+## Description
 
 The `rapiddisk-legacy.sh` shell script provides users with an interface to use
 pre-7.0.0 parameters and functions. It is a wrapper to the updated and new
 rapiddisk binary.
 
-Installation
-------------------
+## Installation
 
 Copy the shell script anywhere but most preferrably to a directory in your current
 working path. It is expected that you have already installed the rapiddisk binary
 in a current working path as it directly calls on this binary for execution.
 
-Execution Examples
-------------------
+## Execution Examples
 
 Help menu:
 

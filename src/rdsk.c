@@ -287,6 +287,61 @@ int cache_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	return rc;
 }
 
+int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
+{
+	int rc = INVALID_VALUE;
+	unsigned char cmd[NAMELEN] = {0};
+	FILE *stream;
+	unsigned char *buf = NULL, *dup = NULL, *token = NULL;
+	struct WC_STATS *stats = NULL;
+
+	if (rc_prof == NULL) {
+		printf("  No RapidDisk-Cache Mappings exist.\n\n");
+		return 1;
+	}
+
+	buf = (unsigned char *)calloc(1, BUFSZ);
+	if (buf == NULL) {
+		printf("%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
+		return INVALID_VALUE;
+	}
+
+	stats = (struct WC_STATS *)calloc(1, sizeof(struct WC_STATS));
+	if (stats == NULL) {
+		printf("%s: calloc: %s\n", __func__, strerror(errno));
+		return INVALID_VALUE;
+	}
+
+	sprintf(cmd, "OUTPUT=`dmsetup status %s`; echo $OUTPUT", cache);
+	stream = popen(cmd, "r");
+	if (stream) {
+		while (fgets(buf, BUFSZ, stream) != NULL);
+		pclose(stream);
+	}
+
+	sprintf(stats->device, "%s", cache);
+	dup = strdup(buf);
+
+	token = strtok((char *)dup, " ");
+	token = strtok(NULL, " ");
+	token = strtok(NULL, " ");
+	token = strtok(NULL, " ");     /* errors */
+	stats->errors = atoi(token);
+	token = strtok(NULL, " ");     /* num blocks */
+	stats->num_blocks = atoi(token);
+	token = strtok(NULL, " ");     /* free blocks */
+	stats->num_free_blocks = atoi(token);
+	token = strtok(NULL, " ");     /* num wb blocks */
+	stats->num_wb_blocks = atoi(token);
+
+	rc = json_cache_wb_statistics(stats);
+
+	if (dup) free(dup);
+	if (stats) free(stats);
+	if (buf) free(buf);
+	return rc;
+}
+
 int mem_device_attach(struct RD_PROFILE *prof, unsigned long size)
 {
 	int dsk;

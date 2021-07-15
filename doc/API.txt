@@ -142,6 +142,7 @@ ex) curl -X POST -s 127.0.0.1:9118/v1/createRapidDiskCache/rd0/sdb/write-through
 Supported caching policies:
 * write-through
 * write-around
+* writeback (dangerous)
 
 status code: 200 (on success)
 
@@ -192,6 +193,63 @@ Retrieve cache statistics from an existing rapiddisk-cache volume. Example outpu
           "disk_writes": 1,
           "cache_reads": 264,
           "cache_writes": 263
+        }
+      ]
+    }
+  ]
+}
+
+If it is writeback cache, it will look like this:
+
+{
+  "statistics": [
+    {
+      "cache_stats": [
+        {
+          "device": "rc-wb_sdd",
+          "errors": 0,
+          "num_blocks": 16320,
+          "num_free_blocks": 16320,
+          "num_wb_blocks": 0
+        }
+      ]
+    }
+  ]
+}
+
+-------------------------
+GET /v1/listAllNVMeTargets
+
+ex) curl -s --output - 10.0.0.185:9118/v1/listAllNVMeTargets|jq .
+
+status code: 200 (on success)
+
+Retrieve cache statistics from an existing rapiddisk-cache volume. Example output:
+
+{
+  "targets": [
+    {
+      "nvmet_targets": [
+        {
+          "nqn": "rd1-test",
+          "namespace": 2,
+          "device": "/dev/rd2",
+          "enabled": "true"
+        },
+        {
+          "nqn": "rd1-test",
+          "namespace": 1,
+          "device": "/dev/rd1",
+          "enabled": "true"
+        }
+      ]
+    },
+    {
+      "nvmet_ports": [
+        {
+          "port": 1,
+          "address": "10.0.0.185",
+          "nqn": "rd1-test"
         }
       ]
     }

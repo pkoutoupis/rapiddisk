@@ -1,3 +1,9 @@
+### Release 7.3.0 ###
+
+- utility: Added NVMe Target support / framework
+- utility: Added support for dm-writecache status readout in API
+- documentation: Clean up formatting and add content
+
 ### Release 7.2.1 ###
 
 - module: Added support for RHEL 8.4 kernel
