@@ -68,12 +68,14 @@ rdsk.o: rdsk.c
 sys.o: sys.c
 	$(CC) -c sys.c -o sys.o
 
+sys-server.o: sys.c
+	$(CC) -c sys.c -DSERVER -o sys-server.o
+
 $(BIN): main.c json.o rdsk.o nvmet.o sys.o
 	$(CC) main.c -o $(BIN) json.o nvmet.o rdsk.o sys.o -ljansson
 
-$(BIN)d: daemon.c json-server.o net.o
-	$(CC) daemon.c -o $(BIN)d json-server.o net.o -lpthread -ljansson -lmicrohttpd
-
+$(BIN)d: daemon.c json-server.o net.o sys-server.o
+	$(CC) daemon.c -o $(BIN)d json-server.o net.o sys-server.o -lpthread -ljansson -lmicrohttpd
 
 .PHONY: clean
 clean:

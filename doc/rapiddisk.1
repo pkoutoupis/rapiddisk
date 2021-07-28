@@ -26,8 +26,14 @@ Input capacity for size or resize of RAM disk device (in MBytes).
 -d
 Detach RAM disk device.
 .TP
+-e
+Export a RapidDisk block device as an NVMe Target.
+.TP
 -f
 Erase all data to a specified RapidDisk device (dangerous).
+.TP
+-H
+The host to export / unexport the NVMe Target to / from.
 .TP
 -j
 Enable JSON formatted output.
@@ -37,6 +43,9 @@ List all attached RAM disk devices.
 .TP
 -m
 Map an RapidDisk device as a caching node to another block device.
+.TP
+-P
+The port to export / unexport the NVMe Target to / from.
 .TP
 -p
 Define cache policy: write-through (wt), write-around (wa) or writeback (wb) (dangerous) (default: write-through).
@@ -50,6 +59,12 @@ Obtain RapidDisk-Cache Mappings statistics.
 .TP
 -u
 Unmap a RapidDisk device from another block device.
+.TP
+-v
+Display the utility version string.
+.TP
+-x
+Unexport a RapidDisk block device from an NVMe Target.
 .SS Parameters (if applicable)
 .TP
 [size]
@@ -80,6 +95,10 @@ rapiddisk -u rc-wt_sdb
 rapiddisk -s rc-wt_sdb
 .TP
 rapiddisk -f rd2
+.TP
+rapiddisk -e -b rd3 -P 1 -H nqn.host1
+.TP
+rapiddisk -x -b rd3 -P 1 -H nqn.host1
 .SH EXIT STATUS
 rapiddisk returns a zero exit status if no error occurs during operation. A non-zero value is returned on error.
 .SH AUTHORS

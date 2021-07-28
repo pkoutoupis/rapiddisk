@@ -32,8 +32,6 @@
 
 #include <malloc.h>
 
-#define PROC_MODULES			"/proc/modules"
-#define SYS_RDSK			"/sys/kernel/rapiddisk/mgmt"
 #define SYS_BLOCK			"/sys/block"
 #define ETC_MTAB			"/etc/mtab"
 #define DEV_MAPPER			"/dev/mapper"
@@ -49,6 +47,8 @@
 #define ACTION_CACHE_UNMAP		0x8
 #define ACTION_QUERY_RESOURCES		0x9
 #define ACTION_LIST_NVMET		0xa
+#define ACTION_EXPORT_NVMET		0xb
+#define ACTION_UNEXPORT_NVMET		0xc
 
 #define NAMELEN				0x200
 #define FILEDATA			0x40
@@ -147,6 +147,8 @@ int json_cache_statistics(struct RC_STATS *);
 int json_cache_wb_statistics(struct WC_STATS *);
 int json_status_return(int);
 int json_nvmet_view_exports(struct NVMET_PROFILE *, struct NVMET_PORTS *);
+int nvmet_export_volume(struct RD_PROFILE *, RC_PROFILE *, unsigned char *, unsigned char *, int);
+int nvmet_unexport_volume(unsigned char *, unsigned char *, int);
 int get_memory_usage(struct MEM_PROFILE *);
 struct VOLUME_PROFILE *search_volumes_targets(void);
 int resources_list(struct MEM_PROFILE *, struct VOLUME_PROFILE *);

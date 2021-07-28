@@ -59,4 +59,9 @@ typedef char bool;
 #define FALSE			0
 #define TRUE			1
 
+#define SYS_RDSK		"/sys/kernel/rapiddisk/mgmt"
+#define SYS_MODULE		"/sys/module"
+
+int check_loaded_modules(void);
+
 #endif

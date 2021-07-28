@@ -28,11 +28,13 @@
  ********************************************************************************/
 
 #include "common.h"
-#include "cli.h"
 #include <linux/fs.h>
 #include <sys/ioctl.h>
 #include <sys/sysinfo.h>
 #include <sys/time.h>
+
+#if !defined SERVER
+#include "cli.h"
 
 struct VOLUME_PROFILE *volume_head =  (struct VOLUME_PROFILE *) NULL;
 struct VOLUME_PROFILE *volume_end =   (struct VOLUME_PROFILE *) NULL;
@@ -127,4 +129,52 @@ int resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volumes)
 	}
 	printf("\n");
 	return SUCCESS;
+}
+
+#endif
+
+/*
+ * Return codes:
+ *     0 - All RapidDisk modules inserted
+ *     1 - All RapidDisk and dm-writecache modules inserted
+ *    <0 - One or more RapidDisk modules are not inserted
+ */
+int check_loaded_modules(void)
+{
+	int rc = INVALID_VALUE, n, i;
+	struct dirent **list;
+
+	if (access(SYS_RDSK, F_OK) == INVALID_VALUE) {
+		printf("Please ensure that the RapidDisk module is loaded and retry.\n");
+		return -EPERM;
+	}
+
+	/* Check for rapiddisk */
+	if ((i = scandir(SYS_MODULE, &list, NULL, NULL)) < 0) {
+		printf("%s: scandir: %s\n", __func__, strerror(errno));
+		return -ENOENT;
+	}
+
+	/* Check for rapiddisk-cache */
+	for (n = 0; n < i; n++) {
+		if (strcmp(list[n]->d_name, "rapiddisk_cache") == SUCCESS) {
+			rc = SUCCESS;
+			break;
+		}
+	}
+
+	if (rc != SUCCESS) {
+		printf("Please ensure that the RapidDisk-Cache module is loaded and retry.\n");
+		return rc;
+	}
+
+	/* Check for dm-writecach */
+	for (n = 0; n < i; n++) {
+		if (strcmp(list[n]->d_name, "dm_writecache") == SUCCESS) {
+			rc = 1;
+		}
+		if (list[n] != NULL) free(list[n]);
+	}
+
+	return rc;
 }

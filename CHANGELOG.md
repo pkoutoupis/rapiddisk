@@ -2,6 +2,8 @@
 
 - utility: Added NVMe Target support / framework
 - utility: Added support for dm-writecache status readout in API
+- utility: Module checker code now traverses via sysfs
+- utility: Added module checker in daemon
 - documentation: Clean up formatting and add content
 
 ### Release 7.2.1 ###

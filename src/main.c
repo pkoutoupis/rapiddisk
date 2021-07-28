@@ -45,12 +45,15 @@ void online_menu(unsigned char *string)
 	       "\t-b\t\tBackend block device absolute path (for cache mapping).\n"
 	       "\t-c\t\tInput capacity for size or resize of RAM disk device (in MBytes).\n"
 	       "\t-d\t\tDetach RAM disk device.\n"
+	       "\t-e\t\tExport a RapidDisk block device as an NVMe Target.\n"
 	       "\t-f\t\tErase all data to a specified RapidDisk device \033[31;1m(dangerous)\033[0m.\n"
+	       "\t-H\t\tThe host to export / unexport the NVMe Target to / from.\n"
 	       "\t-h\t\tDisplay the help menu.\n"
 	       "\t-j\t\tEnable JSON formatted output.\n"
 	       "\t-l\t\tList all attached RAM disk devices.\n"
 	       "\t-m\t\tMap an RapidDisk device as a caching node to another block device.\n"
 	       "\t-n\t\tList RapidDisk enabled NVMe Target exports\n"
+	       "\t-P\t\tThe port to export / unexport the NVMe Target to / from.\n"
 	       "\t-p\t\tDefine cache policy: write-through, write-around or writeback \033[31;1m(dangerous)\033[0m\n"
 	       "\t\t\t(default: write-through). Writeback caching is supplied by the dm-writecache\n"
 	       "\t\t\tkernel module and is not intended for production use as it may result in data\n"
@@ -58,7 +61,8 @@ void online_menu(unsigned char *string)
 	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
 	       "\t-u\t\tUnmap a RapidDisk device from another block device.\n"
-	       "\t-v\t\tDisplay the utility version string.\n\n");
+	       "\t-v\t\tDisplay the utility version string.\n"
+	       "\t-x\t\tUnexport a RapidDisk block device from an NVMe Target.\n\n");
         printf("Example Usage:\n\trapiddisk -a 64\n"
 	       "\trapiddisk -d rd2\n"
 	       "\trapiddisk -r rd2 -c 128\n"
@@ -66,15 +70,17 @@ void online_menu(unsigned char *string)
 	       "\trapiddisk -m rd1 -b /dev/sdb -p wt\n"
 	       "\trapiddisk -m rd3 -b /dev/mapper/rc-wa_sdb -p wb\n"
 	       "\trapiddisk -u rc-wt_sdb\n"
-	       "\trapiddisk -f rd2\n\n");
+	       "\trapiddisk -f rd2\n"
+	       "\trapiddisk -e -b rd3 -P 1 -H nqn.host1\n"
+	       "\trapiddisk -x -b rd3 -P 1 -H nqn.host1\n\n");
 }
 
 int exec_cmdline_arg(int argcin, char *argvin[])
 {
-	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i;
+	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE;
 	unsigned long size = 0;
 	bool json_flag = FALSE;
-	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0};
+	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0};
 	struct RD_PROFILE *disk = NULL;
 	struct RC_PROFILE *cache = NULL;
 	struct MEM_PROFILE *mem = NULL;
@@ -82,7 +88,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	printf("%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	while ((i = getopt(argcin, argvin, "a:b:c:d:f:hjlm:np:qr:s:u:vV")) != INVALID_VALUE) {
+	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:H:hjlm:nP:p:qr:s:u:vVx")) != INVALID_VALUE) {
 		switch (i) {
 		case 'h':
 			online_menu(argvin[0]);
@@ -102,9 +108,15 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			action = ACTION_DETACH;
 			sprintf(device, "%s", optarg);
 			break;
+		case 'e':
+			action = ACTION_EXPORT_NVMET;
+			break;
 		case 'f':
 			action = ACTION_FLUSH;
 			sprintf(device, "%s", optarg);
+			break;
+		case 'H':
+			sprintf(host, "%s", optarg);
 			break;
 		case 'j':
 			json_flag = TRUE;
@@ -118,6 +130,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			break;
 		case 'n':
 			action = ACTION_LIST_NVMET;
+			break;
+		case 'P':
+			port = atoi(optarg);
 			break;
 		case 'p':
 			if (strcmp(optarg, "wa") == 0)
@@ -148,6 +163,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			break;
 		case 'v':
 			return SUCCESS;
+			break;
+		case 'x':
+			action = ACTION_UNEXPORT_NVMET;
 			break;
 		case '?':
 			online_menu(argvin[0]);
@@ -259,6 +277,20 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	case ACTION_LIST_NVMET:
 		rc = nvmet_view_exports(json_flag);
 		break;
+	case ACTION_EXPORT_NVMET:
+		if (strlen(backing) <= 0)
+			goto exec_cmdline_arg_out;
+		if ((disk == NULL) && (cache == NULL)) {
+			printf("No RapidDisk devices exist on the system.\n");
+			return SUCCESS;
+		}
+		rc = nvmet_export_volume(disk, cache, backing, host, port);
+		break;
+	case ACTION_UNEXPORT_NVMET:
+		if (strlen(backing) <= 0)
+			goto exec_cmdline_arg_out;
+		rc = nvmet_unexport_volume(backing, host, port);
+		break;
 	case ACTION_NONE:
 		online_menu(argvin[0]);
 		break;
@@ -284,26 +316,13 @@ int main(int argc, char *argv[])
 		return -EACCES;
 	}
 
-	if (access(SYS_RDSK, F_OK) == INVALID_VALUE) {
-		printf("Please ensure that the RapidDisk module is loaded and retry.\n");
-		return -EPERM;
-	}
-
-	if ((fp = fopen(PROC_MODULES, "r")) == NULL) {
-		printf("%s: fopen: %s\n", __func__, strerror(errno));
-		return -errno;
-	}
-	fread(string, BUFSZ, 1, fp);
-	fclose(fp);
-	if (strstr(string, "rapiddisk_cache") == NULL) {
-		printf("Please ensure that the RapidDisk-Cache module "
-		       "are loaded and retry.\n");
-		return -EPERM;
-	}
-
 	writeback_enabled = FALSE;
-	if (strstr(string, "dm_writecache") != NULL) {
-		writeback_enabled = TRUE;
+	rc = check_loaded_modules();
+	if (rc != SUCCESS) {
+		if (rc == 1)
+			writeback_enabled = TRUE;
+		else
+			return -EPERM;
 	}
 
 	rc = exec_cmdline_arg(argc, argv);
