@@ -6,11 +6,13 @@ check() {
 	for i in $moddir/*
 		do
 			if [ "${moddir}/${kernel}" = "$i" ] ; then
-				size="$(cat "$i" | head -n 1)"
-				device="$(cat "$i" | tail -n 1)"
+				size="$(head -n 1 "$i")"
+				device="$(head -n 2 "$i" | tail -n 1)"
+				cache_mode="$(tail -n 1 "$i")"
 				cp -f "$moddir/run_rapiddisk.sh.orig" "$moddir/run_rapiddisk.sh"
-				sed -i 's,RAMDISKSIZE,'$size',' "$moddir/run_rapiddisk.sh"
-				sed -i 's,BOOTDEVICE,'$device',' "$moddir/run_rapiddisk.sh" 
+				sed -i 's,RAMDISKSIZE,'"$size"',' "$moddir/run_rapiddisk.sh"
+				sed -i 's,BOOTDEVICE,'"$device"',' "$moddir/run_rapiddisk.sh"
+				sed -i 's,CACHEMODE,'"$cache_mode"',' "$moddir/run_rapiddisk.sh"
 				chmod +x "$moddir/run_rapiddisk.sh"
 				return 0
 			fi

@@ -4,7 +4,7 @@ ihelp()  {
 
 	echo "Usage:"
 	echo "$(basename "$0") --help"
-	echo "$(basename "$0") --install --root=<root_partition> --size=<ramdisk_size> --kernel=<kernel_version> [--force]"
+	echo "$(basename "$0") --install --root=<root_partition> --size=<ramdisk_size> --kernel=<kernel_version> --cache-mode=<mode> [--force]"
 	echo "$(basename "$0") --uninstall --kernel=<kernel_version> [--force]"
 	echo "$(basename "$0") --global-uninstall"
 	echo ""
@@ -18,6 +18,7 @@ ihelp()  {
 	echo "                 and you'll be asked to confirm"
 	echo "<ramdisk_size>   is the size in MB of the ramdisk to be used as cache"
 	echo "<kernel_version> is needed to determine which initrd file to alter"
+	echo "<mode>           is the rapiddisk caching mode (wa, wb)"
 	echo "--force		   even if everything is already in place, force reinstalling."
 	echo "                 Can be useful to change the ramdisk size without perform an uninstall"
 	echo ""
@@ -65,7 +66,7 @@ centos_install () {
 	echo " - Activating rapiddisk for kernel version ${kernel_version}."
 	echo >"${module_destination}/${module_name}/${kernel_version_file}" "${ramdisk_size}"
 	echo >>"${module_destination}/${module_name}/${kernel_version_file}" "${root_device}"
-
+	echo >>"${module_destination}/${module_name}/${kernel_version_file}" "${cache_mode}"
 }
 
 centos_end () {
@@ -81,6 +82,7 @@ ubuntu_install () {
 	echo " - Creating kernel options file ..."
 	echo >"${hooks_dir}/${kernel_version_file}" "${ramdisk_size}"
 	echo >>"${hooks_dir}/${kernel_version_file}" "${root_device}"
+	echo >>"${hooks_dir}/${kernel_version_file}" "${cache_mode}"
 	
 	echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
 	if ! cp -f "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
@@ -121,24 +123,35 @@ install_options_checks () {
 	[ -n "$ramdisk_size" ] || myerror "missing argument '--size'."
 	is_num "$ramdisk_size" || myerror "the ramdisk size must be a positive integer."
 
+	[ -n "$cache_mode" ] || myerror "missing argument '--cache-mode'."
+	cache_mode="$(echo "$cache_mode" | tr '[:lower:]' '[:upper:]')"
+	case $cache_mode in
+		wa)
+			;;
+		wb)
+			;;
+		*)
+			myerror "<mode> in --cache-mode must be one in 'wa' or 'wb'"
+			;;
+	esac
 	if [ -z "$root_device" ] ; then
 		echo " - No root device was specified, we start looking for it in /etc/fstab..."
 	
 		root_line="$(grep -vE '^[ #]+' /etc/fstab | grep -m 1 -oP '^.*?[^\s]+\s+/\s+')"
-		root_first_char="$(echo $root_line | grep -o '^.')"
+		root_first_char="$(echo "$root_line" | grep -o '^.')"
 
 		case $root_first_char in
 			U)
-				uuid="$(echo $root_line | grep -oP '[\w\d]{8}-([\w\d]{4}-){3}[\w\d]{12}')"
-				root_device=/dev/"$(ls 2>/dev/null -l /dev/disk/by-uuid/ | grep $uuid | grep -oE '[^/]+$')"
+				uuid="$(echo "$root_line" | grep -oP '[\w\d]{8}-([\w\d]{4}-){3}[\w\d]{12}')"
+				root_device=/dev/"$(ls 2>/dev/null -l /dev/disk/by-uuid/*"$uuid"* | grep -oE '[^/]+$')"
 				;;
 			L)
-				label="$(echo $root_line | grep -oP '=[^\s]+' | tr -d '=')"
-				root_device=/dev/"$(ls 2>/dev/null -l /dev/disk/by-label/ | grep $label | grep -oE '[^/]+$')"
+				label="$(echo "$root_line" | grep -oP '=[^\s]+' | tr -d '=')"
+				root_device=/dev/"$(ls 2>/dev/null -l /dev/disk/by-label/*"$label"* | grep -oE '[^/]+$')"
 				;;
 			/)
-				device="$(echo $root_line | grep -oP '^[^\s]+')"
-				root_device=/dev/"$(ls 2>/dev/null -l $device | grep -oP '[^/]+$')"
+				device="$(echo "$root_line" | grep -oP '^[^\s]+')"
+				root_device=/dev/"$(ls 2>/dev/null -l "$device" | grep -oP '[^/]+$')"
 				;;
 			*)
 				myerror "could not find the root device from /etc/fstab. Use the '--root' option."
@@ -188,7 +201,7 @@ for i in "$@"; do
 			shift # past argument with no value
 			;;
 		--global-uninstall)
-			if [ ! -z "$install_mode" ] ; then
+			if [ -n "$install_mode" ] ; then
 				ihelp
 				myerror "only one betweeen '--install, '--uninstall' and --global-uninstall can be specified."
 			fi
@@ -196,7 +209,7 @@ for i in "$@"; do
 			shift # past argument with no value
 			;;
 		--install)
-			if [ ! -z "$install_mode" ] ; then
+			if [ -n "$install_mode" ] ; then
 				ihelp
 				myerror "only one betweeen '--install, '--uninstall' and --global-uninstall can be specified."
 			fi
@@ -211,6 +224,10 @@ for i in "$@"; do
 			ramdisk_size="${i#*=}"
 			shift # past argument=value
 			;;
+		--cache-mode=*)
+			cache_mode="${i#*=}"
+			shift # past argument=value
+            ;;
 		--force)
 			force=1
 			shift # past argument with no value
@@ -247,7 +264,7 @@ fi
 if [ ! "$install_mode" = "global_uninstall" ] ; then
 	for v in $kernel_installed
 	do
-		if [ $v = "$kernel_version" ] ; then
+		if [ "$v" = "$kernel_version" ] ; then
 			kernel_found=1
 			break
 		fi
@@ -258,7 +275,7 @@ if [ ! "$install_mode" = "global_uninstall" ] ; then
 	fi
 fi
 
-cwd="$(dirname $0)"
+cwd="$(dirname "$0")"
 
 if [ "$os_name" = "centos" ] ; then
 	echo " - CentOS detected!"
@@ -343,7 +360,8 @@ elif [ "$os_name" = "ubuntu" ] ; then
 		install_options_checks
 		ubuntu_install
 	elif [ "$install_mode" = "simple_uninstall" ] ; then
-		if ( [ ! -x "$hook_dest" ] || [ ! -f "$subscript_dest_orig" ] || [ ! -f "${hooks_dir}/${kernel_version_file}" ] || [ ! -f "$bootscript_dest" ] ) && [ -z "$force" ] ; then
+		if { [ ! -x "$hook_dest" ] || [ ! -f "$subscript_dest_orig" ] || [ ! -f "${hooks_dir}/${kernel_version_file}" \
+		 ] || [ ! -f "$bootscript_dest" ] ; } && [ -z "$force" ] ; then
 			myerror "it seems there is not a valid installation for kernel version ${kernel_version}. You should use the '--force' option."
 		fi
 		echo " - Uninstalling for kernel $kernel_version..."
