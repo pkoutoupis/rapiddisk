@@ -7,7 +7,7 @@ prereqs()
 	echo "$PREREQ"
 }
 
-case "${1}" in
+case $1 in
 	prereqs)
 		prereqs
 		exit 0
@@ -31,6 +31,7 @@ for i in "$cwd"/rapiddisk_kernel_*
 			chmod +x "${cwd}/rapiddisk_sub"
 			manual_add_modules rapiddisk
 			manual_add_modules rapiddisk-cache
+			manual_add_modules dm-writecache
 			copy_exec /sbin/rapiddisk /sbin/rapiddisk
 			copy_file binary "${cwd}/rapiddisk_sub" /sbin/
 			rm "${cwd}/rapiddisk_sub"

@@ -30,7 +30,7 @@ depends() {
 
 installkernel() {
 
-	hostonly='' instmods rapiddisk rapiddisk-cache
+	hostonly='' instmods rapiddisk rapiddisk-cache dm-writecache dm-mod
 	return 0
 
 }

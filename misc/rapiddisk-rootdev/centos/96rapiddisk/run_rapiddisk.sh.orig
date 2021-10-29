@@ -1,6 +1,9 @@
 #!/bin/bash
 
+modprobe dm-mod
+modprobe dm-writecache
 modprobe rapiddisk
 modprobe rapiddisk-cache
+
 rapiddisk -a RAMDISKSIZE
 rapiddisk -m rd0 -b BOOTDEVICE -p CACHEMODE

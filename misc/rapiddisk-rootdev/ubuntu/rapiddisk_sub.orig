@@ -1,9 +1,13 @@
 #!/bin/sh
 
+. /scripts/functions
+
+modprobe -v dm-writecache
 modprobe -v rapiddisk
 modprobe -v rapiddisk-cache
 
+rapiddisk -a 1
 rapiddisk -a RAMDISKSIZE
-rapiddisk -m rd0 -b BOOTDEVICE -p CACHEMODE
-
+rapiddisk -m rd1 -b BOOTDEVICE -p CACHEMODE
+rapiddisk -d rd0
 exit 0

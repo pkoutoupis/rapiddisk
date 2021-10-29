@@ -43,7 +43,8 @@ This script alters this approach: the rule set remains system-wide, but allows t
 ### 1) Usage when installing (`--install`)
 ```
 sudo ./install_initrd.sh --install --root=<root_partition> 
-    --size=<ramdisk_size> --kernel=<kernel_version> [--force] 
+    --size=<ramdisk_size> --kernel=<kernel_version> 
+    --cache-mode=<mode> [--force] 
 ```
 
 The installation process (`--install` switch) can be performed several times. The options you provide will affect only
@@ -55,7 +56,7 @@ The installation process (`--install` switch) can be performed several times. Th
 
 
 #### --root=<root_partition>
-<root_partition> must be be equal to the root device where `/` is
+<root_partition> must be equal to the root device where `/` is
 mounted, for example `/dev/sda1`. You can find it this way:
 
 ```
@@ -75,6 +76,11 @@ proposal.
 
 <ramdisk_size> indicates the number of megabyte rapiddisk will use as
 cache for your root device. For example `--size=1000` means your cache will be 1 GB big.
+
+#### --cache-mode=<cache_mode>
+
+<cache_mode> indicates the caching behavoiur, must be `wt`, `wa` or `wb`.
+See `rapiddisk`'s documentation for more.
 
 #### --kernel=<kernel_version>
 
@@ -101,7 +107,7 @@ And go.
 #### --force
 
 This forces the script to reinstall the needed things and redo the jobs,
-even if all seems to be already installed. If you force the reinstall
+even if all seems to be already installed. If you force the reinstallation
 with a different `--root`, only the last one you specified will be
 cached.
 
@@ -135,7 +141,7 @@ sudo ./install_initrd.sh --global-uninstall
 ```
 
 This operation removes everything the script could have installed, and rebuilds ALL the initrd files. A complete
- uninstall is performed.
+ uninstallation is performed.
 
 ## Tips
 

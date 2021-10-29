@@ -4,7 +4,7 @@ ihelp()  {
 
 	echo "Usage:"
 	echo "$(basename "$0") --help"
-	echo "$(basename "$0") --install --root=<root_partition> --size=<ramdisk_size> --kernel=<kernel_version> --cache-mode=<mode> [--force]"
+	echo "$(basename "$0") --install --root=<root_partition> --size=<ramdisk_size> --kernel=<kernel_version> --cache-mode=<cache_mode> [--force]"
 	echo "$(basename "$0") --uninstall --kernel=<kernel_version> [--force]"
 	echo "$(basename "$0") --global-uninstall"
 	echo ""
@@ -18,7 +18,7 @@ ihelp()  {
 	echo "                 and you'll be asked to confirm"
 	echo "<ramdisk_size>   is the size in MB of the ramdisk to be used as cache"
 	echo "<kernel_version> is needed to determine which initrd file to alter"
-	echo "<mode>           is the rapiddisk caching mode (wa, wb)"
+	echo "<cache_mode>     is the rapiddisk caching mode (wt, wa, wb)"
 	echo "--force		   even if everything is already in place, force reinstalling."
 	echo "                 Can be useful to change the ramdisk size without perform an uninstall"
 	echo ""
@@ -124,14 +124,16 @@ install_options_checks () {
 	is_num "$ramdisk_size" || myerror "the ramdisk size must be a positive integer."
 
 	[ -n "$cache_mode" ] || myerror "missing argument '--cache-mode'."
-	cache_mode="$(echo "$cache_mode" | tr '[:lower:]' '[:upper:]')"
+	cache_mode="$(echo "$cache_mode" | tr '[:upper:]' '[:lower:]')"
 	case $cache_mode in
+		wt)
+			;;
 		wa)
 			;;
 		wb)
 			;;
 		*)
-			myerror "<mode> in --cache-mode must be one in 'wa' or 'wb'"
+			myerror "<cache_mode> in --cache-mode must be one in 'wt', 'wa' or 'wb'"
 			;;
 	esac
 	if [ -z "$root_device" ] ; then
