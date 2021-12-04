@@ -2,12 +2,25 @@
 
 . /scripts/functions
 
-modprobe -v dm-writecache
+if [ "CACHEMODE" = "wb" ] ; then
+	log_success_msg "Loading dm-writecache"
+	modprobe -v dm-writecache
+	if [ ! -d /sys/module/dm_writecache ] ; then
+		log_warning_msg "rapiddisk: Unable to load dm-writecache module!"
+		exit 0;
+	fi
+fi
 modprobe -v rapiddisk
 modprobe -v rapiddisk-cache
+if { [ ! -d /sys/module/rapiddisk ] || [ ! -d /sys/module/rapiddisk_cache ]  ; } ; then
+	log_warning_msg "rapiddisk: Unable to load rapiddisk modules!"
+	exit 0;
+fi
 
-rapiddisk -a 1
+#rapiddisk -a 1
+log_success_msg "rapiddisk -a RAMDISKSIZE"
 rapiddisk -a RAMDISKSIZE
-rapiddisk -m rd1 -b BOOTDEVICE -p CACHEMODE
-rapiddisk -d rd0
+log_success_msg "rapiddisk -m rd0 -b BOOTDEVICE -p CACHEMODE"
+rapiddisk -m rd0 -b BOOTDEVICE -p CACHEMODE
+#rapiddisk -d rd0
 exit 0

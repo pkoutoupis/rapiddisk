@@ -331,8 +331,8 @@ elif [ "$os_name" = "ubuntu" ] ; then
 	echo " - Ubuntu detected!"
 
 	# prepare some vars
-	etc_dir_hooks="/etc/initramfs-tools/hooks"
-	etc_dir_scripts="/etc/initramfs-tools/scripts/init-premount"
+	etc_dir_hooks="o/etc/initramfs-tools/hooks"
+	etc_dir_scripts="o/etc/initramfs-tools/scripts/init-premount"
 	usr_dir_hooks="/usr/share/initramfs-tools/hooks"
 	usr_dir_scripts="/usr/share/initramfs-tools/scripts/init-premount"
 	kernel_version_file="rapiddisk_kernel_${kernel_version}"

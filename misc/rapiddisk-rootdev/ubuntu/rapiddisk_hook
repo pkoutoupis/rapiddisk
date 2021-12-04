@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PREREQ=""
+PREREQ="dmsetup"
 
 prereqs()
 {
@@ -25,13 +25,15 @@ for i in "$cwd"/rapiddisk_kernel_*
 			device="$(head -n 2 "$i" | tail -n 1)"
 			cache_mode="$(tail -n 1 "$i")"
 			cp "${cwd}/rapiddisk_sub.orig" "${cwd}/rapiddisk_sub"
-			sed -i 's,RAMDISKSIZE,'"$size"',' "${cwd}/rapiddisk_sub"
-			sed -i 's,BOOTDEVICE,'"$device"',' "${cwd}/rapiddisk_sub"
-			sed -i 's,CACHEMODE,'"$cache_mode"',' "${cwd}/rapiddisk_sub"
+			sed -i 's,RAMDISKSIZE,'"$size"',g' "${cwd}/rapiddisk_sub"
+			sed -i 's,BOOTDEVICE,'"$device"',g' "${cwd}/rapiddisk_sub"
+			sed -i 's,CACHEMODE,'"$cache_mode"',g' "${cwd}/rapiddisk_sub"
 			chmod +x "${cwd}/rapiddisk_sub"
 			manual_add_modules rapiddisk
 			manual_add_modules rapiddisk-cache
-			manual_add_modules dm-writecache
+			if [ $cache_mode = "wb" ] ; then
+				manual_add_modules dm-writecache
+			fi
 			copy_exec /sbin/rapiddisk /sbin/rapiddisk
 			copy_file binary "${cwd}/rapiddisk_sub" /sbin/
 			rm "${cwd}/rapiddisk_sub"
