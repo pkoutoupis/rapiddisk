@@ -108,6 +108,14 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				pclose(stream);
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+		} else if (strncmp(url, CMD_LIST_NVMET_PORTS, sizeof(CMD_LIST_NVMET_PORTS) - 1) == SUCCESS) {
+			sprintf(command, "%s/rapiddisk -N -j|tail -n1", path);
+			stream = popen(command, "r");
+			if (stream) {
+				while (fgets(page, BUFSZ, stream) != NULL);
+				pclose(stream);
+			} else
+				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else {
 			json_status_unsupported(page);
 			status = MHD_HTTP_BAD_REQUEST;

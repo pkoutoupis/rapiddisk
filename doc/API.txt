@@ -255,3 +255,25 @@ Retrieve cache statistics from an existing rapiddisk-cache volume. Example outpu
     }
   ]
 }
+
+-------------------------
+GET /v1/listAllNVMePorts
+
+ex) curl -s --output - 10.0.0.185:9118/v1/listAllNVMePorts|jq .
+
+status code: 200 (on success)
+
+Retrieve cache statistics from an existing rapiddisk-cache volume. Example output:
+
+{
+  "targets": [
+    {
+      "nvmet_ports": [
+        {
+          "port": 1,
+          "address": "10.0.0.185"
+        }
+      ]
+    }
+  ]
+}

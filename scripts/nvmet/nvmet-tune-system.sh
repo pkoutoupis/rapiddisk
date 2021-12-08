@@ -36,8 +36,12 @@ function help_menu()
         echo -e ""
         echo -e "Functions:"
         echo -e "\t--cpu\tDisable CPU idling and adjust frequency scaling."
-        echo -e "\t--net\tEnable NVMeT ports on all ETH interfaces."
+        echo -e "\t--mod\tLoad NVMeT modules for tcp and rdma."
+        echo -e "\t--net\tEnable NVMeT ports on an ETH interfaces (supported: tcp and rdma)."
         echo -e ""
+        echo -e "Examples:"
+        echo -e "\tsh $1 --cpu"
+        echo -e "\tsh $1 --net eno1 tcp"
         exit 0
 }
 
@@ -56,47 +60,73 @@ function validate_ip()
 	return 1
 }
 
-## Enable NVMeT ports on all ETH interfaces ##
-function nvmet_enable_ports()
+## Enable NVMeT load kernel modules ##
+function nvmet_load_modules()
 {
-	port=1
-
 	# Check that the nvmet/nvmet_tcp modules are loaded
 	lsmod|grep -q nvmet
 	if [ $? -ne 0 ]; then modprobe nvmet; fi
 	lsmod|grep -q nvmet_tcp
 	if [ $? -ne 0 ]; then modprobe nvmet_tcp; fi
+	lsmod|grep -q nvmet_rdmad
+	if [ $? -ne 0 ]; then modprobe nvmet_rdma; fi
 
 	# Mount configfs (for nvmet)
 	mount -t configfs none /sys/kernel/config 2>&1
 
-	ETH=`ls -1 /sys/class/net/|grep -v "^lo"|sort -u`
-	for i in $ETH; do
-		echo ""
-		echo "Enabling NVMeT port for interface $ETH"
-		if [ ! -e $SYS_NVMET_PORTS/$port ]; then
+}
+
+## Enable NVMeT ports on all ETH interfaces ##
+function nvmet_enable_port()
+{
+	port=1
+
+	/usr/sbin/ip addr show|grep -q "$1:"
+	if [ $? -ne 0 ]; then
+		echo "NVMeT interface $1 does not exist."
+		return 1
+	fi
+	if [ "$2" != "tcp" ] || [ "$2" == "rdma" ]; then
+		echo "$2 is not a supported protocol."
+		return 1
+	fi
+
+	#IP=`/sbin/ifconfig $i|grep 'inet addr:'|cut -d: -f2|awk '{ print $1}'`
+	IP=`/usr/sbin/ip addr show dev $i|grep 'inet '|sed 's/^ *//g'|cut -d" " -f2|sed -e 's/\/.*//g'`
+	validate_ip $IP
+	if [ $? -ne 0 ]; then
+		echo "NVMeT interface $1 does not have a valid IP address."
+		return 1
+	fi
+
+	for i in `ls $SYS_NVMET_PORTS`; do
+		ADDR=`cat $SYS_NVMET_PORTS/$i/addr_traddr`
+		if [ "x$IP" == "x$ADDR" ]; then
+			echo "NVMeT interface $1 with IP address $IP is already in use for port $i."
+			return 1
+		fi
+	done
+
+	while [ 1 ]; do
+		if [ -e $SYS_NVMET_PORTS/$port ]; then
+			port=$(($port+1))
+		else
+			echo ""
 			mkdir -pv $SYS_NVMET_PORTS/$port 2>&1
 			echo "$NVME_PORT" > $SYS_NVMET_PORTS/$port/addr_trsvcid 2>&1
 			echo "Set Port number to 4420"
-			echo "tcp" > $SYS_NVMET_PORTS/$port/addr_trtype 2>&1
-			echo "Set Port to TCP"
+			echo "$2" > $SYS_NVMET_PORTS/$port/addr_trtype 2>&1
+			echo "Set Port to $2"
 			echo "ipv4" > $SYS_NVMET_PORTS/$port/addr_adrfam 2>&1
 			echo "Set Port to IPv4"
+			echo "$IP" > $SYS_NVMET_PORTS/$port/addr_traddr 2>&1
+			echo "Set IP address to $IP"
+			echo ""
+			return 0
 		fi
-		#IP=`/sbin/ifconfig $i|grep 'inet addr:'|cut -d: -f2|awk '{ print $1}'`
-		IP=`/usr/sbin/ip addr show dev eno1|grep 'inet '|sed 's/^ *//g'|cut -d" " -f2|sed -e 's/\/.*//g'`
-		validate_ip $IP
-		if [ $? -eq 0 ]; then
-			ADDR=`cat $SYS_NVMET_PORTS/$port/addr_traddr`
-			if [ "x$IP" != "x" ] && [ "x$ADDR" == "x" ]; then
-				echo "$IP" > $SYS_NVMET_PORTS/$port/addr_traddr 2>&1
-				echo "Set IP address to $IP"
-			fi
-		fi
-		echo ""
-		port=$(($port+1))
 	done
-	return 0
+	
+	return 1
 }
 
 ## Disable CPU idling and adjust frequency scaling ##
@@ -142,8 +172,13 @@ case "${arr[0]}" in
 --cpu)
 	nvmet_disable_cpu_idle
 	;;
+--mod)
+	nvmet_load_modules
+	;;
 --net)
-	nvmet_enable_ports
+	[ $# -ne "3" ] && help_menu $0
+	nvmet_load_modules
+	nvmet_enable_port $2 $3
 	;;
 --help)
 	help_menu $0

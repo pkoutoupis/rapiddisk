@@ -49,10 +49,12 @@ void online_menu(unsigned char *string)
 	       "\t-f\t\tErase all data to a specified RapidDisk device \033[31;1m(dangerous)\033[0m.\n"
 	       "\t-H\t\tThe host to export / unexport the NVMe Target to / from.\n"
 	       "\t-h\t\tDisplay the help menu.\n"
+	       "\t-i\t\tDefine the network interface to enable for NVMe Target exporting.\n"
 	       "\t-j\t\tEnable JSON formatted output.\n"
 	       "\t-l\t\tList all attached RAM disk devices.\n"
 	       "\t-m\t\tMap an RapidDisk device as a caching node to another block device.\n"
-	       "\t-n\t\tList RapidDisk enabled NVMe Target exports\n"
+	       "\t-N\t\tList only enabled NVMe Target ports.\n"
+	       "\t-n\t\tList RapidDisk enabled NVMe Target exports.\n"
 	       "\t-P\t\tThe port to export / unexport the NVMe Target to / from.\n"
 	       "\t-p\t\tDefine cache policy: write-through, write-around or writeback \033[31;1m(dangerous)\033[0m\n"
 	       "\t\t\t(default: write-through). Writeback caching is supplied by the dm-writecache\n"
@@ -60,8 +62,10 @@ void online_menu(unsigned char *string)
 	       "\t\t\tloss on hardware/power failure.\n"
 	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
+	       "\t-t\t\tDefine the NVMe Target port's transfer protocol (i.e. tcp or rdma).\n"
 	       "\t-u\t\tUnmap a RapidDisk device from another block device.\n"
 	       "\t-v\t\tDisplay the utility version string.\n"
+	       "\t-X\t\tRemove the NVMe Target port (must be unused).\n"
 	       "\t-x\t\tUnexport a RapidDisk block device from an NVMe Target.\n\n");
         printf("Example Usage:\n\trapiddisk -a 64\n"
 	       "\trapiddisk -d rd2\n"
@@ -71,13 +75,15 @@ void online_menu(unsigned char *string)
 	       "\trapiddisk -m rd3 -b /dev/mapper/rc-wa_sdb -p wb\n"
 	       "\trapiddisk -u rc-wt_sdb\n"
 	       "\trapiddisk -f rd2\n"
+	       "\trapiddisk -i eth0 -P 1 -t tcp\n"
+	       "\trapiddisk -X -P 1\n"
 	       "\trapiddisk -e -b rd3 -P 1 -H nqn.host1\n"
 	       "\trapiddisk -x -b rd3 -P 1 -H nqn.host1\n\n");
 }
 
 int exec_cmdline_arg(int argcin, char *argvin[])
 {
-	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE;
+	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE, xfer = XFER_MODE_TCP;
 	unsigned long size = 0;
 	bool json_flag = FALSE;
 	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0};
@@ -88,7 +94,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	printf("%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:H:hjlm:nP:p:qr:s:u:vVx")) != INVALID_VALUE) {
+	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:H:hi:jlm:NnP:p:qr:s:t:u:VvXx")) != INVALID_VALUE) {
 		switch (i) {
 		case 'h':
 			online_menu(argvin[0]);
@@ -118,6 +124,10 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		case 'H':
 			sprintf(host, "%s", optarg);
 			break;
+		case 'i':
+			action = ACTION_ENABLE_NVMET_PORT;
+			sprintf(host, "%s", optarg);
+			break;
 		case 'j':
 			json_flag = TRUE;
 			break;
@@ -127,6 +137,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		case 'm':
 			action = ACTION_CACHE_MAP;
 			sprintf(device, "%s", optarg);
+			break;
+		case 'N':
+			action = ACTION_LIST_NVMET_PORTS;
 			break;
 		case 'n':
 			action = ACTION_LIST_NVMET;
@@ -157,12 +170,19 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			action = ACTION_CACHE_STATS;
 			sprintf(device, "%s", optarg);
 			break;
+		case 't':
+			if (strcmp(optarg, "rdma") == 0)
+				xfer = XFER_MODE_RDMA;
+			break;
 		case 'u':
 			action = ACTION_CACHE_UNMAP;
 			sprintf(device, "%s", optarg);
 			break;
 		case 'v':
 			return SUCCESS;
+			break;
+		case 'X':
+			action = ACTION_DISABLE_NVMET_PORT;
 			break;
 		case 'x':
 			action = ACTION_UNEXPORT_NVMET;
@@ -274,8 +294,25 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		else
 			rc =  resources_list(mem, volumes);
 		break;
+	case ACTION_LIST_NVMET_PORTS:
+		rc = nvmet_view_ports(json_flag);
+		break;
 	case ACTION_LIST_NVMET:
 		rc = nvmet_view_exports(json_flag);
+		break;
+	case ACTION_ENABLE_NVMET_PORT:
+		if (port == INVALID_VALUE) {
+			printf("Error. Invalid port number.\n");
+			return -EINVAL;
+		}
+		rc = nvmet_enable_port(host, port, xfer);
+		break;
+	case ACTION_DISABLE_NVMET_PORT:
+		if (port == INVALID_VALUE) {
+			printf("Error. Invalid port number.\n");
+			return -EINVAL;
+		}
+		rc = nvmet_disable_port(port);
 		break;
 	case ACTION_EXPORT_NVMET:
 		if (strlen(backing) <= 0)

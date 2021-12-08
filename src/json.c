@@ -378,6 +378,47 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
 	return SUCCESS;
 }
 
+/*
+ * JSON output format:
+ * {
+ *   "targets": [
+ *     {
+ *       "nvmet_ports": [
+ *         {
+ *           "port": 1,
+ *           "address": "10.0.0.185"
+ *         }
+ *       ]
+ *     }
+ *   ]
+ * }
+ */
+int json_nvmet_view_ports(struct NVMET_PORTS *ports)
+{
+	json_t *root, *array = json_array(), *ports_array = json_array();
+	json_t *ports_object = json_object();
+
+	while (ports != NULL) {
+		json_t *object = json_object();
+		json_object_set_new(object, "port", json_integer(ports->port));
+		json_object_set_new(object, "address", json_string(ports->addr));
+		json_array_append_new(ports_array, object);
+		ports = ports->next;
+	}
+	json_object_set_new(ports_object, "nvmet_ports", ports_array);
+	json_array_append_new(array, ports_object);
+
+	root = json_pack("{s:o}", "targets", array);
+
+	printf("%s\n", json_dumps(root, 0));
+
+	json_decref(ports_array);
+	json_decref(array);
+	json_decref(root);
+
+	return SUCCESS;
+}
+
 #else
 
 /*
