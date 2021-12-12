@@ -1,9 +1,39 @@
 #!/bin/sh
 
-modprobe -v rapiddisk
-modprobe -v rapiddisk-cache
+. /scripts/functions
 
+FAILUREMSG="rapiddisk: failed."
+log_begin_msg "rapiddisk: starting rapiddisk preparation, ramdisk size: RAMDISKSIZE, boot device: BOOTDEVICE, caching mode: CACHEMODE."
+
+if [ "CACHEMODE" = "wb" ] ; then
+	modprobe -q dm-writecache
+	if [ ! -d /sys/module/dm_writecache ] ; then
+		log_failure_msg "rapiddisk: unable to load dm-writecache module"
+		log_failure_msg "$FAILUREMSG"
+		exit 0;
+	fi
+fi
+modprobe -q rapiddisk
+modprobe -q rapiddisk-cache
+if { [ ! -d /sys/module/rapiddisk ] || [ ! -d /sys/module/rapiddisk_cache ]  ; } ; then
+	log_failure_msg "rapiddisk: unable to load rapiddisk modules"
+	log_failure_msg "$FAILUREMSG"
+	exit 0;
+fi
 rapiddisk -a RAMDISKSIZE
-rapiddisk -m rd0 -b BOOTDEVICE -p wa
-
+if ! rapiddisk -m rd0 -b BOOTDEVICE -p CACHEMODE ; then
+	log_warning_msg "rapiddisk: attaching of the ramdisk failed, trying with a workaround"
+	rapiddisk -a 1
+	rapiddisk -d rd0
+	rapiddisk -a RAMDISKSIZE
+	rapiddisk -d rd1
+	if ! rapiddisk -m rd0 -b BOOTDEVICE -p CACHEMODE ; then
+		log_failure_msg "rapiddisk: workaround failed to attach the ramdisk to BOOTDEVICE, giving up"
+		log_failure_msg "$FAILUREMSG"
+		rapiddisk -d rd0
+		exit 0;
+	fi
+fi
+log_success_msg "rapiddisk: RAMDISKSIZE MB ramdisk attached to BOOTDEVICE successfully."
+log_end_msg
 exit 0

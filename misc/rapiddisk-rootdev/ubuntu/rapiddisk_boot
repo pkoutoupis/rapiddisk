@@ -1,18 +1,18 @@
 #!/bin/sh
-
 PREREQ=""
-
 prereqs()
 {
 	echo "$PREREQ"
 }
 
-case "${1}" in
+case $1 in
 	prereqs)
 		prereqs
 		exit 0
 		;;
 esac
+
+. /scripts/functions
 
 # Begin real processing below this line
 if [ -x /usr/sbin/rapiddisk_sub ] ; then
