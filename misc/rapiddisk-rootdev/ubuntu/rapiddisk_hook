@@ -1,7 +1,5 @@
 #!/bin/sh
-
-PREREQ="dmsetup"
-
+PREREQ=""
 prereqs()
 {
 	echo "$PREREQ"
@@ -15,7 +13,6 @@ case $1 in
 esac
 
 . /usr/share/initramfs-tools/hook-functions
-
 # Begin real processing below this line
 cwd="$(dirname "$0")"
 for i in "$cwd"/rapiddisk_kernel_*
@@ -31,7 +28,7 @@ for i in "$cwd"/rapiddisk_kernel_*
 			chmod +x "${cwd}/rapiddisk_sub"
 			manual_add_modules rapiddisk
 			manual_add_modules rapiddisk-cache
-			if [ $cache_mode = "wb" ] ; then
+			if [ "$cache_mode" = "wb" ] ; then
 				manual_add_modules dm-writecache
 			fi
 			copy_exec /sbin/rapiddisk /sbin/rapiddisk

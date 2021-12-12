@@ -1,7 +1,7 @@
 ## install_initrd.sh
 #### A simple bash script to add rapiddisk cache to your root volume
 
-###### Author: Matteo Tenca (<shub@shub.it>)
+###### Author: Matteo Tenca (<https://github.com/matteotenca/>)
 
 Warning: this is experimental - use at your own risk and only if you
 know what you're doing.
@@ -142,6 +142,10 @@ sudo ./install_initrd.sh --global-uninstall
 
 This operation removes everything the script could have installed, and rebuilds ALL the initrd files. A complete
  uninstallation is performed.
+
+## Notes
+
+* Under Centos 8, using xfs as the root filesystem, rapiddisk may not work if write-back mode is selected.
 
 ## Tips
 

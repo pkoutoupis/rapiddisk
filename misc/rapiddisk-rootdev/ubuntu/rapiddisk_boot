@@ -1,7 +1,5 @@
 #!/bin/sh
-
-PREREQ="lvm2"
-
+PREREQ=""
 prereqs()
 {
 	echo "$PREREQ"
