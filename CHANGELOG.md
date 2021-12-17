@@ -1,5 +1,6 @@
-### Release 7.3.0 ###
+### Release 8.0.0 ###
 
+- module: Updated for 5.14 and 5.15 kernels
 - utility: Added NVMe Target support / framework
 - utility: Added support for dm-writecache status readout in API
 - utility: Module checker code now traverses via sysfs

@@ -1,5 +1,5 @@
 Package: rapiddisk
-Version: 7.2.1-1
+Version: 8.0.0-1
 Section: base
 Priority: optional
 Architecture: amd64
@@ -9,5 +9,6 @@ Description: RapidDisk
  The RapidDisk software defined advanced RAM drive and storage
  caching solution. This suite includes a collection of modules,
  configuration files, and command line utilities for managing
- RapidDisk enabled storage volumes.
+ RapidDisk enabled storage volumes and accessing them either
+ locally or across an NVMe Target network.
 

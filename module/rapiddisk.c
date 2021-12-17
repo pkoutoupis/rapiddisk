@@ -41,7 +41,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"7.2.1"
+#define VERSION_STR		"8.0.0"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -50,9 +50,11 @@
 #define GENERIC_ERROR		-1
 
 #define FREE_BATCH		16
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,15,0)
 #define SECTOR_SHIFT		9
 #define PAGE_SECTORS_SHIFT	(PAGE_SHIFT - SECTOR_SHIFT)
 #define PAGE_SECTORS		BIT(PAGE_SECTORS_SHIFT)
+#endif
 
 /* ioctls */
 #define INVALID_CDQUERY_IOCTL	0x5331
@@ -633,7 +635,11 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 	case BLKFLSBUF:
 		/* We are killing the RAM disk data. */
 		mutex_lock(&ioctl_mutex);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+		mutex_lock(&bdev->bd_disk->open_mutex);
+#else
 		mutex_lock(&bdev->bd_mutex);
+#endif
 		error = -EBUSY;
 		if (bdev->bd_openers <= 1) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
@@ -649,7 +655,11 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 			rdsk_free_pages(rdsk);
 			error = 0;
 		}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+		mutex_unlock(&bdev->bd_disk->open_mutex);
+#else
 		mutex_unlock(&bdev->bd_mutex);
+#endif
 		mutex_unlock(&ioctl_mutex);
 		return error;
 	case INVALID_CDQUERY_IOCTL:
@@ -718,6 +728,7 @@ static int attach_device(int size)
 	spin_lock_init(&rdsk->rdsk_lock);
 	INIT_RADIX_TREE(&rdsk->rdsk_pages, GFP_ATOMIC);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,7,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
 	rdsk->rdsk_queue = blk_alloc_queue(NUMA_NO_NODE);
@@ -731,6 +742,7 @@ static int attach_device(int size)
 	if (!rdsk->rdsk_queue)
 		goto out_free_dev;
 	blk_queue_make_request(rdsk->rdsk_queue, rdsk_make_request);
+#endif
 #endif
 	blk_queue_logical_block_size(rdsk->rdsk_queue, BYTES_PER_SECTOR);
 	blk_queue_physical_block_size(rdsk->rdsk_queue, PAGE_SIZE);
@@ -762,11 +774,18 @@ static int attach_device(int size)
 	blk_queue_flag_set(QUEUE_FLAG_NONROT, rdsk->rdsk_queue);
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+	disk = rdsk->rdsk_disk = blk_alloc_disk(NUMA_NO_NODE);
+#else
 	disk = rdsk->rdsk_disk = alloc_disk(1);
+#endif
 	if (!disk)
 		goto out_free_queue;
 	disk->major = rd_ma_no;
 	disk->first_minor = num;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+	disk->minors = 1;
+#endif
 	disk->fops = &rdsk_fops;
 	disk->private_data = rdsk;
 	disk->queue = rdsk->rdsk_queue;
@@ -774,7 +793,7 @@ static int attach_device(int size)
 	sprintf(disk->disk_name, "rd%d", num);
 	set_capacity(disk, size);
 
-	add_disk(rdsk->rdsk_disk);
+	add_disk(disk);
 	list_add_tail(&rdsk->rdsk_list, &rdsk_devices);
 	rd_total++;
 	pr_info("%s: Attached rd%d of %llu bytes in size.\n", PREFIX,
@@ -783,7 +802,9 @@ static int attach_device(int size)
 
 out_free_queue:
 	blk_cleanup_queue(rdsk->rdsk_queue);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 out_free_dev:
+#endif
 	kfree(rdsk);
 out:
 	return GENERIC_ERROR;

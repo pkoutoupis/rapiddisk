@@ -1,8 +1,30 @@
 /*********************************************************************************
- ** Copyright (c) 2015 - 2021 Petros Koutoupis
+ ** Copyright © 2011 - 2021 Petros Koutoupis
  ** All rights reserved.
  **
- ** @date: 18Jul17, petros@hyve.io
+ ** This file is part of RapidDisk.
+ **
+ ** RapidDisk is free software: you can redistribute it and/or modify
+ ** it under the terms of the GNU General Public License as published by
+ ** the Free Software Foundation, either version 2 of the License, or
+ ** (at your option) any later version.
+ **
+ ** RapidDisk is distributed in the hope that it will be useful,
+ ** but WITHOUT ANY WARRANTY; without even the implied warranty of
+ ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ ** GNU General Public License for more details.
+ **
+ ** You should have received a copy of the GNU General Public License
+ ** along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
+ **
+ ** SPDX-License-Identifier: GPL-2.0-or-later
+ **
+ ** @project: rapiddisk
+ **
+ ** @filename: nvmet.c
+ ** @description: This file contains the core routines of rapiddisk.
+ **
+ ** @date: 1Jul21, petros@petroskoutoupis.com
  ********************************************************************************/
 
 #include "common.h"
@@ -123,7 +145,14 @@ struct NVMET_PORTS *nvmet_scan_ports(void)
 						nvmet_ports->port = atoi(ports[n]->d_name);
 						sprintf(file, "%s/%s", SYS_NVMET_PORTS, ports[n]->d_name);
 						sprintf(nvmet_ports->addr, "%s", read_info(file, "addr_traddr"));
+						if (strlen(nvmet_ports->addr) < 1)
+							sprintf(nvmet_ports->addr, "UNDEFINED");
+						sprintf(nvmet_ports->protocol, "%s", read_info(file, "addr_trtype"));
+						if (strlen(nvmet_ports->protocol) < 1)
+							sprintf(nvmet_ports->protocol, "UNDEFINED");
 						sprintf(nvmet_ports->nqn, "%s", exports[i]->d_name);
+						if (strlen(nvmet_ports->nqn) < 1)
+							sprintf(nvmet_ports->nqn, "UNDEFINED");
 						if (ports_head == NULL)
 							ports_head = nvmet_ports;
 						else
@@ -171,6 +200,11 @@ struct NVMET_PORTS *nvmet_scan_all_ports(void)
 				}
 				nvmet_ports->port = atoi(ports[n]->d_name);
 				sprintf(nvmet_ports->addr, "%s", read_info(file, "addr_traddr"));
+				if (strlen(nvmet_ports->addr) < 1)
+					sprintf(nvmet_ports->addr, "UNDEFINED");
+				sprintf(nvmet_ports->protocol, "%s", read_info(file, "addr_trtype"));
+				if (strlen(nvmet_ports->protocol) < 1)
+					sprintf(nvmet_ports->protocol, "UNDEFINED");
 				if (ports_head == NULL)
 					ports_head = nvmet_ports;
 				else
@@ -222,7 +256,7 @@ int nvmet_view_exports(bool json_flag)
 	}
 
 	while (ports != NULL) {
-		printf("\t%d: Port: %d - %s\tNQN: %s\n", i, ports->port, ports->addr, ports->nqn);
+		printf("\t%d: Port: %d - %s (%s)\tNQN: %s\n", i, ports->port, ports->addr, ports->protocol, ports->nqn);
 		i++;
 		tmp_ports = ports;
 		ports = ports->next;
@@ -427,7 +461,7 @@ int nvmet_unexport_volume(unsigned char *device, unsigned char *host, int port)
 	}
 
 	if (strlen(host) != 0) {
-		sprintf(path, "%s/%d/subsystems/%s%s-%s/allowed_hosts/%s", SYS_NVMET_PORTS, port, NQN_HDR_STR, hostname, device, host);
+		sprintf(path, "%s/%s%s-%s/allowed_hosts/%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device, host);
 		if (access(path, F_OK) == SUCCESS) {
 			rc = unlink(path);
 			if (rc != SUCCESS) {
@@ -444,13 +478,13 @@ int nvmet_unexport_volume(unsigned char *device, unsigned char *host, int port)
 			return SUCCESS;
 	} else {
 		/* If no host is defined, remove all hosts */
-		sprintf(path, "%s/%d/subsystems/%s%s-%s/allowed_hosts/", SYS_NVMET_PORTS, port, NQN_HDR_STR, hostname, device);
+		sprintf(path, "%s/%s%s-%s/allowed_hosts/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if ((err = scandir(path, &list, NULL, NULL)) < 0) {
 			goto host_check_out;
 		}
 		for (n = 0; n < err; n++) {
 			if (strncmp(list[n]->d_name, ".", 1) != SUCCESS) {
-				sprintf(path, "%s/%d/subsystems/%s%s-%s/allowed_hosts/%s", SYS_NVMET_PORTS, port, NQN_HDR_STR, hostname, device, list[n]->d_name);
+				sprintf(path, "%s/%s%s-%s/allowed_hosts/%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device, list[n]->d_name);
 				if (access(path, F_OK) == SUCCESS) {
 					rc = unlink(path);
 					if (rc != SUCCESS) {
@@ -552,11 +586,13 @@ int number_validate(unsigned char *str)
 int ip_validate(unsigned char *ip)
 {
 	int i, num, dots = 0;
-	unsigned char *ptr;
+	unsigned char *ptr, *ip_dup;
 
-	if (ip == NULL)
+	ip_dup = strdup(ip);
+
+	if (ip_dup == NULL)
 		return INVALID_VALUE;
-	ptr = strtok(ip, ".");
+	ptr = strtok(ip_dup, ".");
 	if (ptr == NULL)
 		return INVALID_VALUE;
 
@@ -577,14 +613,15 @@ int ip_validate(unsigned char *ip)
 	return SUCCESS;
 }
 
-int nvmet_interface_ip_get(unsigned char *interface, unsigned char *ip)
+unsigned char *nvmet_interface_ip_get(unsigned char *interface)
 {
 	int fd;
 	struct ifreq ifr;
+	static unsigned char ip[0xF] = {0};
 
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < SUCCESS) {
 		printf("%s: open: %s\n", __func__, strerror(errno));
-		return -ENOENT;
+		return NULL;
 	}
 
 	/* I want to get an IPv4 IP address */
@@ -595,13 +632,13 @@ int nvmet_interface_ip_get(unsigned char *interface, unsigned char *ip)
 
 	if (ioctl(fd, SIOCGIFADDR, &ifr) == INVALID_VALUE) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
-		return -EIO;
+		return NULL;
 	}
 	close(fd);
 
 	sprintf(ip, "%s", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
 
-	return SUCCESS;
+	return ip;
 }
 
 
@@ -625,7 +662,7 @@ int nvmet_view_ports(bool json_flag)
 	}
 
 	while (ports != NULL) {
-		printf("\t%d: Port: %d - %s\n", i, ports->port, ports->addr);
+		printf("\t%d: Port: %d - %s (%s)\n", i, ports->port, ports->addr, ports->protocol);
 		i++;
 		tmp_ports = ports;
 		ports = ports->next;
@@ -637,6 +674,80 @@ int nvmet_view_ports(bool json_flag)
 
 int nvmet_enable_port(unsigned char *interface, int port, int protocol)
 {
+        int rc = INVALID_VALUE;
+	FILE *fp;
+        unsigned char path[NAMELEN] = {0x0}, ip[0xF] = {0x0}, proto[0x5] = {0x0};
+	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+	struct NVMET_PORTS *ports, *tmp_ports;
+        
+	ports = (struct NVMET_PORTS *)nvmet_scan_all_ports();
+
+	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
+	if (access(path, F_OK) == SUCCESS) {
+		printf("Error. NVMe Target Port %d already exists.\n", port);
+		return rc;
+	}
+
+	sprintf(ip, "%s", nvmet_interface_ip_get(interface));
+
+	if (ip_validate(ip) != SUCCESS) {
+		printf("Error. IP address %s is invalid.\n", ip);
+		return rc;
+	}
+	
+        while (ports != NULL) {
+		if (strcmp(ports->addr, ip) == SUCCESS) {
+			printf("Error. Interface %s with IP address %s is already in use on port %d.\n", interface, ip, ports->port);
+			return rc;
+		}
+                tmp_ports = ports;
+                ports = ports->next;
+                free(tmp_ports);
+        }
+
+	if ((rc = mkdir(path, mode)) != SUCCESS) {
+		printf("%s: mkdir: %s\n", __func__, strerror(errno));
+		return INVALID_VALUE;
+	}
+
+	sprintf(path, "%s/%d/addr_trsvcid", SYS_NVMET_PORTS, port);
+	if((fp = fopen(path, "w")) == NULL){
+	printf("%s: fopen: %s\n", __func__, strerror(errno));
+		return INVALID_VALUE;
+	}
+	fprintf(fp, "4420");
+	fclose(fp);
+
+	sprintf(path, "%s/%d/addr_adrfam", SYS_NVMET_PORTS, port);
+	if((fp = fopen(path, "w")) == NULL){
+	printf("%s: fopen: %s\n", __func__, strerror(errno));
+		return INVALID_VALUE;
+	}
+	fprintf(fp, "ipv4");
+	fclose(fp);
+
+	if (protocol == XFER_MODE_RDMA)
+		sprintf(proto, "rdma");
+	else
+		sprintf(proto, "tcp");
+	sprintf(path, "%s/%d/addr_trtype", SYS_NVMET_PORTS, port);
+	if((fp = fopen(path, "w")) == NULL){
+	printf("%s: fopen: %s\n", __func__, strerror(errno));
+		return INVALID_VALUE;
+	}
+	fprintf(fp, "%s", proto);
+	fclose(fp);
+
+	sprintf(path, "%s/%d/addr_traddr", SYS_NVMET_PORTS, port);
+	if((fp = fopen(path, "w")) == NULL){
+	printf("%s: fopen: %s\n", __func__, strerror(errno));
+		return INVALID_VALUE;
+	}
+	fprintf(fp, "%s", ip);
+	fclose(fp);
+
+	printf("Successfully created port %d set to %s for interface %s (with IP address %s).\n", port, proto, interface, ip); 
+
 	return SUCCESS;
 }
 
@@ -647,7 +758,7 @@ int nvmet_disable_port(int port)
 	struct dirent **list;
 
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
-	if (access(path, F_OK) == SUCCESS) {
+	if (access(path, F_OK) != SUCCESS) {
 		printf("Error. NVMe Target Port %d does not exist.\n", port);
 		return rc;
 	}

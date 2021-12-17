@@ -130,6 +130,7 @@ typedef struct NVMET_PORTS {
 	int port;
 	unsigned char addr[0x1F];
 	unsigned char nqn[NAMELEN];
+	unsigned char protocol[0x5];
 	struct NVMET_PORTS *next;
 } NVMET_PORTS;
 

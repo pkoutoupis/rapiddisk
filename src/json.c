@@ -330,6 +330,7 @@ int json_cache_wb_statistics(struct WC_STATS *stats)
  *         {
  *           "port": 1,
  *           "address": "10.0.0.185",
+ *           "protocol": "tcp",
  *           "nqn": "rd1-test"
  *         }
  *       ]
@@ -359,6 +360,7 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
 		json_t *object = json_object();
 		json_object_set_new(object, "port", json_integer(ports->port));
 		json_object_set_new(object, "address", json_string(ports->addr));
+		json_object_set_new(object, "protocol", json_string(ports->protocol));
 		json_object_set_new(object, "nqn", json_string(ports->nqn));
 		json_array_append_new(ports_array, object);
 		ports = ports->next;
@@ -386,7 +388,8 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
  *       "nvmet_ports": [
  *         {
  *           "port": 1,
- *           "address": "10.0.0.185"
+ *           "address": "10.0.0.185",
+ *           "protocol": "tcp"
  *         }
  *       ]
  *     }
@@ -402,6 +405,7 @@ int json_nvmet_view_ports(struct NVMET_PORTS *ports)
 		json_t *object = json_object();
 		json_object_set_new(object, "port", json_integer(ports->port));
 		json_object_set_new(object, "address", json_string(ports->addr));
+		json_object_set_new(object, "protocol", json_string(ports->protocol));
 		json_array_append_new(ports_array, object);
 		ports = ports->next;
 	}

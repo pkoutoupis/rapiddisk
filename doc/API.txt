@@ -249,6 +249,7 @@ Retrieve cache statistics from an existing rapiddisk-cache volume. Example outpu
         {
           "port": 1,
           "address": "10.0.0.185",
+          "protocol": "tcp",
           "nqn": "rd1-test"
         }
       ]
@@ -271,7 +272,8 @@ Retrieve cache statistics from an existing rapiddisk-cache volume. Example outpu
       "nvmet_ports": [
         {
           "port": 1,
-          "address": "10.0.0.185"
+          "address": "10.0.0.185",
+          "protocol": "tcp"
         }
       ]
     }
