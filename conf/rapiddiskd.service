@@ -1,5 +1,5 @@
 [Unit]
-Description=an enclosure monitoring daemon
+Description=A rapiddisk network management daemon
 After=network.target
 
 [Service]
