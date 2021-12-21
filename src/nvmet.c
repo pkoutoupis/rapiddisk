@@ -655,7 +655,7 @@ int nvmet_view_ports(bool json_flag)
 	if (json_flag == TRUE)
 		return json_nvmet_view_ports(ports);
 
-	printf("\nExported NVMe Ports\n\n");
+	printf("Exported NVMe Ports\n\n");
 	if (ports == NULL) {
 		printf("\tNone.\n\n");
 		return SUCCESS;
