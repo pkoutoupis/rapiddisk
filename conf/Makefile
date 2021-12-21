@@ -12,7 +12,7 @@ all:
 
 .PHONY: install
 install: all
-	@echo Installing rapiddisk cluster and rapiddiskd daemon files.
+	@echo Installing rapiddisk high availability and rapiddiskd daemon files.
 	$(MKDIR) $(DESTDIR)$(CFG_DIR)
 	$(CP) $(SERVICE).* $(DESTDIR)$(CFG_DIR)
 	$(CHMOD) -R 755 $(DESTDIR)$(CFG_DIR)
@@ -22,7 +22,7 @@ install: all
 
 .PHONY: uninstall
 uninstall: 
-	@echo Uninstalling rapiddisk cluster and rapiddiskd daemon files.
+	@echo Uninstalling rapiddisk high availability and rapiddiskd daemon files.
 	$(RM) $(DESTDIR)$(CFG_DIR)
 	$(RM) $(DESTDIR)$(SYSD_DIR)/$(SERVICE)d.*
 

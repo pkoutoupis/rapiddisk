@@ -54,7 +54,7 @@
 	} \
 } while (0)
 
-#define VERSION_STR	"7.2.1"
+#define VERSION_STR	"8.0.0"
 #define DM_MSG_PREFIX	"rapiddisk-cache"
 
 #define READCACHE	1
@@ -1217,6 +1217,9 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 	     char *result, unsigned int maxlen)
 #endif
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
+	int sz = 0;
+#endif
 	struct cache_context *dmc = (struct cache_context *)ti->private;
 
 	switch (type) {
@@ -1226,6 +1229,13 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 	case STATUSTYPE_TABLE:
 		rc_status_table(dmc, type, result, maxlen);
 		break;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
+	case STATUSTYPE_IMA:
+		DMEMIT_TARGET_NAME_VERSION(ti->type);
+		DMEMIT(",source_device_name=%s,cache_device_name=%s;", dmc->disk_dev->name,
+		       dmc->cache_dev->name);
+		break;
+#endif
 	}
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,8,3)
 	return 0;
@@ -1234,7 +1244,7 @@ cache_status(struct dm_target *ti, status_type_t type, unsigned status_flags,
 
 static struct target_type cache_target = {
 	.name    = "rapiddisk-cache",
-	.version = {7, 2, 1},
+	.version = {8, 0, 0},
 	.module  = THIS_MODULE,
 	.ctr	 = cache_ctr,
 	.dtr	 = cache_dtr,

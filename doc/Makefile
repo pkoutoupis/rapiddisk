@@ -9,13 +9,13 @@ all:
 
 .PHONY: install
 install: all
-	@echo Installing rapiddisk man page.
+	@echo Installing rapiddisk man pages.
 	$(MKDIR) $(DESTDIR)$(MAN_DIR)
 	$(CP) rapiddisk*.1 $(DESTDIR)$(MAN_DIR)/
 
 .PHONY: uninstall
 uninstall: 
-	@echo Uninstalling rapiddisk man page.
+	@echo Uninstalling rapiddisk man pages.
 	$(RM) $(DESTDIR)$(MAN_DIR)/rapiddisk*.1
 
 .PHONY: clean

@@ -128,6 +128,10 @@ int main(int argc, char *argv[])
 		return -EACCES;
 	}
 
+	rc = check_loaded_modules();
+	if (rc < SUCCESS)
+		return -EPERM;
+
 	/* Make sure that only a single instance is running */
 	if ((rc = proc_find())) {
 		printf("%s: The daemon is already running...\n", __func__);

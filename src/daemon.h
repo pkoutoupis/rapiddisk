@@ -50,7 +50,10 @@ typedef struct PTHREAD_ARGS {
 #define CMD_RCACHE_CREATE	"/v1/createRapidDiskCache"
 #define CMD_RCACHE_REMOVE	"/v1/removeRapidDiskCache"
 #define CMD_RCACHE_STATS	"/v1/showRapidDiskCacheStats"
+#define CMD_LIST_NVMET		"/v1/listAllNVMeTargets"
+#define CMD_LIST_NVMET_PORTS	"/v1/listAllNVMePorts"
 
 void *mgmt_thread(void *);
 int json_status_check(unsigned char *);
+int json_status_unsupported(unsigned char *);
 #endif

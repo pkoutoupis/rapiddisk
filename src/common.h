@@ -44,7 +44,7 @@
 #define PROCESS			"rapiddisk"
 #define DAEMON			PROCESS "d"
 #define COPYRIGHT		"Copyright 2011 - 2021 Petros Koutoupis"
-#define VERSION_NUM	  	"7.2.1"
+#define VERSION_NUM	  	"8.0.0"
 #define SUCCESS			0
 #define INVALID_VALUE		-1
 #define NAMELEN			0x200
@@ -58,5 +58,10 @@ typedef char bool;
 
 #define FALSE			0
 #define TRUE			1
+
+#define SYS_RDSK		"/sys/kernel/rapiddisk/mgmt"
+#define SYS_MODULE		"/sys/module"
+
+int check_loaded_modules(void);
 
 #endif

@@ -45,7 +45,7 @@ int json_status_return(int status)
 {
 	json_t *root = json_object();
 
-	json_object_set_new(root, "return_status", json_string((status == SUCCESS) ? "Success" : "Failed"));
+	json_object_set_new(root, "status", json_string((status == SUCCESS) ? "Success" : "Failed"));
 
 	printf("%s\n", json_dumps(root, 0));
 
@@ -260,6 +260,169 @@ int json_cache_statistics(struct RC_STATS *stats)
 	return SUCCESS;
 }
 
+/*
+ * JSON output format:
+ *  {
+ *    "statistics": [
+ *      {
+ *        "cache_stats": [
+ *          {
+ *            "device": "rc-wb_sdd",
+ *            "errors": 0,
+ *            "num_blocks": 16320,
+ *            "num_free_blocks": 16320,
+ *            "num_wb_blocks": 0
+ *          }
+ *        ]
+ *      }
+ *    ]
+ *  }
+ */
+
+int json_cache_wb_statistics(struct WC_STATS *stats)
+{
+        json_t *root, *array = json_array(), *stats_array = json_array(), *stats_object = json_object();
+
+	if (stats != NULL) {
+		json_t *object = json_object();
+		json_object_set_new(object, "device", json_string(stats->device));
+		json_object_set_new(object, "errors", json_integer(stats->errors));
+		json_object_set_new(object, "num_blocks", json_integer(stats->num_blocks));
+		json_object_set_new(object, "num_free_blocks", json_integer(stats->num_free_blocks));
+		json_object_set_new(object, "num_wb_blocks", json_integer(stats->num_wb_blocks));
+		json_array_append_new(stats_array, object);
+	}
+	json_object_set_new(stats_object, "cache_stats", stats_array);
+	json_array_append_new(array, stats_object);
+
+	root = json_pack("{s:o}", "statistics", array);
+
+	printf("%s\n", json_dumps(root, 0));
+
+	json_decref(stats_array);
+	json_decref(root);
+
+	return SUCCESS;
+}
+
+/*
+ * JSON output format:
+ * {
+ *   "targets": [
+ *     {
+ *       "nvmet_targets": [
+ *         {
+ *           "nqn": "rd1-test",
+ *           "namespace": 2,
+ *           "device": "/dev/rd2",
+ *           "enabled": "true"
+ *         },
+ *         {
+ *           "nqn": "rd1-test",
+ *           "namespace": 1,
+ *           "device": "/dev/rd1",
+ *           "enabled": "true"
+ *         }
+ *       ]
+ *     },
+ *     {
+ *       "nvmet_ports": [
+ *         {
+ *           "port": 1,
+ *           "address": "10.0.0.185",
+ *           "protocol": "tcp",
+ *           "nqn": "rd1-test"
+ *         }
+ *       ]
+ *     }
+ *   ]
+ * }
+ */
+
+int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *ports)
+{
+	json_t *root, *array = json_array(), *nvmet_array = json_array(), *ports_array = json_array();
+	json_t *nvmet_object = json_object(), *ports_object = json_object();
+
+	while (nvmet != NULL) {
+		json_t *object = json_object();
+		json_object_set_new(object, "nqn", json_string(nvmet->nqn));
+		json_object_set_new(object, "namespace", json_integer(nvmet->namespc));
+		json_object_set_new(object, "device", json_string(nvmet->device));
+		json_object_set_new(object, "enabled", json_string((nvmet->enabled == ENABLED) ? "true" : "false"));
+		json_array_append_new(nvmet_array, object);
+		nvmet = nvmet->next;
+	}
+	json_object_set_new(nvmet_object, "nvmet_targets", nvmet_array);
+	json_array_append_new(array, nvmet_object);
+
+	while (ports != NULL) {
+		json_t *object = json_object();
+		json_object_set_new(object, "port", json_integer(ports->port));
+		json_object_set_new(object, "address", json_string(ports->addr));
+		json_object_set_new(object, "protocol", json_string(ports->protocol));
+		json_object_set_new(object, "nqn", json_string(ports->nqn));
+		json_array_append_new(ports_array, object);
+		ports = ports->next;
+	}
+	json_object_set_new(ports_object, "nvmet_ports", ports_array);
+	json_array_append_new(array, ports_object);
+
+	root = json_pack("{s:o}", "targets", array);
+
+	printf("%s\n", json_dumps(root, 0));
+
+	json_decref(nvmet_array);
+	json_decref(ports_array);
+	json_decref(array);
+	json_decref(root);
+
+	return SUCCESS;
+}
+
+/*
+ * JSON output format:
+ * {
+ *   "targets": [
+ *     {
+ *       "nvmet_ports": [
+ *         {
+ *           "port": 1,
+ *           "address": "10.0.0.185",
+ *           "protocol": "tcp"
+ *         }
+ *       ]
+ *     }
+ *   ]
+ * }
+ */
+int json_nvmet_view_ports(struct NVMET_PORTS *ports)
+{
+	json_t *root, *array = json_array(), *ports_array = json_array();
+	json_t *ports_object = json_object();
+
+	while (ports != NULL) {
+		json_t *object = json_object();
+		json_object_set_new(object, "port", json_integer(ports->port));
+		json_object_set_new(object, "address", json_string(ports->addr));
+		json_object_set_new(object, "protocol", json_string(ports->protocol));
+		json_array_append_new(ports_array, object);
+		ports = ports->next;
+	}
+	json_object_set_new(ports_object, "nvmet_ports", ports_array);
+	json_array_append_new(array, ports_object);
+
+	root = json_pack("{s:o}", "targets", array);
+
+	printf("%s\n", json_dumps(root, 0));
+
+	json_decref(ports_array);
+	json_decref(array);
+	json_decref(root);
+
+	return SUCCESS;
+}
+
 #else
 
 /*
@@ -276,6 +439,26 @@ int json_status_check(unsigned char *message)
 
 	json_object_set_new(root, "status", json_string("OK"));
 	json_object_set_new(root, "version", json_string(VERSION_NUM));
+
+	sprintf(message, "%s\n", json_dumps(root, 0));
+
+	json_decref(root);
+
+	return SUCCESS;
+}
+
+/*
+ * JSON output format:
+ * {
+ *    "status": "Unsupported"
+ * }
+ */
+
+int json_status_unsupported(unsigned char *message)
+{
+	json_t *root = json_object();
+
+	json_object_set_new(root, "status", json_string("Unsupported"));
 
 	sprintf(message, "%s\n", json_dumps(root, 0));
 

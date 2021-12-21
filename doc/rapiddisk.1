@@ -4,7 +4,7 @@ rapiddisk \- An administration tool to manage the RapidDisk RAM disk devices and
 .SH SYNOPSIS
 rapiddisk [ -h | -v ] function [ parameters ]
 .SH DESCRIPTION
-rapiddisk is a RapidDisk module management tool to manage RapidDisk RAM disk devices. Dynamically create, remove, resize RAM volumes and if desired, map or unmap them as a cache volume to any block device.
+rapiddisk is a RapidDisk module management tool to manage RapidDisk RAM disk devices. Dynamically create, remove, resize RAM volumes and if desired, map or unmap them as a cache volume to any block device. And export those volumes across an NVMe Target network.
 .SS Options
 .TP
 -h
@@ -26,8 +26,17 @@ Input capacity for size or resize of RAM disk device (in MBytes).
 -d
 Detach RAM disk device.
 .TP
+-e
+Export a RapidDisk block device as an NVMe Target.
+.TP
 -f
 Erase all data to a specified RapidDisk device (dangerous).
+.TP
+-H
+The host to export / unexport the NVMe Target to / from.
+.TP
+-i
+Define the network interface to enable for NVMe Target exporting. Port must not already exist and interface must not be already enabled.
 .TP
 -j
 Enable JSON formatted output.
@@ -37,6 +46,15 @@ List all attached RAM disk devices.
 .TP
 -m
 Map an RapidDisk device as a caching node to another block device.
+.TP
+-N
+List only enabled NVMe Target ports.
+.TP
+-n
+List RapidDisk enabled NVMe Target exports.
+.TP
+-P
+The port to export / unexport the NVMe Target to / from.
 .TP
 -p
 Define cache policy: write-through (wt), write-around (wa) or writeback (wb) (dangerous) (default: write-through).
@@ -48,8 +66,17 @@ Dynamically grow the size of an existing RapidDisk device.
 -s
 Obtain RapidDisk-Cache Mappings statistics.
 .TP
+-t
+Define the NVMe Target port's transfer protocol (i.e. tcp or rdma).
+.TP
 -u
 Unmap a RapidDisk device from another block device.
+.TP
+-X
+Remove the NVMe Target port (must be unused).
+.TP
+-x
+Unexport a RapidDisk block device from an NVMe Target. To remove export to host or port, only define the host and / or port. Not defining a host or port will result in the block device being removed from the NVMe Target subsystem.
 .SS Parameters (if applicable)
 .TP
 [size]
@@ -80,6 +107,14 @@ rapiddisk -u rc-wt_sdb
 rapiddisk -s rc-wt_sdb
 .TP
 rapiddisk -f rd2
+.TP
+rapiddisk -i eth0 -P 1 -t tcp
+.TP
+rapiddisk -X -P 1
+.TP
+rapiddisk -e -b rd3 -P 1 -H nqn.host1
+.TP
+rapiddisk -x -b rd3 -P 1 -H nqn.host1
 .SH EXIT STATUS
 rapiddisk returns a zero exit status if no error occurs during operation. A non-zero value is returned on error.
 .SH AUTHORS

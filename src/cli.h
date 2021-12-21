@@ -21,7 +21,7 @@
  **
  ** @project: rapiddisk
  **
- ** @filename: main.c
+ ** @filename: cli.h
  ** @description: This is the main file for the RapidDisk userland tool.
  **
  ** @date: 26Aug20, petros@petroskoutoupis.com
@@ -32,8 +32,6 @@
 
 #include <malloc.h>
 
-#define PROC_MODULES			"/proc/modules"
-#define SYS_RDSK			"/sys/kernel/rapiddisk/mgmt"
 #define SYS_BLOCK			"/sys/block"
 #define ETC_MTAB			"/etc/mtab"
 #define DEV_MAPPER			"/dev/mapper"
@@ -48,10 +46,22 @@
 #define ACTION_CACHE_STATS		0x7
 #define ACTION_CACHE_UNMAP		0x8
 #define ACTION_QUERY_RESOURCES		0x9
+#define ACTION_LIST_NVMET_PORTS		0xa
+#define ACTION_LIST_NVMET		0xb
+#define ACTION_ENABLE_NVMET_PORT	0xc
+#define ACTION_DISABLE_NVMET_PORT	0xd
+#define ACTION_EXPORT_NVMET		0xe
+#define ACTION_UNEXPORT_NVMET		0xf
 
 #define NAMELEN				0x200
 #define FILEDATA			0x40
 #define BYTES_PER_SECTOR		0x200
+
+#define DISABLED			0
+#define ENABLED				1
+
+#define XFER_MODE_TCP			0
+#define XFER_MODE_RDMA			1
 
 typedef struct RD_PROFILE {      /* For RapidDisk device list     */
 	unsigned char device[0xf];
@@ -87,6 +97,14 @@ typedef struct RC_STATS {
 	unsigned int write_ops;
 } RC_STATS;
 
+typedef struct WC_STATS {
+	unsigned char device[NAMELEN];
+	int errors;
+	unsigned int num_blocks;
+	unsigned int num_free_blocks;
+	unsigned int num_wb_blocks;
+} WC_STATS;
+
 typedef struct MEM_PROFILE {
         unsigned long long mem_total;
         unsigned long long mem_free;
@@ -100,6 +118,22 @@ typedef struct VOLUME_PROFILE {
 	struct VOLUME_PROFILE *next;
 } VOLUME_PROFILE;
 
+typedef struct NVMET_PROFILE {
+	unsigned char nqn[NAMELEN];
+	int namespc;
+	unsigned char device[0x1F];
+	int enabled;
+	struct NVMET_PROFILE *next;
+} NVMET_PROFILE;
+
+typedef struct NVMET_PORTS {
+	int port;
+	unsigned char addr[0x1F];
+	unsigned char nqn[NAMELEN];
+	unsigned char protocol[0x5];
+	struct NVMET_PORTS *next;
+} NVMET_PORTS;
+
 struct RD_PROFILE *search_rdsk_targets(void);
 struct RC_PROFILE *search_cache_targets(void);
 unsigned char *read_info(unsigned char *, unsigned char *);
@@ -112,10 +146,20 @@ int cache_device_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, 
 int cache_device_unmap(struct RC_PROFILE *, unsigned char *);
 int cache_device_stat(struct RC_PROFILE *, unsigned char *);
 int cache_device_stat_json(struct RC_PROFILE *, unsigned char *);
+int cache_wb_device_stat_json(struct RC_PROFILE *, unsigned char *);
+int nvmet_view_exports(bool);
+int nvmet_view_ports(bool);
 int json_device_list(struct RD_PROFILE *, struct RC_PROFILE *);
 int json_resources_list(struct MEM_PROFILE *, struct VOLUME_PROFILE *);
 int json_cache_statistics(struct RC_STATS *);
+int json_cache_wb_statistics(struct WC_STATS *);
 int json_status_return(int);
+int json_nvmet_view_exports(struct NVMET_PROFILE *, struct NVMET_PORTS *);
+int json_nvmet_view_ports(struct NVMET_PORTS *);
+int nvmet_enable_port(unsigned char *, int, int);
+int nvmet_disable_port(int);
+int nvmet_export_volume(struct RD_PROFILE *, RC_PROFILE *, unsigned char *, unsigned char *, int);
+int nvmet_unexport_volume(unsigned char *, unsigned char *, int);
 int get_memory_usage(struct MEM_PROFILE *);
 struct VOLUME_PROFILE *search_volumes_targets(void);
 int resources_list(struct MEM_PROFILE *, struct VOLUME_PROFILE *);

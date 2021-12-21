@@ -100,6 +100,25 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				pclose(stream);
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+		} else if (strncmp(url, CMD_LIST_NVMET, sizeof(CMD_LIST_NVMET) - 1) == SUCCESS) {
+			sprintf(command, "%s/rapiddisk -n -j|tail -n1", path);
+			stream = popen(command, "r");
+			if (stream) {
+				while (fgets(page, BUFSZ, stream) != NULL);
+				pclose(stream);
+			} else
+				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+		} else if (strncmp(url, CMD_LIST_NVMET_PORTS, sizeof(CMD_LIST_NVMET_PORTS) - 1) == SUCCESS) {
+			sprintf(command, "%s/rapiddisk -N -j|tail -n1", path);
+			stream = popen(command, "r");
+			if (stream) {
+				while (fgets(page, BUFSZ, stream) != NULL);
+				pclose(stream);
+			} else
+				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+		} else {
+			json_status_unsupported(page);
+			status = MHD_HTTP_BAD_REQUEST;
 		}
 	} else if (strcmp(method, "POST") == SUCCESS) {
 		if ((strncmp(url, CMD_RDSK_CREATE, sizeof(CMD_RDSK_CREATE) - 1) == SUCCESS) && \
@@ -201,6 +220,8 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wt -j|tail -n1", path, device, source);
 			} else if (strcmp(token, "write-around") == SUCCESS) {
 				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wa -j|tail -n1", path, device, source);
+			} else if (strcmp(token, "writeback") == SUCCESS) {
+				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wb -j|tail -n1", path, device, source);
 			} else {
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
@@ -227,6 +248,9 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				pclose(stream);
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+		} else {
+			json_status_unsupported(page);
+			status = MHD_HTTP_BAD_REQUEST;
 		}
 	} else
 		status = MHD_HTTP_BAD_REQUEST;

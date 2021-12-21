@@ -1,13 +1,13 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 7.2.1
+Version: 8.0.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: gcc,make,kernel-headers,kernel-devel,dkms,jansson
-BuildRequires: kernel-headers,kernel-devel,gcc,make,jansson-devel
+Requires: gcc,make,kernel-headers,kernel-devel,dkms,jansson,libmicrohttpd12
+BuildRequires: kernel-headers,kernel-devel,gcc,make,jansson-devel,libmicrohttpd-devel
 
 %description
 The RapidDisk software defined advanced RAM drive and storage
@@ -78,6 +78,15 @@ rm -rf %{buildroot}
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %changelog
+* Fri Dec 17 2021 Petros Koutoupis <petros@petroskoutoupis.com>
+- module: Updated for 5.14 and 5.15 kernels
+- utility: Added NVMe Target support / framework
+- utility: Added support for dm-writecache status readout in API (github issue ##65)
+- utility: Module checker code now traverses via sysfs
+- utility: Added module checker in daemon
+- documentation: Clean up formatting and add content
+- packaging: Fixed dependencies
+- misc: Cleaned up and optimized scripts to enable rapiddisk/cache on root during boot (thank you Matteo Tenca)
 * Sun Jun 13 2021 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Added support for RHEL 8.4 kernel
 - utility: added support for libmicrohttpd v0.9.71 and newer while still supporting legacy versions
