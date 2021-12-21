@@ -13,7 +13,8 @@ BuildRequires: kernel-headers,kernel-devel,gcc,make,jansson-devel,libmicrohttpd-
 The RapidDisk software defined advanced RAM drive and storage
 caching solution. This suite includes a collection of modules,
 configuration files, and command line utilities for managing
-RapidDisk enabled storage volumes.
+RapidDisk enabled storage volumes and accessing them either
+locally or across an NVMe Target network.
 
 %package utils
 Summary: The RapidDisk administration utilities.
@@ -23,7 +24,8 @@ Group: Applications/System
 The RapidDisk software defined advanced RAM drive and storage
 caching solution. This packages includes a collection of
 configuration files, and command line utilities for managing
-RapidDisk enabled storage volumes.
+RapidDisk enabled storage volumes and accessing them either
+locally or across an NVMe Target network.
 
 %prep
 %setup -T -D -n rapiddisk
