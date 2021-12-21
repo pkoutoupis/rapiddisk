@@ -297,7 +297,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
 		if ((rc = mkdir(path, mode)) != SUCCESS) {
-			printf("%s: mkdir: %s\n", __func__, strerror(errno));
+			printf("Error. Unable to create target directory %s.\n%s: mkdir: %s\n", path, __func__, strerror(errno));
 			return INVALID_VALUE;
 		}
 	}
@@ -306,7 +306,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 	if (strlen(host) == 0) {
 		sprintf(path, "%s/%s%s-%s/allowed_hosts", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if ((err = scandir(path, &list, NULL, NULL)) < 0) {
-			printf("%s: scandir: %s\n", __func__, strerror(errno));
+			printf("Error. Unable to access %s.\n%s: scandir: %s\n", path, __func__, strerror(errno));
 			return INVALID_VALUE;
 		}
 		for (n = 0; n < err; n++) if (list[n] != NULL) free(list[n]);    /* clear list */
@@ -317,7 +317,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 
 		sprintf(path, "%s/%s%s-%s/attr_allow_any_host", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if((fp = fopen(path, "w")) == NULL){
-			printf("%s: fopen: %s\n", __func__, strerror(errno));
+			printf("Error. Unable to open %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
 			return INVALID_VALUE;
 		}
 		fprintf(fp, "1");
@@ -328,7 +328,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 		sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
 		if (access(path, F_OK) != SUCCESS) {
 			if ((rc = mkdir(path, mode)) != SUCCESS) {
-				printf("%s: mkdir: %s\n", __func__, strerror(errno));
+				printf("Error. Unable to create host directory %s.\n%s: mkdir: %s\n", path, __func__, strerror(errno));
 				return INVALID_VALUE;
 			}
 		}
@@ -338,7 +338,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 		if (access(path2, F_OK) != SUCCESS) {
 			rc = symlink(path, path2);
 			if (rc != SUCCESS) {
-				printf("%s: symlink: %s\n", __func__, strerror(errno));
+				printf("Error. Unable to link host to port.\n%s: symlink: %s\n", __func__, strerror(errno));
 				return rc;
 			}
 		}
@@ -346,7 +346,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 		/* Make sure that no other hosts can access the target */
 		sprintf(path, "%s/%s%s-%s/attr_allow_any_host", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if((fp = fopen(path, "w")) == NULL){
-			printf("%s: fopen: %s\n", __func__, strerror(errno));
+			printf("Error. Unable to open %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
 			return INVALID_VALUE;
 		}
 		fprintf(fp, "0");
@@ -357,7 +357,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 	sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
 		if ((rc = mkdir(path, mode)) != SUCCESS) {
-			printf("%s: mkdir: %s\n", __func__, strerror(errno));
+			printf("Error. Unable to create namespace directory %s\n.%s: mkdir: %s\n", path, __func__, strerror(errno));
 			return rc;
 		}
 	}
@@ -365,7 +365,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 	/* Set device */
 	sprintf(path, "%s/%s%s-%s/namespaces/1/device_path", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if((fp = fopen(path, "w")) == NULL){
-		printf("%s: fopen: %s\n", __func__, strerror(errno));
+		printf("Error. Unable to open device_path file: %s\n%s: fopen: %s\n", path, __func__, strerror(errno));
 		return INVALID_VALUE;
 	}
 	if (strncmp(device, "rd", 2) == SUCCESS)
@@ -377,7 +377,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 	/* Enable volume */
 	sprintf(path, "%s/%s%s-%s/namespaces/1/enable", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if((fp = fopen(path, "w")) == NULL){
-		printf("%s: fopen: %s\n", __func__, strerror(errno));
+		printf("Error. Unable to open namespace enable file %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
 		return INVALID_VALUE;
 	}
 	fprintf(fp, "1");
@@ -390,7 +390,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 		if (access(path2, F_OK) != SUCCESS) {
 			rc = symlink(path, path2);
 			if (rc != SUCCESS) {
-				printf("%s: symlink: %s\n", __func__, strerror(errno));
+				printf("Error. Unable to create link of NQN to port.\n%s: symlink: %s\n", __func__, strerror(errno));
 				return rc;
 			}
 		}
@@ -407,7 +407,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 				if (access(path2, F_OK) != SUCCESS) {
 					rc = symlink(path, path2);
 					if (rc != SUCCESS) {
-						printf("%s: symlink: %s\n", __func__, strerror(errno));
+						printf("Error. Unable to create link of NQN to port.\n%s: symlink: %s\n", __func__, strerror(errno));
 						return rc;
 					}
 				}
@@ -451,7 +451,7 @@ int nvmet_unexport_volume(unsigned char *device, unsigned char *host, int port)
 	/* Make sure that no other namespaces exist. We do not create anything higher than 1. */
 	sprintf(path, "%s/%s%s-%s/namespaces/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if ((err = scandir(path, &list, NULL, NULL)) < 0) {
-		printf("%s: scandir: %s\n", __func__, strerror(errno));
+		printf("Error. Unable to access %s.\n%s: scandir: %s\n", path, __func__, strerror(errno));
 		return INVALID_VALUE;
 	}
 	for (n = 0; n < err; n++) if (list[n] != NULL) free(list[n]);    /* clear list */
@@ -465,7 +465,7 @@ int nvmet_unexport_volume(unsigned char *device, unsigned char *host, int port)
 		if (access(path, F_OK) == SUCCESS) {
 			rc = unlink(path);
 			if (rc != SUCCESS) {
-				printf("%s: unlink: %s\n", __func__, strerror(errno));
+				printf("Error. Unable to remove host.\n%s: unlink: %s\n", __func__, strerror(errno));
 				return rc;
 			}
         		printf("Block device %s has been unmapped from NVMe Target host %s.\n", device, host);
@@ -488,7 +488,7 @@ int nvmet_unexport_volume(unsigned char *device, unsigned char *host, int port)
 				if (access(path, F_OK) == SUCCESS) {
 					rc = unlink(path);
 					if (rc != SUCCESS) {
-						printf("%s: unlink: %s\n", __func__, strerror(errno));
+						printf("Error. Unable to remove hosts.\n%s: unlink: %s\n", __func__, strerror(errno));
 						return rc;
 					}
 				}
@@ -505,7 +505,7 @@ host_check_out:
 		if (access(path, F_OK) == SUCCESS) {
 			rc = unlink(path);
 			if (rc != SUCCESS) {
-				printf("%s: unlink: %s\n", __func__, strerror(errno));
+				printf("Error. Unable to remove NQN from port.\n%s: unlink: %s\n", __func__, strerror(errno));
 				return rc;
 			}
         		printf("Block device %s has been unmapped from NVMe Target port %d.\n", device, port);
@@ -524,7 +524,7 @@ host_check_out:
 				if (access(path, F_OK) == SUCCESS) {
 					rc = unlink(path);
 					if (rc != SUCCESS) {
-						printf("%s: unlink: %s\n", __func__, strerror(errno));
+						printf("Error. Unable to remove NQN from ports.\n%s: unlink: %s\n", __func__, strerror(errno));
 						return rc;
 					}
 				}
@@ -542,7 +542,7 @@ port_check_out:
 			/* Disable volume */
 			sprintf(path, "%s/%s%s-%s/namespaces/1/enable", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 			if((fp = fopen(path, "w")) == NULL){
-				printf("%s: fopen: %s\n", __func__, strerror(errno));
+				printf("Error. Unable to open namespace enable file %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
 				return INVALID_VALUE;
 			}
 			fprintf(fp, "0");
@@ -552,7 +552,7 @@ port_check_out:
 		sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if (access(path, F_OK) == SUCCESS) {
 			if ((rc = rmdir(path)) != SUCCESS) {
-				printf("%s: rmdir: %s\n", __func__, strerror(errno));
+				printf("Error. Unable to remove namespace %s.\n%s: rmdir: %s\n", path, __func__, strerror(errno));
 				return rc;
 			}
 		}
@@ -561,7 +561,7 @@ port_check_out:
 		sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if (access(path, F_OK) == SUCCESS) {
 			if ((rc = rmdir(path)) != SUCCESS) {
-				printf("%s: rmdir: %s\n", __func__, strerror(errno));
+				printf("Error. Unable to remove NQN from NVMe Target subsystem %s.\n%s: rmdir: %s\n", path, __func__, strerror(errno));
 				return rc;
 			}
 		}
@@ -706,13 +706,13 @@ int nvmet_enable_port(unsigned char *interface, int port, int protocol)
         }
 
 	if ((rc = mkdir(path, mode)) != SUCCESS) {
-		printf("%s: mkdir: %s\n", __func__, strerror(errno));
+		printf("Error. Unable to create port directory.\n%s: mkdir: %s\n", __func__, strerror(errno));
 		return INVALID_VALUE;
 	}
 
 	sprintf(path, "%s/%d/addr_trsvcid", SYS_NVMET_PORTS, port);
 	if((fp = fopen(path, "w")) == NULL){
-	printf("%s: fopen: %s\n", __func__, strerror(errno));
+		printf("Error. Unable to open %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
 		return INVALID_VALUE;
 	}
 	fprintf(fp, "4420");
@@ -720,7 +720,7 @@ int nvmet_enable_port(unsigned char *interface, int port, int protocol)
 
 	sprintf(path, "%s/%d/addr_adrfam", SYS_NVMET_PORTS, port);
 	if((fp = fopen(path, "w")) == NULL){
-	printf("%s: fopen: %s\n", __func__, strerror(errno));
+		printf("Error. Unable to open %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
 		return INVALID_VALUE;
 	}
 	fprintf(fp, "ipv4");
@@ -732,7 +732,7 @@ int nvmet_enable_port(unsigned char *interface, int port, int protocol)
 		sprintf(proto, "tcp");
 	sprintf(path, "%s/%d/addr_trtype", SYS_NVMET_PORTS, port);
 	if((fp = fopen(path, "w")) == NULL){
-	printf("%s: fopen: %s\n", __func__, strerror(errno));
+		printf("Error. Unable to open %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
 		return INVALID_VALUE;
 	}
 	fprintf(fp, "%s", proto);
@@ -740,7 +740,7 @@ int nvmet_enable_port(unsigned char *interface, int port, int protocol)
 
 	sprintf(path, "%s/%d/addr_traddr", SYS_NVMET_PORTS, port);
 	if((fp = fopen(path, "w")) == NULL){
-	printf("%s: fopen: %s\n", __func__, strerror(errno));
+		printf("Error. Unable to open %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
 		return INVALID_VALUE;
 	}
 	fprintf(fp, "%s", ip);
@@ -766,7 +766,7 @@ int nvmet_disable_port(int port)
 	/* Make sure that no subsystems are mapped from this port. */
         sprintf(path, "%s/%d/subsystems/", SYS_NVMET_PORTS, port);
         if ((err = scandir(path, &list, NULL, NULL)) < 0) {
-                printf("%s: scandir: %s\n", __func__, strerror(errno));
+                printf("Error. Unable to access %s.\n%s: scandir: %s\n", path, __func__, strerror(errno));
                 return rc;
         }
         for (n = 0; n < err; n++) if (list[n] != NULL) free(list[n]);    /* clear list */
@@ -778,7 +778,7 @@ int nvmet_disable_port(int port)
 	/* Remove the port */
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
 	if ((rc = rmdir(path)) != SUCCESS) {
-		printf("%s: rmdir: %s\n", __func__, strerror(errno));
+		printf("Error. Unable to remove port.\n%s: rmdir: %s\n", __func__, strerror(errno));
 		return rc;
 	}
 
