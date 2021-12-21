@@ -7,6 +7,7 @@
 - utility: Added module checker in daemon
 - documentation: Clean up formatting and add content
 - packaging: Fixed dependencies in spec and debian control files.
+- misc: Cleaned up and optimized scripts to enable rapiddisk/cache on root during boot (thank you Matteo Tenca)
 
 ### Release 7.2.1 ###
 

@@ -2,11 +2,12 @@ rapiddisk (8.0.0-1) released; urgency=medium
 
 * module: Updated for 5.14 and 5.15 kernels
 * utility: Added NVMe Target support / framework
-* utility: Added support for dm-writecache status readout in API
+* utility: Added support for dm-writecache status readout in API (github issue #65)
 * utility: Module checker code now traverses via sysfs
 * utility: Added module checker in daemon
 * documentation: Clean up formatting and add content
 * packaging: Fixed dependencies
+* misc: Cleaned up and optimized scripts to enable rapiddisk/cache on root during boot (thank you Matteo Tenca)
 
 rapiddisk (7.2.1-1) released; urgency=medium
 

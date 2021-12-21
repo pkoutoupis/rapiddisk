@@ -84,11 +84,12 @@ rm -rf %{buildroot}
 * Fri Dec 17 2021 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Updated for 5.14 and 5.15 kernels
 - utility: Added NVMe Target support / framework
-- utility: Added support for dm-writecache status readout in API
+- utility: Added support for dm-writecache status readout in API (github issue #65)
 - utility: Module checker code now traverses via sysfs
 - utility: Added module checker in daemon
 - documentation: Clean up formatting and add content
 - packaging: Fixed dependencies
+- misc: Cleaned up and optimized scripts to enable rapiddisk/cache on root during boot (thank you Matteo Tenca)
 * Sun Jun 13 2021 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Added support for RHEL 8.4 kernel
 - utility: added support for libmicrohttpd v0.9.71 and newer while still supporting legacy versions
