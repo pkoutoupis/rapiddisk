@@ -6,8 +6,8 @@ License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: gcc,make,kernel-headers,kernel-devel,dkms,jansson
-BuildRequires: kernel-headers,kernel-devel,gcc,make,jansson-devel
+Requires: gcc,make,kernel-headers,kernel-devel,dkms,jansson,libmicrohttpd12
+BuildRequires: kernel-headers,kernel-devel,gcc,make,jansson-devel,libmicrohttpd-devel
 
 %description
 The RapidDisk software defined advanced RAM drive and storage
@@ -85,6 +85,7 @@ rm -rf %{buildroot}
 - utility: Module checker code now traverses via sysfs
 - utility: Added module checker in daemon
 - documentation: Clean up formatting and add content
+- packaging: Fixed dependencies
 * Sun Jun 13 2021 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Added support for RHEL 8.4 kernel
 - utility: added support for libmicrohttpd v0.9.71 and newer while still supporting legacy versions

@@ -6,6 +6,7 @@
 - utility: Module checker code now traverses via sysfs
 - utility: Added module checker in daemon
 - documentation: Clean up formatting and add content
+- packaging: Fixed dependencies in spec and debian control files.
 
 ### Release 7.2.1 ###
 

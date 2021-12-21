@@ -6,6 +6,7 @@ rapiddisk (8.0.0-1) released; urgency=medium
 * utility: Module checker code now traverses via sysfs
 * utility: Added module checker in daemon
 * documentation: Clean up formatting and add content
+* packaging: Fixed dependencies
 
 rapiddisk (7.2.1-1) released; urgency=medium
 
