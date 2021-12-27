@@ -1,5 +1,5 @@
 /*********************************************************************************
- ** Copyright © 2011 - 2021 Petros Koutoupis
+ ** Copyright © 2011 - 2022 Petros Koutoupis
  ** All rights reserved.
  **
  ** This file is part of RapidDisk.
@@ -21,7 +21,7 @@
  **
  ** @project: rapiddisk
  **
- ** @filename: core.c
+ ** @filename: rdsk.c
  ** @description: This file contains the core routines of rapiddisk.
  **
  ** @date: 15Oct10, petros@petroskoutoupis.com

@@ -1,3 +1,10 @@
+### Release 8.0.1 ###
+
+- packaging: Fixed package descriptions
+- misc: update authors file
+- misc: updated copyright
+- misc: added GPL disclaimer to files missing it
+
 ### Release 8.0.0 ###
 
 - module: Updated for 5.14 and 5.15 kernels

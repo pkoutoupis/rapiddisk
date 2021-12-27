@@ -1,6 +1,6 @@
 #!/bin/bash
   
-# Copyright © 2021 Petros Koutoupis
+# Copyright © 2021 - 2022 Petros Koutoupis
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify

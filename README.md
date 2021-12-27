@@ -43,7 +43,9 @@ remain in cache a bit longer before being evicted.
 
 The RapidDisk Daemon (rapiddiskd) enabled remote management of RapidDisk
 volumes. The management commands are simplified into a set of GET and POST
-commands.
+commands. It operates over port 9118 by default. This can be changed when
+invoking the daemon with the use of a parameter. Either way, please
+ensure that the port is open for TCP within your firewall rules.
 
 An example of a GET command:
 

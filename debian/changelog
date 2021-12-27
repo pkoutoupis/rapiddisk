@@ -1,3 +1,10 @@
+rapiddisk (8.0.1-1) released; urgency=medium
+
+* packaging: Fixed package descriptions
+* misc: update authors file
+* misc: updated copyright
+* misc: added GPL disclaimer to files missing it
+
 rapiddisk (8.0.0-1) released; urgency=medium
 
 * module: Updated for 5.14 and 5.15 kernels

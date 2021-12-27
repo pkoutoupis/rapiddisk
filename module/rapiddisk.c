@@ -1,5 +1,5 @@
 /*******************************************************************************
- ** Copyright © 2011 - 2021 Petros Koutoupis
+ ** Copyright © 2011 - 2022 Petros Koutoupis
  ** All rights reserved.
  **
  ** This program is free software: you can redistribute it and/or modify
@@ -41,7 +41,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"8.0.0"
+#define VERSION_STR		"8.0.1"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		128
@@ -903,4 +903,4 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Petros Koutoupis <petros@petroskoutoupis.com>");
 MODULE_DESCRIPTION("RapidDisk is an enhanced RAM disk block device driver.");
 MODULE_VERSION(VERSION_STR);
-MODULE_INFO(Copyright, "Copyright 2010 - 2021 Petros Koutoupis");
+MODULE_INFO(Copyright, "Copyright 2010 - 2022 Petros Koutoupis");
