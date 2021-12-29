@@ -39,12 +39,14 @@ install: all
 	@echo Installing all $(BIN) binary files.
 	$(MKDIR) $(DESTDIR)$(DIR)
 	$(CP) $(BIN)* $(DESTDIR)$(DIR)
-	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)*
+	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)
+	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)d
 
 .PHONY: uninstall
 uninstall:
 	@echo Uninstalling $(BIN) binary files.
-	$(RM) $(DESTDIR)$(DIR)/$(BIN)*
+	$(RM) $(DESTDIR)$(DIR)/$(BIN)
+	$(RM) $(DESTDIR)$(DIR)/$(BIN)d
 
 json.o: json.c
 	$(CC) -c json.c -o json.o
