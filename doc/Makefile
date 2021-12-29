@@ -34,7 +34,8 @@ install: all
 .PHONY: uninstall
 uninstall: 
 	@echo Uninstalling rapiddisk man pages.
-	$(RM) $(DESTDIR)$(MAN_DIR)/rapiddisk*.1
+	$(RM) $(DESTDIR)$(MAN_DIR)/rapiddisk.1
+	$(RM) $(DESTDIR)$(MAN_DIR)/rapiddiskd.1
 
 .PHONY: clean
 clean:
