@@ -813,10 +813,16 @@ out:
 static int detach_device(int num)
 {
 	struct rdsk_device *rdsk;
+	bool found = false;
 
 	list_for_each_entry(rdsk, &rdsk_devices, rdsk_list)
-		if (rdsk->num == num)
+		if (rdsk->num == num) {
+			found = true;
 			break;
+		}
+
+	if (!found)
+		return GENERIC_ERROR;
 
 	list_del(&rdsk->rdsk_list);
 	del_gendisk(rdsk->rdsk_disk);
@@ -833,10 +839,16 @@ static int detach_device(int num)
 static int resize_device(int num, int size)
 {
 	struct rdsk_device *rdsk;
+	bool found = false;
 
 	list_for_each_entry(rdsk, &rdsk_devices, rdsk_list)
-		if (rdsk->num == num)
+		if (rdsk->num == num) {
+			found = true;
 			break;
+		}
+
+	if (!found)
+		return GENERIC_ERROR;
 
 	if (size <= get_capacity(rdsk->rdsk_disk)) {
 		pr_warn("%s: Please specify a larger size for resizing.\n",
