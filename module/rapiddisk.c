@@ -105,7 +105,11 @@ static int rdsk_ioctl(struct block_device *, fmode_t,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+static void rdsk_submit_bio(struct bio *);
+#else
 static blk_qc_t rdsk_submit_bio(struct bio *);
+#endif
 #else
 static blk_qc_t rdsk_make_request(struct request_queue *, struct bio *);
 #endif
@@ -476,7 +480,11 @@ out:
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+static void
+#else
 static blk_qc_t
+#endif
 #else
 static void
 #endif
@@ -594,7 +602,9 @@ out:
 #else
 	bio_endio(bio);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,15,0)
 	return BLK_QC_T_NONE;
+#endif
 #else
 	return;
 #endif
@@ -606,7 +616,9 @@ io_error:
 #endif
 	bio_io_error(bio);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,15,0)
 	return BLK_QC_T_NONE;
+#endif
 #endif
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
@@ -691,6 +703,9 @@ static const struct block_device_operations rdsk_fops = {
 static int attach_device(int size)
 {
 	int num = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+	int err = GENERIC_ERROR;
+#endif
 	struct rdsk_device *rdsk, *tmp;
 	struct gendisk *disk;
 	unsigned char *string, name[16];
@@ -793,7 +808,13 @@ static int attach_device(int size)
 	sprintf(disk->disk_name, "rd%d", num);
 	set_capacity(disk, size);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+	err = add_disk(disk);
+	if (err)
+		goto out_free_queue;
+#else
 	add_disk(disk);
+#endif
 	list_add_tail(&rdsk->rdsk_list, &rdsk_devices);
 	rd_total++;
 	pr_info("%s: Attached rd%d of %llu bytes in size.\n", PREFIX,
