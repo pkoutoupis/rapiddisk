@@ -58,6 +58,7 @@
 
 /* ioctls */
 #define INVALID_CDQUERY_IOCTL	0x5331
+#define INVALID_CDQUERY_IOCTL2	0x5395
 #define RD_GET_STATS		0x0529
 
 static DEFINE_MUTEX(sysfs_mutex);
@@ -575,7 +576,11 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 
 		err = rdsk_do_bvec(rdsk, bvec.bv_page, len,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+				   bvec.bv_offset, bio_op(bio), sector);
+#else
 				   bvec.bv_offset, op_is_write(bio_op(bio)), sector);
+#endif
 #else
 				   bvec.bv_offset, rw, sector);
 #endif
@@ -603,12 +608,13 @@ out:
 	bio_endio(bio, err);
 #else
 	bio_endio(bio);
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,16,0)
 	return BLK_QC_T_NONE;
-#endif
 #else
 	return;
+#endif
 #endif
 io_error:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
@@ -620,7 +626,6 @@ io_error:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,16,0)
 	return BLK_QC_T_NONE;
-#endif
 #endif
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
@@ -677,6 +682,7 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		mutex_unlock(&ioctl_mutex);
 		return error;
 	case INVALID_CDQUERY_IOCTL:
+	case INVALID_CDQUERY_IOCTL2:
 		return -EINVAL;
 	case RD_GET_STATS:
 		return copy_to_user((void __user *)arg,
