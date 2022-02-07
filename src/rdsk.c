@@ -320,6 +320,7 @@ int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	}
 
 	sprintf(stats->device, "%s", cache);
+	stats->expanded = FALSE;
 	dup = strdup(buf);
 
 	token = strtok((char *)dup, " ");
@@ -335,6 +336,7 @@ int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	stats->num_wb_blocks = atoi(token);
 	token = strtok(NULL, " ");     /* num read requests */
 	if (!token) goto abort_stat_collect;
+	stats->expanded = TRUE;
 	stats->num_read_req = atoi(token);
 	token = strtok(NULL, " ");     /* num read cache hits */
 	if (!token) goto abort_stat_collect;

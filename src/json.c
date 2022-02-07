@@ -290,16 +290,18 @@ int json_cache_wb_statistics(struct WC_STATS *stats)
 		json_object_set_new(object, "num_blocks", json_integer(stats->num_blocks));
 		json_object_set_new(object, "num_free_blocks", json_integer(stats->num_free_blocks));
 		json_object_set_new(object, "num_wb_blocks", json_integer(stats->num_wb_blocks));
-		json_object_set_new(object, "num_read_req", json_integer(stats->num_read_req));
-		json_object_set_new(object, "num_read_cache_hits", json_integer(stats->num_read_cache_hits));
-		json_object_set_new(object, "num_write_req", json_integer(stats->num_write_req));
-		json_object_set_new(object, "num_write_uncommitted_blk_hits", json_integer(stats->num_write_uncommitted_blk_hits));
-		json_object_set_new(object, "num_write_committed_blk_hits", json_integer(stats->num_write_committed_blk_hits));
-		json_object_set_new(object, "num_write_cache_bypass", json_integer(stats->num_write_cache_bypass));
-		json_object_set_new(object, "num_write_cache_alloc", json_integer(stats->num_write_cache_alloc));
-		json_object_set_new(object, "num_write_freelist_blocked", json_integer(stats->num_write_freelist_blocked));
-		json_object_set_new(object, "num_flush_req", json_integer(stats->num_flush_req));
-		json_object_set_new(object, "num_discard_req", json_integer(stats->num_discard_req));
+		if (stats->expanded == TRUE) {
+			json_object_set_new(object, "num_read_req", json_integer(stats->num_read_req));
+			json_object_set_new(object, "num_read_cache_hits", json_integer(stats->num_read_cache_hits));
+			json_object_set_new(object, "num_write_req", json_integer(stats->num_write_req));
+			json_object_set_new(object, "num_write_uncommitted_blk_hits", json_integer(stats->num_write_uncommitted_blk_hits));
+			json_object_set_new(object, "num_write_committed_blk_hits", json_integer(stats->num_write_committed_blk_hits));
+			json_object_set_new(object, "num_write_cache_bypass", json_integer(stats->num_write_cache_bypass));
+			json_object_set_new(object, "num_write_cache_alloc", json_integer(stats->num_write_cache_alloc));
+			json_object_set_new(object, "num_write_freelist_blocked", json_integer(stats->num_write_freelist_blocked));
+			json_object_set_new(object, "num_flush_req", json_integer(stats->num_flush_req));
+			json_object_set_new(object, "num_discard_req", json_integer(stats->num_discard_req));
+		}
 		json_array_append_new(stats_array, object);
 	}
 	json_object_set_new(stats_object, "cache_stats", stats_array);

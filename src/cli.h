@@ -99,6 +99,7 @@ typedef struct RC_STATS {
 
 typedef struct WC_STATS {
 	unsigned char device[NAMELEN];
+	bool expanded;
 	int errors;
 	unsigned int num_blocks;
 	unsigned int num_free_blocks;
