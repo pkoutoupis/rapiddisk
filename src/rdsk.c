@@ -333,6 +333,38 @@ int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	stats->num_free_blocks = atoi(token);
 	token = strtok(NULL, " ");     /* num wb blocks */
 	stats->num_wb_blocks = atoi(token);
+	token = strtok(NULL, " ");     /* num read requests */
+	if (!token) goto abort_stat_collect;
+	stats->num_read_req = atoi(token);
+	token = strtok(NULL, " ");     /* num read cache hits */
+	if (!token) goto abort_stat_collect;
+	stats->num_read_cache_hits = atoi(token);
+	token = strtok(NULL, " ");     /* num write requests */
+	if (!token) goto abort_stat_collect;
+	stats->num_write_req = atoi(token);
+	token = strtok(NULL, " ");     /* num write uncommitted block hits */
+	if (!token) goto abort_stat_collect;
+	stats->num_write_uncommitted_blk_hits = atoi(token);
+	token = strtok(NULL, " ");     /* num write committed block hits */
+	if (!token) goto abort_stat_collect;
+	stats->num_write_committed_blk_hits = atoi(token);
+	token = strtok(NULL, " ");     /* num write cache bypassed */
+	if (!token) goto abort_stat_collect;
+	stats->num_write_cache_bypass = atoi(token);
+	token = strtok(NULL, " ");     /* num write cache allocated */
+	if (!token) goto abort_stat_collect;
+	stats->num_write_cache_alloc = atoi(token);
+	token = strtok(NULL, " ");     /* num writes blocked on freelist */
+	if (!token) goto abort_stat_collect;
+	stats->num_write_freelist_blocked = atoi(token);
+	token = strtok(NULL, " ");     /* num flush requests */
+	if (!token) goto abort_stat_collect;
+	stats->num_flush_req = atoi(token);
+	token = strtok(NULL, " ");     /* num discard requests */
+	if (!token) goto abort_stat_collect;
+	stats->num_discard_req = atoi(token);
+
+abort_stat_collect:
 
 	rc = json_cache_wb_statistics(stats);
 
