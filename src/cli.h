@@ -99,10 +99,22 @@ typedef struct RC_STATS {
 
 typedef struct WC_STATS {
 	unsigned char device[NAMELEN];
+	bool expanded;
 	int errors;
 	unsigned int num_blocks;
 	unsigned int num_free_blocks;
 	unsigned int num_wb_blocks;
+	/* For 5.15 and later */
+	unsigned int num_read_req;
+	unsigned int num_read_cache_hits;
+	unsigned int num_write_req;
+	unsigned int num_write_uncommitted_blk_hits;
+	unsigned int num_write_committed_blk_hits;
+	unsigned int num_write_cache_bypass;
+	unsigned int num_write_cache_alloc;
+	unsigned int num_write_freelist_blocked;
+	unsigned int num_flush_req;
+	unsigned int num_discard_req;
 } WC_STATS;
 
 typedef struct MEM_PROFILE {
