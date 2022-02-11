@@ -1,3 +1,11 @@
+### Release 8.1.0 ###
+
+- module: Added support for 5.16 and 5.17 kernels (thank you Nitrooo)
+- module: Fixed queue allocation defect for 5.15 kernel (thank you Nitrooo)
+- module: Fixed ram drive allocation bug when sending invalid disk number (thank you betawaffle)
+- utility: Expanded writecache stats to supported in 5.15+ kernels.
+- misc: Cleaned up Makefiles
+
 ### Release 8.0.1 ###
 
 - packaging: Fixed package descriptions
