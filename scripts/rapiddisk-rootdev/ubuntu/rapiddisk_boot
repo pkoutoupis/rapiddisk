@@ -15,8 +15,8 @@ esac
 . /scripts/functions
 
 # Begin real processing below this line
-if [ -x /usr/sbin/rapiddisk_sub ] ; then
-	/usr/sbin/rapiddisk_sub
+if [ -x /sbin/rapiddisk_sub ] ; then
+	/sbin/rapiddisk_sub
 fi
 
 exit 0
