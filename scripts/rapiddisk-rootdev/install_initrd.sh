@@ -1,5 +1,8 @@
 #!/bin/bash
 
+VERSION='1.1'
+echo "install_initrd.sh version $VERSION"
+
 ihelp()  {
 
 	echo "Usage:"
@@ -12,21 +15,21 @@ ihelp()  {
 	echo ""
 	echo "--help           prints this help and exit"
 	echo ""
-	echo "in '--install' mode:"
+	echo "In '--install' mode:"
 	echo "<root_partition> is the device mounted as '/' as in /etc/fstab, in the /dev/xxxn format"
 	echo "                 if not provided, /etc/fstab will be parsed to determine it automatically"
 	echo "                 and you'll be asked to confirm"
 	echo "<ramdisk_size>   is the size in MB of the ramdisk to be used as cache"
 	echo "<kernel_version> is needed to determine which initrd file to alter"
 	echo "<cache_mode>     is the rapiddisk caching mode (wt, wa, wb)"
-	echo "--force		   even if everything is already in place, force reinstalling."
+	echo "--force          even if everything is already in place, force reinstalling."
 	echo "                 Can be useful to change the ramdisk size without perform an uninstall"
 	echo ""
-	echo "in '--uninstall' mode:"
+	echo "In '--uninstall' mode:"
 	echo "<kernel_version> is needed to determine which initrd file to alter. Other initrd files are left intact"
 	echo "--force          perform the uninstall actions even if there is nothing to remove"
 	echo ""
-	echo "in '--global-uninstall' mode:"
+	echo "In '--global-uninstall' mode:"
 	echo "                 everything ever installed by the script will be removed once and for all"
 	echo "                 all the initrd files will be rebuild"
 	echo ""
@@ -163,10 +166,14 @@ install_options_checks () {
 # checks for current user == root
 whoami | grep '^root$' 2>/dev/null 1>/dev/null || myerror "sorry, this must be run as root."
 # looks for the OS name
-if hostnamectl | grep "CentOS" >/dev/null 2>/dev/null; then
+HOSTNAMECTL="$(which 2>/dev/null hostnamectl | head -n 1)"
+if [ -z "$HOSTNAMECTL" ] ; then
+	myerror "'hostnamectl' command not found."
+fi
+if "$HOSTNAMECTL" 2>/dev/null | grep "CentOS" >/dev/null 2>/dev/null; then
 	os_name="centos"
 	kernel_installed="$(rpm -qa kernel-*| sed -E 's/^kernel-[^[:digit:]]+//'|sort -u)"
-elif hostnamectl | grep "Ubuntu" >/dev/null 2>/dev/null; then
+elif "$HOSTNAMECTL" 2>/dev/null | grep "Ubuntu" >/dev/null 2>/dev/null; then
 	os_name="ubuntu"
 	kernel_installed="$(dpkg-query --list | grep -P 'linux-image-\d' |grep '^.i'| awk '{ print $2 }'| sed 's,linux-image-,,')"
 else
@@ -332,7 +339,10 @@ elif [ "$os_name" = "ubuntu" ] ; then
 	elif [ "$install_mode" = "global_uninstall" ] ; then
 		echo " - Global uninstalling for all kernel versions.."
 		echo " - Deleting all files and rebuilding all the initrd files.."
-		rm -f "${hooks_dir:?}"/rapiddisk* "${scripts_dir:?}"/rapiddisk*
+		rm -f "${hooks_dir:?}"/rapiddisk*
+		rm -f "${hook_dest}" 2>/dev/null
+		rm -f "${bootscript_dest}" 2>/dev/null
+		rm -f "${subscript_dest_orig}" 2>/dev/null
 		kernel_version=all
 	fi
 	ubuntu_end

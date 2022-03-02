@@ -1,5 +1,12 @@
 # Changelog
 
+### Version 0.1.1
+
+Released 2022-03-02
+
+* Fixed issue in boot script under Ubuntu 18 and earlier
+* Improved global uninstall under Ubuntu
+
 ### Version 0.1.0
 
 Released 2021-12-12
