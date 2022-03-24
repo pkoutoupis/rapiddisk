@@ -11,6 +11,8 @@ map them as caching nodes to slower local (or remote) disk drives. The
 same utilies provide users with the capability to export the same volumes
 across an NVMe Target network.
 
+![Diagram](diagram.png)
+
 ### Caching Policies
 
 Leverage a high speed RAM drive to add speed to a slower volume by
