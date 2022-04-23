@@ -175,7 +175,7 @@ if "$HOSTNAMECTL" 2>/dev/null | grep "CentOS" >/dev/null 2>/dev/null; then
 	kernel_installed="$(rpm -qa kernel-*| sed -E 's/^kernel-[^[:digit:]]+//'|sort -u)"
 elif "$HOSTNAMECTL" 2>/dev/null | grep "Ubuntu" >/dev/null 2>/dev/null; then
 	os_name="ubuntu"
-	kernel_installed="$(dpkg-query --list | grep -P 'linux-image-\d' |grep '^.i'| awk '{ print $2 }'| sed 's,linux-image-,,')"
+	kernel_installed="$(dpkg-query --list | grep -P 'linux-image-(unsigned-)?\d' |grep '^.i'| awk '{ print $2 }'| sed -re 's,linux-image-(unsigned-)?,,')"
 else
 	myerror "operating system not supported."
 fi
