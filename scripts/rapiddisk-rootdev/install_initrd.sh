@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION='1.1'
+VERSION='0.1.2'
 echo "install_initrd.sh version $VERSION"
 
 ihelp()  {
@@ -84,9 +84,9 @@ centos_end () {
 ubuntu_install () {
 
 	echo " - Creating kernel options file ..."
-	echo >"${hooks_dir}/${kernel_version_file}" "${ramdisk_size}"
-	echo >>"${hooks_dir}/${kernel_version_file}" "${root_device}"
-	echo >>"${hooks_dir}/${kernel_version_file}" "${cache_mode}"
+	echo >"${kernel_version_file_dest}" "${ramdisk_size}"
+	echo >>"${kernel_version_file_dest}" "${root_device}"
+	echo >>"${kernel_version_file_dest}" "${cache_mode}"
 	echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
 	if ! cp -f "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
 		myerror "could not copy rapiddisk_hook to ${hook_dest}."
@@ -165,15 +165,20 @@ install_options_checks () {
 
 # checks for current user == root
 whoami | grep '^root$' 2>/dev/null 1>/dev/null || myerror "sorry, this must be run as root."
+# checks for rapiddisk executables
+rapiddisk_command="$(which 2>/dev/null rapiddisk | head -n 1)"
+if [ -z "$rapiddisk_command" ] ; then
+	myerror "'rapiddisk' command not found."
+fi
 # looks for the OS name
-HOSTNAMECTL="$(which 2>/dev/null hostnamectl | head -n 1)"
-if [ -z "$HOSTNAMECTL" ] ; then
+hostnamectl="$(which 2>/dev/null hostnamectl | head -n 1)"
+if [ -z "$hostnamectl" ] ; then
 	myerror "'hostnamectl' command not found."
 fi
-if "$HOSTNAMECTL" 2>/dev/null | grep "CentOS" >/dev/null 2>/dev/null; then
+if "$hostnamectl" 2>/dev/null | grep "CentOS" >/dev/null 2>/dev/null; then
 	os_name="centos"
 	kernel_installed="$(rpm -qa kernel-*| sed -E 's/^kernel-[^[:digit:]]+//'|sort -u)"
-elif "$HOSTNAMECTL" 2>/dev/null | grep "Ubuntu" >/dev/null 2>/dev/null; then
+elif "$hostnamectl" 2>/dev/null | grep "Ubuntu" >/dev/null 2>/dev/null; then
 	os_name="ubuntu"
 	kernel_installed="$(dpkg-query --list | grep -P 'linux-image-(unsigned-)?\d' |grep '^.i'| awk '{ print $2 }'| sed -re 's,linux-image-(unsigned-)?,,')"
 else
@@ -257,7 +262,7 @@ if [ ! "$install_mode" = "global_uninstall" ] ; then
 		fi
 	done
 	if [ -z $kernel_found ] ; then
-		myerror "the kernel version you specified is not installed."
+		myerror "the kernel version you specified is not installed on the machine."
 	fi
 fi
 # start installation
@@ -308,38 +313,48 @@ if [ "$os_name" = "centos" ] ; then
 elif [ "$os_name" = "ubuntu" ] ; then
 	echo " - Ubuntu detected!"
 	# prepare some vars
-	usr_dir_hooks="/usr/share/initramfs-tools/hooks"
-	usr_dir_scripts="/usr/share/initramfs-tools/scripts/init-premount"
-	kernel_version_file="rapiddisk_kernel_${kernel_version}"
-	if [ -d "$usr_dir_hooks" ] && [ -d "$usr_dir_scripts" ] ; then
-		hooks_dir="$usr_dir_hooks"
-		scripts_dir="$usr_dir_scripts"
-	else
+	hooks_dir="/usr/share/initramfs-tools/hooks"
+	scripts_dir="/usr/share/initramfs-tools/scripts/init-premount"
+	if [ ! -d "$hooks_dir" ] || [ ! -d "$scripts_dir" ] ; then
 		myerror "I can't find any suitable place to write initramfs' scripts."
 	fi
 	hook_dest="${hooks_dir}/rapiddisk_hook"
 	bootscript_dest="${scripts_dir}/rapiddisk_boot"
 	subscript_dest_orig="${hooks_dir}/rapiddisk_sub.orig"
+	kernel_version_file="rapiddisk_kernel_${kernel_version}"
+	kernel_version_file_dest="${hooks_dir}/${kernel_version_file}"
 	# what should we do?
 	if [ "$install_mode" = "simple_install" ] ; then
 		# installing on Ubuntu
-		if [ -f "${hooks_dir}/${kernel_version_file}" ] && [ -z $force ] ; then
-			myerror "the config file for kernel version ${kernel_version} is already installed. Use '--force' to reinstall it."
+		# check if rapiddisk modules are installed for chosen kernel
+		# TODO: move this check to install_options_checks function if is ok under CentOS too
+		if modinfo >/dev/null 2>&1 -k "$kernel_version" -n rapiddisk ; then
+			modules_found=1
+		fi
+		if [ -z "$modules_found" ] ; then
+			myerror "no rapiddisk modules found for chosen kernel."
+		fi
+		if [ -z "$force" ] ; then
+			if [ -f "${kernel_version_file_dest}" ] ; then
+				myerror "the config file for kernel version ${kernel_version} is already installed. Use '--force' to reinstall it."
+			fi
 		fi
 		# now we can perform some parameters' checks which would be senseless to do earlier
 		install_options_checks
+		# calls install function
 		ubuntu_install
 	elif [ "$install_mode" = "simple_uninstall" ] ; then
-		if { [ ! -x "$hook_dest" ] || [ ! -f "$subscript_dest_orig" ] || [ ! -f "${hooks_dir}/${kernel_version_file}" \
-		 ] || [ ! -f "$bootscript_dest" ] ; } && [ -z "$force" ] ; then
-			myerror "it seems there is not a valid installation for kernel version ${kernel_version}. You should use the '--force' option."
+		if [ -z "$force" ] ; then
+			if [ ! -f "${kernel_version_file_dest}" ] ; then
+				myerror "it seems there is not a valid installation for kernel version ${kernel_version}. You should use the '--force' option."
+			fi
 		fi
 		echo " - Uninstalling for kernel $kernel_version..."
-		rm -f "${hooks_dir:?}/${kernel_version_file:?}" 2>/dev/null
+		rm -f "${kernel_version_file_dest}" 2>/dev/null
 	elif [ "$install_mode" = "global_uninstall" ] ; then
 		echo " - Global uninstalling for all kernel versions.."
 		echo " - Deleting all files and rebuilding all the initrd files.."
-		rm -f "${hooks_dir:?}"/rapiddisk*
+		rm -f "${hooks_dir:?}"/rapiddisk_kernel_*
 		rm -f "${hook_dest}" 2>/dev/null
 		rm -f "${bootscript_dest}" 2>/dev/null
 		rm -f "${subscript_dest_orig}" 2>/dev/null
