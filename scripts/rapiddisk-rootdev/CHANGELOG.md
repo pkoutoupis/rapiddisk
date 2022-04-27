@@ -1,5 +1,14 @@
 # Changelog
 
+### Version 0.1.2
+
+Released 2022-04-26
+
+* Fixed issue under Ubuntu, which caused unsigned kernel images not to be detected, preventing installation. Thanks to 
+  [Augusto7743](https://github.com/Augusto7743), and to [Mark Boddington](https://github.com/TuxInvader) (who provided the solution)
+* Added rapiddisk executable presence check
+* Added rapiddisk's modules presence check for the chosen kernel under Ubuntu
+
 ### Version 0.1.1
 
 Released 2022-03-02
