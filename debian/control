@@ -4,7 +4,6 @@ Priority: optional
 Maintainer: Petros Koutoupis <petros@petroskoutoupis.com>
 Build-Depends: dkms, libjansson4, libmicrohttpd12, libjansson-dev, libmicrohttpd-dev
 Standards-Version: 8.1.0-1
-Maintainer: Petros Koutoupis <petros@petroskoutoupis.com>
 Homepage: https://github.com/pkoutoupis/rapiddisk/
 Vcs-Git: https://github.com/pkoutoupis/rapiddisk/
 
