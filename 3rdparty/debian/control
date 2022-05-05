@@ -2,13 +2,13 @@ Source: rapiddisk
 Section: misc
 Priority: optional
 Maintainer: Petros Koutoupis <petros@petroskoutoupis.com>
-Build-Depends: dkms, libjansson4, libmicrohttpd12, libjansson-dev, libmicrohttpd-dev
+Build-Depends: debhelper, dkms, libjansson4, libmicrohttpd12, libjansson-dev, libmicrohttpd-dev
 Homepage: https://github.com/pkoutoupis/rapiddisk/
 Standards-Version: 4.4.1
 
 Package: rapiddisk
 Architecture: amd64
-Depends: dkms, ${shlibs:Depends}, ${misc:Depends}, libjansson-dev, libmicrohttpd-dev
+Depends: dkms, ${shlibs:Depends}, ${misc:Depends}
 Description: RapidDisk
  The RapidDisk software defined advanced RAM drive and storage
  caching solution. This suite includes a collection of modules,

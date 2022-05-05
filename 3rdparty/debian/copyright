@@ -7,7 +7,11 @@ Files: *
 Copyright: 2015-2022 Petros Koutoupis <petros@petroskoutoupis.com>
 License: GPL-2.0+
 
-Files: debian/*
+Files: 3rdparty/debian/*
+Copyright: 2022 Matteo Tenca <matteo.tenca@gmail.com>
+License: GPL-2.0+
+
+Files: scripts/rapiddisk-rootdev/*
 Copyright: 2022 Matteo Tenca <matteo.tenca@gmail.com>
 License: GPL-2.0+
 
@@ -36,3 +40,4 @@ License: GPL-2.0+
 # If you need, there are some extra license texts available in two places:
 #   /usr/share/debhelper/dh_make/licenses/
 #   /usr/share/common-licenses/
+
