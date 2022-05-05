@@ -129,6 +129,7 @@ For utility information please reference the rapiddisk manual page:
 ```
 
 ## Inserting/Removing the rapiddisk / rapiddisk-cache kernel modules
+Both modules are required to be loaded for the rapiddisk daemon to start.
 
 To insert the rapiddisk module:
 
