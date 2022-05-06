@@ -55,11 +55,7 @@ json-server.o: json.c
 	$(CC) -c json.c -DSERVER -o json-server.o
 
 net.o: net.c
-ifeq ($(shell grep -q "enum MHD_Result" $(DESTDIR)/usr/include/microhttpd.h; echo $$?),1)
-	$(CC) -c net.c -DLEGACY -o net.o
-else
 	$(CC) -c net.c -o net.o
-endif
 
 nvmet.o: nvmet.c
 	$(CC) -c nvmet.c -o nvmet.o
