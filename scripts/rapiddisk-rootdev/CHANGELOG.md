@@ -1,5 +1,13 @@
 # Changelog
 
+### Version 0.1.3
+
+Released 2022-05-07
+
+* Now searches for data files in /etc/rapiddisk-on-boot first
+* Can be installed as a deb package under Ubuntu
+* Added man page
+
 ### Version 0.1.2
 
 Released 2022-04-26

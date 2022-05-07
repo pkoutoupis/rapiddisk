@@ -9,10 +9,18 @@ Standards-Version: 4.4.1
 Package: rapiddisk
 Architecture: amd64
 Depends: dkms, ${shlibs:Depends}, ${misc:Depends}
+Suggests: rapiddisk-on-boot
 Description: RapidDisk
  The RapidDisk software defined advanced RAM drive and storage
  caching solution. This suite includes a collection of modules,
  configuration files, and command line utilities for managing
  RapidDisk enabled storage volumes and accessing them either
  locally or across an NVMe Target network.
+
+Package: rapiddisk-on-boot
+Architecture: amd64
+Depends: rapiddisk
+Description: RapidDisk Boot Install Script
+ This script allows to install a rapiddisk cache on the boot
+ volume.
 

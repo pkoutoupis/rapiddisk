@@ -1,7 +1,7 @@
 #!/bin/bash
 
-VERSION='0.1.2'
-echo "install_initrd.sh version $VERSION"
+VERSION='0.1.3'
+echo "rapiddisk-on-boot version $VERSION"
 
 ihelp()  {
 
@@ -61,8 +61,8 @@ centos_install () {
 	echo " - Creating module's dir..."
 	mkdir -p "${module_destination}/${module_name}"
 	echo " - Copying module's files in place..."
-	cp -f "${cwd}/${os_name}/${module_name}/run_rapiddisk.sh.orig" "${module_destination}/${module_name}/"
-	cp -f "${cwd}/${os_name}/${module_name}/module-setup.sh" "${module_destination}/${module_name}/"
+	cp -f "${source_dir}/${os_name}/${module_name}/run_rapiddisk.sh.orig" "${module_destination}/${module_name}/"
+	cp -f "${source_dir}/${os_name}/${module_name}/module-setup.sh" "${module_destination}/${module_name}/"
 	echo " - chmod module's files..."
 	chmod +x "${module_destination}/${module_name}/module-setup.sh"
 	chmod -x "${module_destination}/${module_name}/run_rapiddisk.sh.orig"
@@ -87,18 +87,18 @@ ubuntu_install () {
 	echo >"${kernel_version_file_dest}" "${ramdisk_size}"
 	echo >>"${kernel_version_file_dest}" "${root_device}"
 	echo >>"${kernel_version_file_dest}" "${cache_mode}"
-	echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
-	if ! cp -f "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
+	echo " - Copying ${source_dir}/ubuntu/rapiddisk_hook to ${hook_dest}..."
+	if ! cp -f "${source_dir}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
 		myerror "could not copy rapiddisk_hook to ${hook_dest}."
 	fi
 	chmod +x "${hook_dest}" 2>/dev/null
-	echo " - Copying ${cwd}/ubuntu/rapiddisk_boot to ${bootscript_dest}..."
-	if ! cp -f "${cwd}/ubuntu/rapiddisk_boot" "${bootscript_dest}" ; then
+	echo " - Copying ${source_dir}/ubuntu/rapiddisk_boot to ${bootscript_dest}..."
+	if ! cp -f "${source_dir}/ubuntu/rapiddisk_boot" "${bootscript_dest}" ; then
 		myerror "could not copy rapiddisk_boot to ${bootscript_dest}."
 	fi
 	chmod +x "${bootscript_dest}" 2>/dev/null
-	echo " - Copying ${cwd}/ubuntu/rapiddisk_sub.orig to ${subscript_dest_orig}..."
-	if ! cp -f "${cwd}/ubuntu/rapiddisk_sub.orig" "${subscript_dest_orig}"; then
+	echo " - Copying ${source_dir}/ubuntu/rapiddisk_sub.orig to ${subscript_dest_orig}..."
+	if ! cp -f "${source_dir}/ubuntu/rapiddisk_sub.orig" "${subscript_dest_orig}"; then
 		myerror "could not copy rapiddisk_sub.orig to ${subscript_dest_orig}."
 	fi
 	chmod -x "${subscript_dest_orig}" 2>/dev/null
@@ -184,6 +184,12 @@ elif "$hostnamectl" 2>/dev/null | grep "Ubuntu" >/dev/null 2>/dev/null; then
 else
 	myerror "operating system not supported."
 fi
+# set the data dir
+if [ -d /etc/rapiddisk-on-boot ] ; then
+	source_dir="/etc/rapiddisk-on-boot"
+else
+	source_dir="$(dirname "$0")"
+fi
 # parsing arguments
 for i in "$@"; do
 	case $i in
@@ -266,7 +272,6 @@ if [ ! "$install_mode" = "global_uninstall" ] ; then
 	fi
 fi
 # start installation
-cwd="$(dirname "$0")"
 if [ "$os_name" = "centos" ] ; then
 	echo " - CentOS detected!"
 	# prepare some vars

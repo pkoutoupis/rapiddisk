@@ -1,4 +1,4 @@
-# install_initrd.sh
+# rapiddisk-on-boot
 ### A simple bash script to add rapiddisk cache to your root volume
 
 ##### Author: [Matteo Tenca](https://github.com/matteotenca) (<https://github.com/matteotenca/>)
@@ -23,7 +23,7 @@ make accessible a
 partition placed on a software RAID array. To achieve these goals, an initrd file is specially
 crafted, so that the kernel, upon boot, can load it, extract it to a ramdisk, mount it as a temporary
 filesystem and access this preliminary boot environment to perform the kind of operations described above.
-`install_initrd.sh` adds to this operation list the mapping of a cache to the device where the root filesystem resides. So
+`rapiddisk-on-boot` adds to this operation list the mapping of a cache to the device where the root filesystem resides. So
 that, when at last the root filesystem is mounted, it will be cached by rapiddisk.
 
 ### System-wide but kenel version-wise
@@ -42,12 +42,12 @@ for each kernel version.
 
 ### 1) Usage when installing (`--install`)
 ```
-sudo ./install_initrd.sh --install --root=<root_partition> 
+sudo rapiddisk-on-boot --install --root=<root_partition> 
     --size=<ramdisk_size> --kernel=<kernel_version> 
     --cache-mode=<mode> [--force] 
 ```
 
-The installation process (`--install` switch) can be performed several times. The options you provide will affect only one initrd file per time, i.e. the one related to the specified kernel version (**--kernel** switch). If you use the `--install` option using a kernel version for which a configuration was already created by `install_initrd.sh`, it is mandatory to specify the `--force` argument too to overwrite the configuration.
+The installation process (`--install` switch) can be performed several times. The options you provide will affect only one initrd file per time, i.e. the one related to the specified kernel version (**--kernel** switch). If you use the `--install` option using a kernel version for which a configuration was already created by `rapiddisk-on-boot`, it is mandatory to specify the `--force` argument too to overwrite the configuration.
 
 
 #### --root=<root_partition>
@@ -106,7 +106,7 @@ This forces the script to perform a reinstall with the new parameters for the sp
 ### 2) Usage when uninstalling (`--uninstall`)
 
 ```
-sudo ./install_initrd.sh --uninstall --kernel=<kernel_version> [--force] 
+sudo rapiddisk-on-boot --uninstall --kernel=<kernel_version> [--force] 
 ```
 
 From the initrd file linked to the specified kernel version, the rapiddisk cache creation will be removed. If
@@ -130,7 +130,7 @@ Trys to remove the installation even if it cannot be found.
 ### 3) Usage when global uninstalling (`--global-uninstall`)
 
 ```
-sudo ./install_initrd.sh --global-uninstall 
+sudo rapiddisk-on-boot --global-uninstall 
 ```
 
 This operation removes everything the script could have installed, and rebuilds ALL the initrd files. A complete
