@@ -1,3 +1,0 @@
-scripts/rapiddisk-rootdev/rapiddisk-on-boot usr/sbin
-scripts/rapiddisk-rootdev/ubuntu etc/rapiddisk-on-boot
-scripts/rapiddisk-rootdev/centos etc/rapiddisk-on-boot

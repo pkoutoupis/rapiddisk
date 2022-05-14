@@ -21,6 +21,6 @@ Package: rapiddisk-on-boot
 Architecture: amd64
 Depends: rapiddisk
 Description: RapidDisk Boot Install Script
- This script allows to install a rapiddisk cache on the boot
- volume.
+ Allows to install a RapidDisk cache on the boot
+ volume manipulating the initramfs-tools configuration.
 

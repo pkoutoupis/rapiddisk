@@ -171,22 +171,18 @@ if [ -z "$rapiddisk_command" ] ; then
 	myerror "'rapiddisk' command not found."
 fi
 # looks for the OS name
-hostnamectl="$(which 2>/dev/null hostnamectl | head -n 1)"
-if [ -z "$hostnamectl" ] ; then
-	myerror "'hostnamectl' command not found."
-fi
-if "$hostnamectl" 2>/dev/null | grep "CentOS" >/dev/null 2>/dev/null; then
+if cat /etc/*-release 2>/dev/null | grep "CentOS" >/dev/null 2>/dev/null; then
 	os_name="centos"
 	kernel_installed="$(rpm -qa kernel-*| sed -E 's/^kernel-[^[:digit:]]+//'|sort -u)"
-elif "$hostnamectl" 2>/dev/null | grep "Ubuntu" >/dev/null 2>/dev/null; then
+elif cat /etc/*-release  2>/dev/null | grep "Ubuntu" >/dev/null 2>/dev/null; then
 	os_name="ubuntu"
 	kernel_installed="$(dpkg-query --list | grep -P 'linux-image-(unsigned-)?\d' |grep '^.i'| awk '{ print $2 }'| sed -re 's,linux-image-(unsigned-)?,,')"
 else
 	myerror "operating system not supported."
 fi
 # set the data dir
-if [ -d /etc/rapiddisk-on-boot ] ; then
-	source_dir="/etc/rapiddisk-on-boot"
+if [ -d /usr/share/rapiddisk-on-boot ] ; then
+	source_dir="/usr/share/rapiddisk-on-boot"
 else
 	source_dir="$(dirname "$0")"
 fi
@@ -306,7 +302,7 @@ if [ "$os_name" = "centos" ] ; then
 		rm -f "${module_destination}/${module_name}/${kernel_version_file}"
 		centos_end
 	elif [ "$install_mode" = "global_uninstall" ] ; then
-		echo " - Global uninstalling and rebuilding initrd for kernel ${kernel_version}..."
+		echo " - Global uninstalling and rebuilding initrd for all kernels..."
 		rm -rf "${module_destination:?}/${module_name:?}"
 		echo " - Rebuilding all the initrd files.."
 		for k in $kernel_installed
