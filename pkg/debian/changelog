@@ -6,7 +6,7 @@ rapiddisk (8.1.0-1) UNRELEASED; urgency=medium
   * utility: Expanded writecache stats to supported in 5.15+ kernels.
   * misc: Cleaned up Makefiles
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 11 Feb 2022 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Fri, 11 Feb 2022 01:15:34 +0000
 
 rapiddisk (8.0.1-1) UNRELEASED; urgency=medium
 
@@ -15,7 +15,7 @@ rapiddisk (8.0.1-1) UNRELEASED; urgency=medium
   * misc: updated copyright
   * misc: added GPL disclaimer to files missing it
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 27 Dec 2021 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Mon, 27 Dec 2021 16:02:59 +0000
 
 rapiddisk (8.0.0-1) UNRELEASED; urgency=medium
 
@@ -28,14 +28,14 @@ rapiddisk (8.0.0-1) UNRELEASED; urgency=medium
   * packaging: Fixed dependencies
   * misc: Cleaned up and optimized scripts to enable rapiddisk/cache on root during boot (thank you Matteo Tenca)
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 21 Dec 2021 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Tue, 21 Dec 2021 15:41:27 -0600
 
 rapiddisk (7.2.1-1) UNRELEASED; urgency=medium
 
   * module: Added support for RHEL 8.4 kernel
   * utility: added support for libmicrohttpd v0.9.71 and newer while still supporting legacy versions
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 26 Jun 2021 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 26 Jun 2021 08:20:23 -0500
 
 rapiddisk (7.2.0-1) UNRELEASED; urgency=medium
 
@@ -44,20 +44,20 @@ rapiddisk (7.2.0-1) UNRELEASED; urgency=medium
   * utility: add CLI support for dm-writecache wrapper
   * utility: Fixed property check bug when parsing sysfs block subtree params (github issue #55)
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Jun 2021 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Jun 2021 09:47:32 -0500
 
 rapiddisk (7.1.0-1) UNRELEASED; urgency=medium
 
   * module: Updated for 5.9 kernels and later
   * documentation: Updated copyrights
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Thu, 21 Jan 2021 14:35:32 +0000
 
 rapiddisk (7.0.1-1) UNRELEASED; urgency=medium
 
   * misc: Fixed typo in utility Makefile
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 18 Oct 2020 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Sun, 18 Oct 2020 21:45:35 +0000
 
 rapiddisk (7.0.0-1) UNRELEASED; urgency=medium
 
@@ -69,7 +69,7 @@ rapiddisk (7.0.0-1) UNRELEASED; urgency=medium
   * test: Restructured and improved test framework
   * misc: Code / documentation cleanup
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 17 Oct 2020 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 17 Oct 2020 12:42:46 -0500
 
 rapiddisk (6.1-1) UNRELEASED; urgency=medium
 
@@ -82,7 +82,7 @@ rapiddisk (6.1-1) UNRELEASED; urgency=medium
   * documentation: added AUTHORS file
   * misc: added experimental scripts to enable rapiddisk/cache on root device during boot (thank you Shub77)
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 31 May 2020 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Sun, 31 May 2020 08:12:16 -0500
 
 rapiddisk (6.0-1) UNRELEASED; urgency=medium
 
@@ -91,7 +91,7 @@ rapiddisk (6.0-1) UNRELEASED; urgency=medium
   * utility: Removed archive/restore code and dependency on zlib. Again, can just use dd and tar. Is anyone even using this?
   * misc: Updated licensing and logo location (thanks Boian!).
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 14 Aug 2019 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Fri, 24 May 2019 07:47:28 -0500
 
 rapiddisk (5.2-1) UNRELEASED; urgency=medium
 
@@ -99,7 +99,7 @@ rapiddisk (5.2-1) UNRELEASED; urgency=medium
   * build: Cleaned up module clean Makefile.
   * Updated copyright years.
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 25 May 2018 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Fri, 25 May 2018 09:35:36 -0500
 
 rapiddisk (5.1-1) UNRELEASED; urgency=medium
 
@@ -107,7 +107,7 @@ rapiddisk (5.1-1) UNRELEASED; urgency=medium
   * kernel: added support for 4.12 kernel (thank you Marcel Huber).
   * utility: fixed compilation warnings (thank you Marcel Huber).
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 04 Sep 2017 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Mon, 4 Sep 2017 11:44:35 -0500
 
 rapiddisk (5.0-1) UNRELEASED; urgency=medium
 
@@ -115,112 +115,19 @@ rapiddisk (5.0-1) UNRELEASED; urgency=medium
   * utility: Add JSON output for RapidDisk configuration (requires libjansson).
   * www: remove fat-free (f3) RESTful API.
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 01 Dec 2016 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Tue, 29 Nov 2016 08:29:27 -0600
 
 rapiddisk (4.5-1) UNRELEASED; urgency=medium
 
   * kernel: cache - Fixed I/O handler bug for 4.8+ kernels
   * documentation: Cleaned up formatting and license disclaimers (thanks Boian!)
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 23 Nov 2016 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 19 Nov 2016 14:12:09 -0600
 
 rapiddisk (4.4-1) UNRELEASED; urgency=medium
 
   * kernel: Update to 4.8 and 4.9 kernels.
   * build: Cleaned up Makefiles (thanks Marcel!)
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Fri, 28 Oct 2016 14:23:34 -0500
 
-rapiddisk (4.3-1) UNRELEASED; urgency=medium
-
-  * kernel: Add support for the 4.7 kernel (patch supplied by Marcel Huber)
-  * packaging: Updated DEB control for PHP changes between Ubuntu 14.04/16.04
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (4.2-2) UNRELEASED; urgency=medium
-
-  * utility: Added more complex default DES key with backwards compatibility to legacy key.
-  * ha: added write around support to HA resource agents.
-  * documentation: corrections / clean up.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (4.2-1) UNRELEASED; urgency=medium
-
-  * kernel: Added Write-Around support to rapiddisk-cache.
-  * kernel: Fixed LINUX_VERSION check for rapiddisk-cache to accommodate changes in 3.8.3.
-  * utility: Added a NOCRYPT build flag. 
-  * utility: Added user definable keys for encryption setup.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (4.1-2) UNRELEASED; urgency=medium
-
-  * kernel: Readjusted misaligned discard request check to build on kernels older than 4.3.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (4.1-1) UNRELEASED; urgency=medium
-
-  * kernel: Refuse misaligned discard requests.
-  * kernel: Convert ENOMEM to ENOSPC when cannot alloc pages.
-  * kernel: Added 4k physical block size attribute.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (4.0-4) UNRELEASED; urgency=medium
-
-  * Code cleanup.
-  * Also need to remove CONFIG_BLK_DEV_RAM_COUNT from distro specific packages.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (4.0-3) UNRELEASED; urgency=medium
-
-  * Fixed all references of RapidCache to RapidDisk-Cache.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (4.0-2) UNRELEASED; urgency=medium
-
-  * Updated fatfree-framework.
-  * Addressed bug in RapidDisk REST implementation.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (4.0-1) UNRELEASED; urgency=medium
-
-  * Fixed libcryptsetup build error for RHEL6.
-  * Renamed rxdsk/rxcache modules.
-  * Did massive cleanup of administration utility code.
-  * Converted most (if not all) return codes to POSIX.1 error numbers.
-  * Code cleanup in RESTful API.
-  * RapidDisk volumes now show up as non-rotational.
-  * Cleaned up ioctls in both module and utilies.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (3.7-1) UNRELEASED; urgency=medium
-
-  * Cleaned up kernel module code.
-  * Fixed stack overflow bug in administration utility.
-  * Fixed error print statement in administration utility.
-  * Updated copyright years.
-  * Cleaned up build environment, including Makefiles.
-  * Fixed bug in configuring encryption on device.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (3.6-3) UNRELEASED; urgency=medium
-
-  * Fixed errors in documentation.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
-
-rapiddisk (3.6-2) UNRELEASED; urgency=medium
-
-  * Fixed a memory leak in administration utility.
-  * Placed better checks before deallocating memory in administration utility.
-
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 12 Dec 2015 14:35:31 -0600
