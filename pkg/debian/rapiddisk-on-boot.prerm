@@ -1,0 +1,31 @@
+#!/bin/sh
+
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+case "$1" in
+	remove)
+		rapiddisk-on-boot --global-uninstall
+		;;
+	upgrade)
+		hooks_dir="/usr/share/initramfs-tools/hooks"
+		installations="$(for k in "$(ls /usr/share/initramfs-tools/hooks/rapiddisk_kernel* | grep -oP 'kernel_.*$' | sed 's/kernel_//')" ; do echo "$k"; done)"
+		declare -a kernel
+		declare -a size
+		declare -a device
+		declare -a cache_mode 
+ 	   	
+		for inst in $installations ; do
+			file="${hooks_dir:?}/rapiddisk_kernel_${inst}"
+			kernel[${#kernel[*]}]=$inst
+			size[${#size[*]}]="$(head -n 1 "$file")"
+            device[${#device[*]}]="$(head -n 2 "$file" | tail -n 1)"
+            cache_mode[${#cache_mode[*]}]="$(tail -n 1 "$file")"
+		done
+		if [ -f /tmp/rapiddisk-insts ] ; then
+			rm -f /tmp/rapiddisk-insts
+		fi
+		for ((i=0; i < ${#kernel[*]}; i=$i+1)) ; do
+			echo >>/tmp/rapiddisk-insts "rapiddisk-on-boot --install --kernel=${kernel[$i]} --size=${size[$i]} --cache-mode=${cache_mode[$i]} --root=${device[$i]}"
+		done
+		rapiddisk-on-boot --global-uninstall --no-initramfs
+		;;
+esac

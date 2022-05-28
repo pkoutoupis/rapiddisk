@@ -20,20 +20,24 @@ if { [ ! -d /sys/module/rapiddisk ] || [ ! -d /sys/module/rapiddisk_cache ]  ; }
 	log_failure_msg "$FAILUREMSG"
 	exit 0;
 fi
-rapiddisk -a RAMDISKSIZE
-if ! rapiddisk -m rd0 -b BOOTDEVICE -p CACHEMODE ; then
-	log_warning_msg "rapiddisk: attaching of the ramdisk failed, trying with a workaround"
-	rapiddisk -a 1
-	rapiddisk -d rd0
-	rapiddisk -a RAMDISKSIZE
-	rapiddisk -d rd1
-	if ! rapiddisk -m rd0 -b BOOTDEVICE -p CACHEMODE ; then
-		log_failure_msg "rapiddisk: workaround failed to attach the ramdisk to BOOTDEVICE, giving up"
-		log_failure_msg "$FAILUREMSG"
-		rapiddisk -d rd0
-		exit 0;
+rapiddisk >/dev/null 2>&1 -a RAMDISKSIZE
+if ! rapiddisk >/dev/null 2>&1 -m rd0 -b BOOTDEVICE -p CACHEMODE ; then
+	log_failure_msg "rapiddisk: attaching of the ramdisk failed, trying with a workaround"
+	rapiddisk >/dev/null 2>&1 -a 5 || log_warning_msg "rapiddisk: failed to add 5 MB rd1 ramdisk"
+	rapiddisk >/dev/null 2>&1 -d rd0 || log_warning_msg "rapiddisk: failed to delete RAMDISKSIZE MB rd0 ramdisk"
+	rapiddisk >/dev/null 2>&1 -a RAMDISKSIZE || log_warning_msg "rapiddisk: failed to add RAMDISKSIZE MB rd0 ramdisk"
+	rapiddisk >/dev/null 2>&1 -a 5 || log_warning_msg "rapiddisk: failed to add 5 MB rd2 ramdisk"
+	rapiddisk >/dev/null 2>&1 -d rd1 || log_warning_msg "rapiddisk: failed to delete 5 MB rd1 ramdisk"
+	if ! rapiddisk >/dev/null 2>&1 -m rd0 -b BOOTDEVICE -p CACHEMODE ; then
+		rapiddisk >/dev/null 2>&1 -d rd0
+		rapiddisk >/dev/null 2>&1 -d rd1
+		rapiddisk >/dev/null 2>&1 -d rd2
+		log_end_msg "rapiddisk: attaching of the ramdisk failed"
+		exit 0
 	fi
 fi
-log_success_msg "rapiddisk: RAMDISKSIZE MB ramdisk attached to BOOTDEVICE successfully."
-log_end_msg
+result="$(rapiddisk 2>&1 -l)"
+log_success_msg "$result"
+log_end_msg "rapiddisk: RAMDISKSIZE MB ramdisk attached to BOOTDEVICE successfully."
 exit 0
+

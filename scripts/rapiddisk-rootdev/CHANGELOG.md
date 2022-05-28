@@ -1,5 +1,13 @@
 # Changelog
 
+### Version 0.1.4
+
+Released 2022-05-28
+
+* Added prerm and postinst actions to rapiddisk-on-boot debian files
+* Improved workaround to attach ramdisk under Ubuntu
+* Added a clean script to improve the workaround
+
 ### Version 0.1.3
 
 Released 2022-05-07
