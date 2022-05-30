@@ -1,5 +1,28 @@
 # Changelog
 
+### Version 0.1.5
+
+Released 2022-05-30
+
+* rapiddisk-on-boot now tries to invoke dkms to build modules for the specified kernel if not present (Ubuntu)
+* Added a prerm hook script called when a kernel package is removed (Ubuntu deb package)
+
+### Version 0.1.4
+
+Released 2022-05-28
+
+* Added prerm and postinst actions to rapiddisk-on-boot debian files
+* Improved workaround to attach ramdisk under Ubuntu
+* Added a clean script to improve the workaround
+
+### Version 0.1.3
+
+Released 2022-05-07
+
+* Now searches for data files in /etc/rapiddisk-on-boot first
+* Can be installed as a deb package under Ubuntu
+* Added man page
+
 ### Version 0.1.2
 
 Released 2022-04-26

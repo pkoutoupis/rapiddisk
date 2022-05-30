@@ -1,0 +1,26 @@
+Source: rapiddisk
+Section: misc
+Priority: optional
+Maintainer: Petros Koutoupis <petros@petroskoutoupis.com>
+Build-Depends: debhelper, dkms, libjansson4, libmicrohttpd12, libjansson-dev, libmicrohttpd-dev
+Homepage: https://github.com/pkoutoupis/rapiddisk/
+Standards-Version: 4.4.1
+
+Package: rapiddisk
+Architecture: amd64
+Depends: dkms, ${shlibs:Depends}, ${misc:Depends}
+Suggests: rapiddisk-on-boot
+Description: RapidDisk
+ The RapidDisk software defined advanced RAM drive and storage
+ caching solution. This suite includes a collection of modules,
+ configuration files, and command line utilities for managing
+ RapidDisk enabled storage volumes and accessing them either
+ locally or across an NVMe Target network.
+
+Package: rapiddisk-on-boot
+Architecture: amd64
+Depends: rapiddisk
+Description: RapidDisk Boot Install Script
+ Allows to install a RapidDisk cache on the boot
+ volume manipulating the initramfs-tools configuration.
+

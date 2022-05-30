@@ -1,0 +1,11 @@
+#!/bin/sh
+
+case "$1" in
+	configure) 
+		if [ -f /tmp/rapiddisk-insts ] ; then
+			. /tmp/rapiddisk-insts
+			rm -f /tmp/rapiddisk-insts
+		fi
+	;;
+esac
+

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-VERSION='0.1.2'
-echo "install_initrd.sh version $VERSION"
+VERSION='0.1.5'
+echo "rapiddisk-on-boot version $VERSION"
 
 ihelp()  {
 
@@ -61,8 +61,8 @@ centos_install () {
 	echo " - Creating module's dir..."
 	mkdir -p "${module_destination}/${module_name}"
 	echo " - Copying module's files in place..."
-	cp -f "${cwd}/${os_name}/${module_name}/run_rapiddisk.sh.orig" "${module_destination}/${module_name}/"
-	cp -f "${cwd}/${os_name}/${module_name}/module-setup.sh" "${module_destination}/${module_name}/"
+	cp -f "${source_dir}/${os_name}/${module_name}/run_rapiddisk.sh.orig" "${module_destination}/${module_name}/"
+	cp -f "${source_dir}/${os_name}/${module_name}/module-setup.sh" "${module_destination}/${module_name}/"
 	echo " - chmod module's files..."
 	chmod +x "${module_destination}/${module_name}/module-setup.sh"
 	chmod -x "${module_destination}/${module_name}/run_rapiddisk.sh.orig"
@@ -83,38 +83,55 @@ centos_end () {
 
 ubuntu_install () {
 
+	if [ ! -x "${hook_dest}" -o -n "${force}" ] ; then
+		echo " - Copying ${source_dir}/ubuntu/rapiddisk_hook to ${hook_dest}..."
+		if ! cp -f "${source_dir}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
+			myerror "could not copy rapiddisk_hook to ${hook_dest}."
+		fi
+		chmod +x "${hook_dest}" 2>/dev/null
+	fi
+	if [ ! -x "${bootscript_dest}" -o -n "${force}" ] ; then
+		echo " - Copying ${source_dir}/ubuntu/rapiddisk_boot to ${bootscript_dest}..."
+		if ! cp -f "${source_dir}/ubuntu/rapiddisk_boot" "${bootscript_dest}" ; then
+			myerror "could not copy rapiddisk_boot to ${bootscript_dest}."
+		fi
+		chmod +x "${bootscript_dest}" 2>/dev/null
+	fi
+	if [ ! -f "${subscript_dest_orig}" -o -n "${force}" ] ; then
+		echo " - Copying ${source_dir}/ubuntu/rapiddisk_sub.orig to ${subscript_dest_orig}..."
+		if ! cp -f "${source_dir}/ubuntu/rapiddisk_sub.orig" "${subscript_dest_orig}"; then
+			myerror "could not copy rapiddisk_sub.orig to ${subscript_dest_orig}."
+		fi
+		chmod -x "${subscript_dest_orig}" 2>/dev/null
+	fi
+	if [ ! -x "${cleanscript_dest_orig}" -o -n "${force}" ] ; then
+		echo " - Copying ${source_dir}/ubuntu/rapiddisk_clean to ${cleanscript_dest_orig}..."
+		if ! cp -f "${source_dir}/ubuntu/rapiddisk_clean" "${cleanscript_dest_orig}"; then
+			myerror "could not copy rapiddisk_clean to ${cleanscript_dest_orig}."
+		fi
+		chmod +x "${cleanscript_dest_orig}" 2>/dev/null
+	fi
 	echo " - Creating kernel options file ..."
 	echo >"${kernel_version_file_dest}" "${ramdisk_size}"
 	echo >>"${kernel_version_file_dest}" "${root_device}"
 	echo >>"${kernel_version_file_dest}" "${cache_mode}"
-	echo " - Copying ${cwd}/ubuntu/rapiddisk_hook to ${hook_dest}..."
-	if ! cp -f "${cwd}/ubuntu/rapiddisk_hook" "${hook_dest}" ; then
-		myerror "could not copy rapiddisk_hook to ${hook_dest}."
-	fi
-	chmod +x "${hook_dest}" 2>/dev/null
-	echo " - Copying ${cwd}/ubuntu/rapiddisk_boot to ${bootscript_dest}..."
-	if ! cp -f "${cwd}/ubuntu/rapiddisk_boot" "${bootscript_dest}" ; then
-		myerror "could not copy rapiddisk_boot to ${bootscript_dest}."
-	fi
-	chmod +x "${bootscript_dest}" 2>/dev/null
-	echo " - Copying ${cwd}/ubuntu/rapiddisk_sub.orig to ${subscript_dest_orig}..."
-	if ! cp -f "${cwd}/ubuntu/rapiddisk_sub.orig" "${subscript_dest_orig}"; then
-		myerror "could not copy rapiddisk_sub.orig to ${subscript_dest_orig}."
-	fi
-	chmod -x "${subscript_dest_orig}" 2>/dev/null
 
 }
 
 ubuntu_end () {
 
-	echo " - Updating initramfs for kernel version ${kernel_version}..."
-	echo ""
-	update-initramfs -u -k "$kernel_version"
-	echo ""
-	echo " - Updating grub..."
-	echo ""
-	update-grub
-	echo ""
+	# this is needed when an --uninstall is peformed by the apt prerm kernel script
+	# we need to skip the kernel version test (skipped using the --skip-kernel-check)
+	# and to skip the initramfs creation
+	if [ "$install_mode" = "simple_uninstall" -a -n "$skipkernelcheck" ] ; then
+		noinitramfs=1
+	fi
+	if [ -z "$noinitramfs" ] ; then
+		echo " - Updating initramfs for kernel version ${kernel_version}..."
+		echo ""
+		update-initramfs -u -k "$kernel_version"
+		echo ""
+	fi
 	echo " - Done under Ubuntu. A reboot is needed."
 
 }
@@ -171,18 +188,20 @@ if [ -z "$rapiddisk_command" ] ; then
 	myerror "'rapiddisk' command not found."
 fi
 # looks for the OS name
-hostnamectl="$(which 2>/dev/null hostnamectl | head -n 1)"
-if [ -z "$hostnamectl" ] ; then
-	myerror "'hostnamectl' command not found."
-fi
-if "$hostnamectl" 2>/dev/null | grep "CentOS" >/dev/null 2>/dev/null; then
+if cat /etc/*-release 2>/dev/null | grep "CentOS" >/dev/null 2>/dev/null; then
 	os_name="centos"
 	kernel_installed="$(rpm -qa kernel-*| sed -E 's/^kernel-[^[:digit:]]+//'|sort -u)"
-elif "$hostnamectl" 2>/dev/null | grep "Ubuntu" >/dev/null 2>/dev/null; then
+elif cat /etc/*-release  2>/dev/null | grep "Ubuntu" >/dev/null 2>/dev/null; then
 	os_name="ubuntu"
 	kernel_installed="$(dpkg-query --list | grep -P 'linux-image-(unsigned-)?\d' |grep '^.i'| awk '{ print $2 }'| sed -re 's,linux-image-(unsigned-)?,,')"
 else
 	myerror "operating system not supported."
+fi
+# set the data dir
+if [ -d /usr/share/rapiddisk-on-boot ] ; then
+	source_dir="/usr/share/rapiddisk-on-boot"
+else
+	source_dir="$(dirname "$0")"
 fi
 # parsing arguments
 for i in "$@"; do
@@ -227,6 +246,14 @@ for i in "$@"; do
 			force=1
 			shift # past argument with no value
 			;;
+		--no-initramfs)
+			noinitramfs=1
+			shift # past argument with no value
+			;;
+		--skip-kernel-check)
+			skipkernelcheck=1
+			shift # past argument with no value
+			;;
 		--help)
 			ihelp
 			exit 1
@@ -261,12 +288,11 @@ if [ ! "$install_mode" = "global_uninstall" ] ; then
 			break
 		fi
 	done
-	if [ -z $kernel_found ] ; then
+	if [ -z "$kernel_found" -a -z "$skipkernelcheck" ] ; then
 		myerror "the kernel version you specified is not installed on the machine."
 	fi
 fi
 # start installation
-cwd="$(dirname "$0")"
 if [ "$os_name" = "centos" ] ; then
 	echo " - CentOS detected!"
 	# prepare some vars
@@ -301,7 +327,7 @@ if [ "$os_name" = "centos" ] ; then
 		rm -f "${module_destination}/${module_name}/${kernel_version_file}"
 		centos_end
 	elif [ "$install_mode" = "global_uninstall" ] ; then
-		echo " - Global uninstalling and rebuilding initrd for kernel ${kernel_version}..."
+		echo " - Global uninstalling and rebuilding initrd for all kernels..."
 		rm -rf "${module_destination:?}/${module_name:?}"
 		echo " - Rebuilding all the initrd files.."
 		for k in $kernel_installed
@@ -315,24 +341,36 @@ elif [ "$os_name" = "ubuntu" ] ; then
 	# prepare some vars
 	hooks_dir="/usr/share/initramfs-tools/hooks"
 	scripts_dir="/usr/share/initramfs-tools/scripts/init-premount"
-	if [ ! -d "$hooks_dir" ] || [ ! -d "$scripts_dir" ] ; then
+	alt_scripts_dir="/usr/share/initramfs-tools/scripts/local-bottom"
+	if [ ! -d "$hooks_dir" -o ! -d "$scripts_dir" -o ! -d "$alt_scripts_dir" ] ; then
 		myerror "I can't find any suitable place to write initramfs' scripts."
 	fi
 	hook_dest="${hooks_dir}/rapiddisk_hook"
 	bootscript_dest="${scripts_dir}/rapiddisk_boot"
 	subscript_dest_orig="${hooks_dir}/rapiddisk_sub.orig"
+	cleanscript_dest_orig="${alt_scripts_dir}/rapiddisk_clean"
 	kernel_version_file="rapiddisk_kernel_${kernel_version}"
-	kernel_version_file_dest="${hooks_dir}/${kernel_version_file}"
+	kernel_version_file_dest="${hooks_dir:?}/${kernel_version_file:?}"
 	# what should we do?
 	if [ "$install_mode" = "simple_install" ] ; then
 		# installing on Ubuntu
 		# check if rapiddisk modules are installed for chosen kernel
 		# TODO: move this check to install_options_checks function if is ok under CentOS too
-		if modinfo >/dev/null 2>&1 -k "$kernel_version" -n rapiddisk ; then
-			modules_found=1
+		# checks for modinfo executable
+		modinfo_command="$(which 2>/dev/null modinfo | head -n 1)"
+		if [ -z "$modinfo_command" ] ; then
+			myerror "'modinfo' command not found."
 		fi
-		if [ -z "$modules_found" ] ; then
-			myerror "no rapiddisk modules found for chosen kernel."
+		if ! $modinfo_command >/dev/null 2>&1 -k "$kernel_version" -n rapiddisk ; then
+			if dkms status -m rapiddisk -k "$kernel_version" | grep -q 'added$' ; then
+				rapiddisk_version="$(dkms status -m rapiddisk -k "$kernel_version" | grep -oP ',\s+[^:\s]+'|sed 's/, //')"
+				if dkms 2>/dev/null install -m rapiddisk -v "$rapiddisk_version" -k "$kernel_version" ; then
+					missing_modules=0
+				fi
+			fi
+			if [ -z "$missing_modules" ] ; then
+				myerror "no rapiddisk modules found for chosen kernel."
+			fi
 		fi
 		if [ -z "$force" ] ; then
 			if [ -f "${kernel_version_file_dest}" ] ; then
@@ -358,6 +396,7 @@ elif [ "$os_name" = "ubuntu" ] ; then
 		rm -f "${hook_dest}" 2>/dev/null
 		rm -f "${bootscript_dest}" 2>/dev/null
 		rm -f "${subscript_dest_orig}" 2>/dev/null
+		rm -f "${cleanscript_dest_orig}" 2>/dev/null
 		kernel_version=all
 	fi
 	ubuntu_end
