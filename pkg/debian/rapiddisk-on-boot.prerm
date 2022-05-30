@@ -24,7 +24,7 @@ case "$1" in
 			rm -f /tmp/rapiddisk-insts
 		fi
 		for ((i=0; i < ${#kernel[*]}; i=$i+1)) ; do
-			echo >>/tmp/rapiddisk-insts "rapiddisk-on-boot --install --kernel=${kernel[$i]} --size=${size[$i]} --cache-mode=${cache_mode[$i]} --root=${device[$i]}"
+			echo >>/tmp/rapiddisk-insts "rapiddisk-on-boot --install --kernel=${kernel[$i]} --size=${size[$i]} --cache-mode=${cache_mode[$i]} --root=${device[$i]} --force"
 		done
 		rapiddisk-on-boot --global-uninstall --no-initramfs
 		;;

@@ -1,5 +1,12 @@
 # Changelog
 
+### Version 0.1.5
+
+Released 2022-05-30
+
+* rapiddisk-on-boot now tries to invoke dkms to build modules for the specified kernel if not present (Ubuntu)
+* Added a prerm hook script called when a kernel package is removed (Ubuntu deb package)
+
 ### Version 0.1.4
 
 Released 2022-05-28

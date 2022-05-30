@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION='0.1.4'
+VERSION='0.1.5'
 echo "rapiddisk-on-boot version $VERSION"
 
 ihelp()  {
@@ -120,6 +120,12 @@ ubuntu_install () {
 
 ubuntu_end () {
 
+	# this is needed when an --uninstall is peformed by the apt prerm kernel script
+	# we need to skip the kernel version test (skipped using the --skip-kernel-check)
+	# and to skip the initramfs creation
+	if [ "$install_mode" = "simple_uninstall" -a -n "$skipkernelcheck" ] ; then
+		noinitramfs=1
+	fi
 	if [ -z "$noinitramfs" ] ; then
 		echo " - Updating initramfs for kernel version ${kernel_version}..."
 		echo ""
@@ -244,6 +250,10 @@ for i in "$@"; do
 			noinitramfs=1
 			shift # past argument with no value
 			;;
+		--skip-kernel-check)
+			skipkernelcheck=1
+			shift # past argument with no value
+			;;
 		--help)
 			ihelp
 			exit 1
@@ -278,7 +288,7 @@ if [ ! "$install_mode" = "global_uninstall" ] ; then
 			break
 		fi
 	done
-	if [ -z $kernel_found ] ; then
+	if [ -z "$kernel_found" -a -z "$skipkernelcheck" ] ; then
 		myerror "the kernel version you specified is not installed on the machine."
 	fi
 fi
@@ -349,10 +359,18 @@ elif [ "$os_name" = "ubuntu" ] ; then
 		# checks for modinfo executable
 		modinfo_command="$(which 2>/dev/null modinfo | head -n 1)"
 		if [ -z "$modinfo_command" ] ; then
-			    myerror "'modinfo' command not found."
+			myerror "'modinfo' command not found."
 		fi
 		if ! $modinfo_command >/dev/null 2>&1 -k "$kernel_version" -n rapiddisk ; then
-			myerror "no rapiddisk modules found for chosen kernel."
+			if dkms status -m rapiddisk -k "$kernel_version" | grep -q 'added$' ; then
+				rapiddisk_version="$(dkms status -m rapiddisk -k "$kernel_version" | grep -oP ',\s+[^:\s]+'|sed 's/, //')"
+				if dkms 2>/dev/null install -m rapiddisk -v "$rapiddisk_version" -k "$kernel_version" ; then
+					missing_modules=0
+				fi
+			fi
+			if [ -z "$missing_modules" ] ; then
+				myerror "no rapiddisk modules found for chosen kernel."
+			fi
 		fi
 		if [ -z "$force" ] ; then
 			if [ -f "${kernel_version_file_dest}" ] ; then

@@ -1,6 +1,6 @@
 % RAPIDDISK-ON-BOOT(1) GNU
 % [Matteo Tenca](https://github.com/matteotenca)
-% 2022-05-07
+% 2022-05-30
 
 # NAME
 rapiddisk-on-boot - a simple bash script to add rapiddisk cache to your root volume
@@ -84,7 +84,7 @@ From the initrd file linked to the specified kernel version, the rapiddisk cache
 : This operation removes everything the script could have installed, and rebuilds ALL the initrd files. A complete uninstallation is performed.
 
 # FILES
-*/etc/rapiddisk-on-boot/\**
+*/usr/share/rapiddisk-on-boot/\**
 
 # NOTES
 You can see the content of an initrd with \`lsinitrd\` on CentOS and \`lsinitramfs\` on Ubuntu.
