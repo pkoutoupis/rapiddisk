@@ -1,6 +1,6 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 8.1.0
+Version: 8.2.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
@@ -81,6 +81,15 @@ rm -rf %{buildroot}
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %changelog
+* Sat Jun 11 2022 Petros Koutoupis <petros@petroskoutoupis.com>
+- module: Fixed support for 5.14.
+- documentation: Updated README files.
+- utility: Fixed buffer overflow in NVMe structure.
+- utility: Improved on MHD version check (thank you Matteo Tenca).
+- utility: Clean up / optimize systemd service file.
+- packaging: Improved and overhauled debian packaging (thank you Matteo Tenca).
+- scripts: Optimized and fixed bugs for rapiddisk/cache on root during boot support (thank you Matteo Tenca).
+- misc: Cleaned up Makefiles and impr ved dkms build/installation process.
 * Fri Feb 11 2022 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Added support for 5.16 and 5.17 kernels (thank you Nitrooo)
 - module: Fixed queue allocation defect for 5.15 kernel (thank you Nitrooo)

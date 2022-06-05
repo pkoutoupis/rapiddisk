@@ -1,3 +1,13 @@
+### Release 8.2.0 ###
+- module: Fixed support for 5.14.
+- documentation: Updated README files.
+- utility: Fixed buffer overflow in NVMe structure.
+- utility: Improved on MHD version check (thank you Matteo Tenca).
+- utility: Clean up / optimize systemd service file.
+- packaging: Improved and overhauled debian packaging (thank you Matteo Tenca).
+- scripts: Optimized and fixed bugs for rapiddisk/cache on root during boot support (thank you Matteo Tenca).
+- misc: Cleaned up Makefiles and impr ved dkms build/installation process.
+
 ### Release 8.1.0 ###
 
 - module: Added support for 5.16 and 5.17 kernels (thank you Nitrooo)
