@@ -3,7 +3,7 @@ Web server API revision 1
 -------------------------
 GET /v1/checkServiceStatus
 
-ex) curl -s --output - 127.0.0.1:9118/v1/checkServiceStatus|jq .
+ex) curl -s --output - 127.0.0.1:9118/v1/checkServiceStatus|tail -n1|jq .
 
 status code: 200 (on success)
 
@@ -17,7 +17,7 @@ Check the status of the daemon. Example output:
 -------------------------
 GET /v1/listAllResources
 
-ex) curl -s --output - 127.0.0.1:9118/v1/listAllResources|jq .
+ex) curl -s --output - 127.0.0.1:9118/v1/listAllResources|tail -n1|jq .
 
 status code: 200 (on success)
 
@@ -49,7 +49,7 @@ Retrieve system resource information. Example output:
 -------------------------
 GET /v1/listRapidDiskVolumes
 
-ex) curl -s --output - 127.0.0.1:9118/v1/listRapidDiskVolumes|jq .
+ex) curl -s --output - 127.0.0.1:9118/v1/listRapidDiskVolumes|tail -n1|jq .
 
 status code: 200 (on success)
 
@@ -85,7 +85,7 @@ Retrieve rapiddisk/cache information. Example output:
 -------------------------
 POST /v1/createRapidDisk/@size
 
-ex) curl -X POST -s 127.0.0.1:9118/v1/createRapidDisk/128|jq .
+ex) curl -X POST -s 127.0.0.1:9118/v1/createRapidDisk/128|tail -n1|jq .
 
 status code: 200 (on success)
 
@@ -98,7 +98,7 @@ Create a rapiddisk volume. Example output:
 -------------------------
 POST /v1/resizeRapidDisk/@volume/@size
 
-ex) curl -X POST -s 127.0.0.1:9118/v1/resizeRapidDisk/rd0/128|jq .
+ex) curl -X POST -s 127.0.0.1:9118/v1/resizeRapidDisk/rd0/128|tail -n1|jq .
 
 status code: 200 (on success)
 
@@ -111,7 +111,7 @@ Resize an existing rapiddisk volume. Example output:
 -------------------------
 POST /v1/flushRapidDisk/@volume
 
-ex) curl -X POST -s 127.0.0.1:9118/v1/flushRapidDisk/rd0|jq .
+ex) curl -X POST -s 127.0.0.1:9118/v1/flushRapidDisk/rd0|tail -n1|jq .
 
 status code: 200 (on success)
 
@@ -124,7 +124,7 @@ Flush the memory of an existing rapiddisk volume. Example output:
 -------------------------
 POST /v1/removeRapidDisk/@volume
 
-ex) curl -X POST -s 127.0.0.1:9118/v1/removeRapidDisk/rd0|jq .
+ex) curl -X POST -s 127.0.0.1:9118/v1/removeRapidDisk/rd0|tail -n1|jq .
 
 status code: 200 (on success)
 
@@ -137,7 +137,7 @@ Remove an existing rapiddisk volume. Example output:
 -------------------------
 POST /v1/createRapidDiskCache/@volume/@source/@policy
 
-ex) curl -X POST -s 127.0.0.1:9118/v1/createRapidDiskCache/rd0/sdb/write-through|jq .
+ex) curl -X POST -s 127.0.0.1:9118/v1/createRapidDiskCache/rd0/sdb/write-through|tail -n1|jq .
 
 Supported caching policies:
 * write-through
@@ -155,7 +155,7 @@ Create a rapiddisk-cache volume. Example output:
 -------------------------
 POST /v1/removeRapidDiskCache/@volume
 
-ex) curl -X POST -s 127.0.0.1:9118/v1/removeRapidDiskCache/rc-wt_sdb|jq .
+ex) curl -X POST -s 127.0.0.1:9118/v1/removeRapidDiskCache/rc-wt_sdb|tail -n1|jq .
 
 status code: 200 (on success)
 
@@ -220,7 +220,7 @@ If it is writeback cache, it will look like this:
 -------------------------
 GET /v1/listAllNVMeTargets
 
-ex) curl -s --output - 10.0.0.185:9118/v1/listAllNVMeTargets|jq .
+ex) curl -s --output - 10.0.0.185:9118/v1/listAllNVMeTargets|tail -n1|jq .
 
 status code: 200 (on success)
 
@@ -260,7 +260,7 @@ Retrieve cache statistics from an existing rapiddisk-cache volume. Example outpu
 -------------------------
 GET /v1/listAllNVMePorts
 
-ex) curl -s --output - 10.0.0.185:9118/v1/listAllNVMePorts|jq .
+ex) curl -s --output - 10.0.0.185:9118/v1/listAllNVMePorts|tail -n1|jq .
 
 status code: 200 (on success)
 
