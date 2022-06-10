@@ -781,7 +781,7 @@ static int attach_device(int size)
 #endif
 	if (!disk)
 		goto out_free_queue;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
 	blk_queue_logical_block_size(disk->queue, BYTES_PER_SECTOR);
 	blk_queue_physical_block_size(disk->queue, PAGE_SIZE);
 #else
@@ -789,7 +789,7 @@ static int attach_device(int size)
 	blk_queue_physical_block_size(rdsk->rdsk_queue, PAGE_SIZE);
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
 	blk_queue_write_cache(disk->queue, true, false);
 #else
 	blk_queue_write_cache(rdsk->rdsk_queue, true, false);
@@ -800,7 +800,7 @@ static int attach_device(int size)
 	blk_queue_ordered(rdsk->rdsk_queue, QUEUE_ORDERED_TAG, NULL);
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
 	disk->queue->limits.max_sectors = (max_sectors * 2);
 	disk->queue->nr_requests = nr_requests;
 	disk->queue->limits.discard_granularity = PAGE_SIZE;
@@ -836,7 +836,7 @@ static int attach_device(int size)
 #endif
 	disk->fops = &rdsk_fops;
 	disk->private_data = rdsk;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 	disk->queue = rdsk->rdsk_queue;
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
@@ -861,10 +861,8 @@ static int attach_device(int size)
 	return 0;
 
 out_free_queue:
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0)
-	blk_cleanup_queue(rdsk->rdsk_queue);
-#endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
+	blk_cleanup_queue(rdsk->rdsk_queue);
 out_free_dev:
 #endif
 	kfree(rdsk);
