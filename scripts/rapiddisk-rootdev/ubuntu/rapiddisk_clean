@@ -35,7 +35,11 @@ for rd in $ramdisks; do
 done
 
 for remove in $removelist ; do
-	rapiddisk 2>&1 -d $remove && log_warning_msg "rapiddisk: deleted $remove ramdisk" || log_warning_msg "rapiddisk: failed to delete $remove ramdisk"
+	if rapiddisk 2>&1 -d $remove ; then
+	  log_warning_msg "rapiddisk: deleted $remove ramdisk"
+	else
+	  log_warning_msg "rapiddisk: failed to delete $remove ramdisk"
+  fi
 done
 exit 0
 

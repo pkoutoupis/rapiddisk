@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # We're passed the version of the kernel being removed
 inst_kern=$1
