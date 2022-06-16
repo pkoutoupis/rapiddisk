@@ -401,7 +401,7 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size)
 		return -ENOENT;
 	}
 	if (fprintf(fp, "rapiddisk attach %d %llu\n", dsk,
-		(size * 1024 * BYTES_PER_SECTOR)) < 0) {
+		(size * 1024 * 1024)) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
 		return -EIO;
 	}
@@ -499,7 +499,7 @@ int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned l
 		return -ENOENT;
 	}
 
-	if (fprintf(fp, "rapiddisk resize %s %llu\n", string + 2, (size * 1024 * BYTES_PER_SECTOR)) < 0) {
+	if (fprintf(fp, "rapiddisk resize %s %llu\n", string + 2, (size * 1024 * 1024)) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
 		return -EIO;
 	}

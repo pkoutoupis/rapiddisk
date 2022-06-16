@@ -89,12 +89,12 @@ module_param(max_sectors, int, S_IRUGO);
 MODULE_PARM_DESC(max_sectors, " Maximum sectors (in KB) for the request queue. (Default = 127)");
 module_param(nr_requests, int, S_IRUGO);
 MODULE_PARM_DESC(nr_requests, " Number of requests at a given time for the request queue. (Default = 128)");
-module_param(rd_nr, long, S_IRUGO);
+module_param(rd_nr, ulong, S_IRUGO);
 MODULE_PARM_DESC(rd_nr, " Maximum number of RapidDisk devices to load on insertion. (Default = 0)");
-module_param(rd_size, long, S_IRUGO);
+module_param(rd_size, ulong, S_IRUGO);
 MODULE_PARM_DESC(rd_size, " Size of each RAM disk (in MB) loaded on insertion. (Default = 0)");
-module_param(rd_max_nr, long, S_IRUGO);
-MODULE_PARM_DESC(rd_max_nr, " Maximum number of RAM Disks. (Default = 256)");
+module_param(rd_max_nr, ulong, S_IRUGO);
+MODULE_PARM_DESC(rd_max_nr, " Maximum number of RAM Disks. (Default = 1024)");
 
 static int rdsk_do_bvec(struct rdsk_device *, struct page *,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
@@ -151,7 +151,7 @@ static ssize_t devices_show(struct kobject *kobj, struct kobj_attribute *attr, c
         len += sprintf(buf + len, "Device\tSize\tErrors\n");
         list_for_each_entry(rdsk, &rdsk_devices, rdsk_list) {
                 len += scnprintf(buf + len, PAGE_SIZE - len, "rd%d\t%llu\t%lu\n", rdsk->num,
-                                 (rdsk->size / 1024 / 1024), rdsk->error_cnt);
+                                 rdsk->size, rdsk->error_cnt);
         }
 
         mutex_unlock(&sysfs_mutex);
@@ -180,7 +180,7 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 	if (!strncmp("rapiddisk attach ", buffer, 17)) {
 		ptr = buf + 17;
 		num = simple_strtoul(ptr, &ptr, 0);
-		size = (simple_strtoull(ptr + 1, &ptr, 0) * 2);
+		size = (simple_strtoull(ptr + 1, &ptr, 0));
 
 		if (attach_device(num, size) != 0) {
 			pr_err("%s: Unable to attach a new RapidDisk device.\n", PREFIX);
@@ -197,7 +197,7 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 	} else if (!strncmp("rapiddisk resize ", buffer, 17)) {
 		ptr = buf + 17;
 		num = simple_strtoul(ptr, &ptr, 0);
-		size = (simple_strtoull(ptr + 1, &ptr, 0) * 2);
+		size = (simple_strtoull(ptr + 1, &ptr, 0));
 
 		if (resize_device(num, size) != 0) {
 			pr_err("%s: Unable to resize rd%lu\n", PREFIX, num);
@@ -747,7 +747,7 @@ static int attach_device(unsigned long num, unsigned long long size)
 		goto out;
 	}
 
-	if (size % BYTES_PER_SECTOR != SUCCESS) {
+	if (size % BYTES_PER_SECTOR != 0) {
 		pr_err("%s: Invalid size input. Size must be a multiple of sector size %d.\n",
 		       PREFIX, BYTES_PER_SECTOR);
 		goto out;
@@ -765,7 +765,6 @@ static int attach_device(unsigned long num, unsigned long long size)
 	rdsk->num = num;
 	rdsk->error_cnt = 0;
 	rdsk->max_blk_alloc = 0;
-	rdsk->size = ((unsigned long long)size * BYTES_PER_SECTOR);
 	rdsk->size = size;
 	spin_lock_init(&rdsk->rdsk_lock);
 	INIT_RADIX_TREE(&rdsk->rdsk_pages, GFP_ATOMIC);
@@ -922,7 +921,7 @@ static int resize_device(unsigned long num, unsigned long long size)
 	bool found = false;
 	sector_t sectors = 0;
 
-	if (size % BYTES_PER_SECTOR != SUCCESS) {
+	if (size % BYTES_PER_SECTOR != 0) {
 		pr_err("%s: Invalid size input. Size must be a multiple of sector size %d.\n",
 		       PREFIX, BYTES_PER_SECTOR);
 		return GENERIC_ERROR;
