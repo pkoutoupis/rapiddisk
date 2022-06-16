@@ -345,7 +345,7 @@ static int copy_to_rdsk_setup(struct rdsk_device *rdsk,
 		if (!rdsk_insert_page(rdsk, sector))
 			return -ENOSPC;
 	}
-	return 0;
+	return SUCCESS;
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
@@ -465,7 +465,7 @@ static int rdsk_do_bvec(struct rdsk_device *rdsk, struct page *page,
 #endif
 			sector_t sector){
 	void *mem;
-	int err = 0;
+	int err = SUCCESS;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
 	if (is_write) {
@@ -555,7 +555,7 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 		goto io_error;
 #endif
 
-	err = 0;
+	err = SUCCESS;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,336)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
 	if (unlikely(bio_op(bio) == REQ_OP_DISCARD)) {
@@ -649,7 +649,7 @@ io_error:
 #endif
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
-	return 0;
+	return SUCCESS;
 #endif
 }
 
@@ -872,7 +872,7 @@ static int attach_device(unsigned long num, unsigned long long size)
 	list_add_tail(&rdsk->rdsk_list, &rdsk_devices);
 	rd_total++;
 	pr_info("%s: Attached rd%lu of %llu bytes in size.\n", PREFIX, num, rdsk->size);
-	return 0;
+	return SUCCESS;
 
 out_free_queue:
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
@@ -972,7 +972,7 @@ static int __init init_rd(void)
 			goto init_failure2;
 		}
 	}
-	return 0;
+	return SUCCESS;
 
 init_failure2:
 	kobject_put(rdsk_kobj);
