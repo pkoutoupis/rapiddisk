@@ -135,7 +135,7 @@ static ssize_t mgmt_show(struct kobject *kobj, struct kobj_attribute *attr, char
 
 	len = sprintf(buf, "RapidDisk %s\n\nMaximum Number of Attachable Devices: %lu\n",
 		      VERSION_STR, rd_max_nr);
-	len += sprintf(buf + len, "Number of Attached Devices: %lu\nMax Sectors (KB): %d\nNumber of Requests: %d\n\n",
+	len += sprintf(buf + len, "Number of Attached Devices: %lu\nMax Sectors (KB): %d\nNumber of Requests: %d\n",
 		       rd_total, max_sectors, nr_requests);
 
 	return len;
@@ -737,16 +737,20 @@ static int attach_device(unsigned long num, unsigned long long size)
 	struct gendisk *disk;
 	sector_t sectors = 0;
 
+	if (num > MINORMASK) {
+		pr_warn("%s: Reached maximum value for the attached disk.\n", PREFIX);
+		goto out;
+	}
+
 	if (rd_total >= rd_max_nr) {
-		pr_warn("%s: Reached maximum number of attached disks.\n",
-			PREFIX);
+		pr_warn("%s: Reached maximum number of attached disks.\n", PREFIX);
 		goto out;
 	}
 
 	if (size % BYTES_PER_SECTOR != SUCCESS) {
 		pr_err("%s: Invalid size input. Size must be a multiple of sector size %d.\n",
 		       PREFIX, BYTES_PER_SECTOR);
-		return GENERIC_ERROR;
+		goto out;
 	}
 	sectors = (size / BYTES_PER_SECTOR);
 
