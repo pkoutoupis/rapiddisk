@@ -85,7 +85,7 @@ void online_menu(unsigned char *string)
 int exec_cmdline_arg(int argcin, char *argvin[])
 {
 	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE, xfer = XFER_MODE_TCP;
-	unsigned long size = 0;
+	unsigned long long size = 0;
 	bool json_flag = FALSE;
 	bool header_flag = TRUE;
 	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0}, header[NAMELEN] = {0};
