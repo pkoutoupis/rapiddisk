@@ -699,6 +699,7 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 #else
 		mutex_unlock(&bdev->bd_mutex);
 #endif
+		rdsk->max_blk_alloc = 0;
 		mutex_unlock(&ioctl_mutex);
 		return error;
 	case INVALID_CDQUERY_IOCTL:
