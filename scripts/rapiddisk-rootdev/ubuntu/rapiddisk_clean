@@ -26,20 +26,16 @@ for map in $mapped ; do
 		fi
 	done
 done
-for rd in $ramdisks; do
-	for rmv in $tokeep ; do
-		if [ ! $rd = $rmv ] ; then
-			removelist="$removelist $rd"
-		fi
-	done
+for rmv in $tokeep ; do
+	ramdisks="$(echo $ramdisks | sed "s/$rmv//g")"
 done
 
-for remove in $removelist ; do
+for remove in $ramdisks ; do
 	if rapiddisk 2>&1 -d $remove ; then
-	  log_warning_msg "rapiddisk: deleted $remove ramdisk"
+		log_warning_msg "rapiddisk: deleted $remove ramdisk"
 	else
-	  log_warning_msg "rapiddisk: failed to delete $remove ramdisk"
-  fi
+		log_warning_msg "rapiddisk: failed to delete $remove ramdisk"
+	fi
 done
 exit 0
 
