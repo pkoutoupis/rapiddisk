@@ -47,6 +47,7 @@ void online_menu(unsigned char *string)
 	       "\t-d\t\tDetach RAM disk device.\n"
 	       "\t-e\t\tExport a RapidDisk block device as an NVMe Target.\n"
 	       "\t-f\t\tErase all data to a specified RapidDisk device \033[31;1m(dangerous)\033[0m.\n"
+	       "\t-g\t\tDo not print header, useful with -j.\n"
 	       "\t-H\t\tThe host to export / unexport the NVMe Target to / from.\n"
 	       "\t-h\t\tDisplay the help menu.\n"
 	       "\t-i\t\tDefine the network interface to enable for NVMe Target exporting.\n"
@@ -86,17 +87,19 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE, xfer = XFER_MODE_TCP;
 	unsigned long size = 0;
 	bool json_flag = FALSE;
-	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0};
+	bool header_flag = TRUE;
+	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0}, header[NAMELEN] = {0};
 	struct RD_PROFILE *disk = NULL;
 	struct RC_PROFILE *cache = NULL;
 	struct MEM_PROFILE *mem = NULL;
 	struct VOLUME_PROFILE *volumes = NULL;
 
-	printf("%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
+	sprintf(header, "%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:H:hi:jlm:NnP:p:qr:s:t:u:VvXx")) != INVALID_VALUE) {
+	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:gH:hi:jlm:NnP:p:qr:s:t:u:VvXx")) != INVALID_VALUE) {
 		switch (i) {
 		case 'h':
+			printf("%s", header);
 			online_menu(argvin[0]);
 			return SUCCESS;
 			break;
@@ -120,6 +123,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		case 'f':
 			action = ACTION_FLUSH;
 			sprintf(device, "%s", optarg);
+			break;
+		case 'g':
+			header_flag = FALSE;
 			break;
 		case 'H':
 			sprintf(host, "%s", optarg);
@@ -151,12 +157,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			if (strcmp(optarg, "wa") == 0)
 				mode = WRITEAROUND;
 			else if (strcmp(optarg, "wb") == 0) {
-				if (writeback_enabled == FALSE) {
-					printf("Please ensure that the dm-writecache module is "
-					       "loaded and retry.\n");
-					return -EPERM;
-				} else
-					mode = WRITEBACK;
+				mode = WRITEBACK;
 			}
 			break;
 		case 'q':
@@ -179,6 +180,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			sprintf(device, "%s", optarg);
 			break;
 		case 'v':
+			printf("%s", header);
 			return SUCCESS;
 			break;
 		case 'X':
@@ -188,10 +190,21 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			action = ACTION_UNEXPORT_NVMET;
 			break;
 		case '?':
+			printf("%s", header);
 			online_menu(argvin[0]);
 			return INVALID_VALUE;
 			break;
                 }
+	}
+
+	if (header_flag == TRUE) {
+		printf("%s", header);
+	}
+
+	if ((writeback_enabled == FALSE) && (mode == WRITEBACK)) {
+		printf("Please ensure that the dm-writecache module is "
+			   "loaded and retry.\n");
+		return -EPERM;
 	}
 
 	disk = (struct RD_PROFILE *)search_rdsk_targets();
@@ -329,6 +342,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		rc = nvmet_unexport_volume(backing, host, port);
 		break;
 	case ACTION_NONE:
+		if (header_flag == FALSE) {
+			printf("%s", header);
+		}
 		online_menu(argvin[0]);
 		break;
 	}
