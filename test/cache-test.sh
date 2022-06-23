@@ -29,7 +29,7 @@ function removeLoopbackDevices()
 
 function createCacheVolumes()
 {
-	RD=`../src/rapiddisk -a 64|tail -n1|cut -d' ' -f3`
+	RD=`../src/rapiddisk -a 64 -g|cut -d' ' -f3`
 	../src/rapiddisk -m ${RD} -b /dev/loop7
 	RETVAL=$?
 	if [ ${RETVAL} -ne 0 ]; then

@@ -69,7 +69,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 		if (strcmp(url, CMD_PING_DAEMON) == SUCCESS) {
 			json_status_check(page);
 		} else if (strcmp(url, CMD_LIST_RESOURCES) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -q -j|tail -n1", path);
+			sprintf(command, "%s/rapiddisk -q -j -g", path);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -77,7 +77,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if (strcmp(url, CMD_LIST_RD_VOLUMES) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -l -j|tail -n1", path);
+			sprintf(command, "%s/rapiddisk -l -j -g", path);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -93,7 +93,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -s %s -j|tail -n1", path, token);
+			sprintf(command, "%s/rapiddisk -s %s -j -g", path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -101,7 +101,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if (strncmp(url, CMD_LIST_NVMET, sizeof(CMD_LIST_NVMET) - 1) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -n -j|tail -n1", path);
+			sprintf(command, "%s/rapiddisk -n -j -g", path);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -109,7 +109,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if (strncmp(url, CMD_LIST_NVMET_PORTS, sizeof(CMD_LIST_NVMET_PORTS) - 1) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -N -j|tail -n1", path);
+			sprintf(command, "%s/rapiddisk -N -j -g", path);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -132,7 +132,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				goto answer_to_connection_out;
 			}
 			size = strtoull(token, (char **)NULL, 10);
-			sprintf(command, "%s/rapiddisk -a %llu -j|tail -n1", path, size);
+			sprintf(command, "%s/rapiddisk -a %llu -j -g", path, size);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -149,7 +149,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -d %s -j|tail -n1", path, token);
+			sprintf(command, "%s/rapiddisk -d %s -j -g", path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -172,7 +172,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				goto answer_to_connection_out;
 			}
 			size = strtoull(token, (char **)NULL, 10);
-			sprintf(command, "%s/rapiddisk -r %s -c %llu -j|tail -n1", path, device, size);
+			sprintf(command, "%s/rapiddisk -r %s -c %llu -j -g", path, device, size);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -188,7 +188,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -f %s -j|tail -n1", path, token);
+			sprintf(command, "%s/rapiddisk -f %s -j -g", path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -217,11 +217,11 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				goto answer_to_connection_out;
 			}
 			if (strcmp(token, "write-through") == SUCCESS) {
-				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wt -j|tail -n1", path, device, source);
+				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wt -j -g", path, device, source);
 			} else if (strcmp(token, "write-around") == SUCCESS) {
-				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wa -j|tail -n1", path, device, source);
+				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wa -j -g", path, device, source);
 			} else if (strcmp(token, "writeback") == SUCCESS) {
-				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wb -j|tail -n1", path, device, source);
+				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wb -j -g", path, device, source);
 			} else {
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
@@ -241,7 +241,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -u %s -j|tail -n1", path, token);
+			sprintf(command, "%s/rapiddisk -u %s -j -g", path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
