@@ -68,3 +68,7 @@ disk_writes: Writes to the backing store device.
 cache_reads: Reads from the cache device.
 
 cache_writes: Writes to the cache device.
+
+
+
+* For details on dm-writecache stats, please refer to https://www.kernel.org/doc/html/latest/admin-guide/device-mapper/writecache.html.
