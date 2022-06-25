@@ -248,6 +248,38 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				pclose(stream);
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+		} else if (strncmp(url, CMD_RDSK_LOCK, sizeof(CMD_RDSK_LOCK) - 1) == SUCCESS) {
+			dup = strdup(url);
+			token = strtok((char *)dup, "/");
+			token = strtok(NULL, "/");    /* skip first "/" delimeter */
+			token = strtok(NULL, "/");    /* and second delimeter     */
+			if (!token) {
+				status = MHD_HTTP_BAD_REQUEST;
+				goto answer_to_connection_out;
+			}
+			sprintf(command, "%s/rapiddisk -L %s -j -g", path, token);
+			stream = popen(command, "r");
+			if (stream) {
+				while (fgets(page, BUFSZ, stream) != NULL);
+				pclose(stream);
+			} else
+				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+		} else if (strncmp(url, CMD_RDSK_UNLOCK, sizeof(CMD_RDSK_UNLOCK) - 1) == SUCCESS) {
+			dup = strdup(url);
+			token = strtok((char *)dup, "/");
+			token = strtok(NULL, "/");    /* skip first "/" delimeter */
+			token = strtok(NULL, "/");    /* and second delimeter     */
+			if (!token) {
+				status = MHD_HTTP_BAD_REQUEST;
+				goto answer_to_connection_out;
+			}
+			sprintf(command, "%s/rapiddisk -U %s -j -g", path, token);
+			stream = popen(command, "r");
+			if (stream) {
+				while (fgets(page, BUFSZ, stream) != NULL);
+				pclose(stream);
+			} else
+				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else {
 			json_status_unsupported(page);
 			status = MHD_HTTP_BAD_REQUEST;

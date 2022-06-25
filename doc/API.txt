@@ -218,6 +218,32 @@ If it is writeback cache, it will look like this:
 }
 
 -------------------------
+POST /v1/lockRapidDisk/@volume
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/lockRapidDisk/rd0|jq .
+
+status code: 200 (on success)
+
+Lock an existing rapiddisk volume (set to read-only). Example output:
+
+{
+  "status": "Success"
+}
+
+-------------------------
+POST /v1/unlockRapidDisk/@volume
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/unlockRapidDisk/rd0|jq .
+
+status code: 200 (on success)
+
+Lock an existing rapiddisk volume (set to read-write). Example output:
+
+{
+  "status": "Success"
+}
+
+-------------------------
 GET /v1/listAllNVMeTargets
 
 ex) curl -s --output - 10.0.0.185:9118/v1/listAllNVMeTargets|jq .

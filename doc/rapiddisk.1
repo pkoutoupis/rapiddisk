@@ -41,6 +41,9 @@ Define the network interface to enable for NVMe Target exporting. Port must not 
 -j
 Enable JSON formatted output.
 .TP
+-L
+Lock a RapidDisk block device (set to read-only).
+.TP
 -l
 List all attached RAM disk devices.
 .TP
@@ -68,6 +71,9 @@ Obtain RapidDisk-Cache Mappings statistics.
 .TP
 -t
 Define the NVMe Target port's transfer protocol (i.e. tcp or rdma).
+.TP
+-U
+Unlock a RapidDisk block device (set to read-write).
 .TP
 -u
 Unmap a RapidDisk device from another block device.
@@ -107,6 +113,10 @@ rapiddisk -u rc-wt_sdb
 rapiddisk -s rc-wt_sdb
 .TP
 rapiddisk -f rd2
+.TP
+rapiddisk -L rd2
+.TP
+rapiddisk -U rc-wa_sdb
 .TP
 rapiddisk -i eth0 -P 1 -t tcp
 .TP

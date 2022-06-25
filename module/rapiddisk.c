@@ -73,6 +73,7 @@ struct rdsk_device {
 	struct gendisk *rdsk_disk;
 	struct list_head rdsk_list;
 	unsigned long long max_blk_alloc;	/* rdsk: to keep track of highest sector write	*/
+	unsigned long long max_page_cnt;
 	unsigned long long size;
 	unsigned long error_cnt;
 	spinlock_t rdsk_lock;
@@ -148,10 +149,10 @@ static ssize_t devices_show(struct kobject *kobj, struct kobj_attribute *attr, c
 
         mutex_lock(&sysfs_mutex);
 
-        len += sprintf(buf + len, "Device\tSize\tErrors\n");
+        len += sprintf(buf + len, "Device\tSize\tErrors\tUsed\n");
         list_for_each_entry(rdsk, &rdsk_devices, rdsk_list) {
-                len += scnprintf(buf + len, PAGE_SIZE - len, "rd%d\t%llu\t%lu\n", rdsk->num,
-                                 rdsk->size, rdsk->error_cnt);
+                len += scnprintf(buf + len, PAGE_SIZE - len, "rd%d\t%llu\t%lu\t%llu\n", rdsk->num,
+                                 rdsk->size, rdsk->error_cnt, (rdsk->max_page_cnt * PAGE_SIZE));
         }
 
         mutex_unlock(&sysfs_mutex);
@@ -182,7 +183,7 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 		num = simple_strtoul(ptr, &ptr, 0);
 		size = (simple_strtoull(ptr + 1, &ptr, 0));
 
-		if (attach_device(num, size) != 0) {
+		if (attach_device(num, size) != SUCCESS) {
 			pr_err("%s: Unable to attach a new RapidDisk device.\n", PREFIX);
 			err = -EINVAL;
 		}
@@ -190,7 +191,7 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 		ptr = buf + 17;
 		num = simple_strtoul(ptr, &ptr, 0);
 
-		if (detach_device(num) != 0) {
+		if (detach_device(num) != SUCCESS) {
 			pr_err("%s: Unable to detach rd%lu\n", PREFIX, num);
 			err = -EINVAL;
 		}
@@ -199,7 +200,7 @@ static ssize_t mgmt_store(struct kobject *kobj, struct kobj_attribute *attr,
 		num = simple_strtoul(ptr, &ptr, 0);
 		size = (simple_strtoull(ptr + 1, &ptr, 0));
 
-		if (resize_device(num, size) != 0) {
+		if (resize_device(num, size) != SUCCESS) {
 			pr_err("%s: Unable to resize rd%lu\n", PREFIX, num);
 			err = -EINVAL;
 		}
@@ -290,6 +291,7 @@ static struct page *rdsk_insert_page(struct rdsk_device *rdsk, sector_t sector)
 	spin_unlock(&rdsk->rdsk_lock);
 
 	radix_tree_preload_end();
+	rdsk->max_page_cnt++;
 
 	return page;
 }
@@ -700,6 +702,7 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		mutex_unlock(&bdev->bd_mutex);
 #endif
 		rdsk->max_blk_alloc = 0;
+		rdsk->max_page_cnt = 0;
 		mutex_unlock(&ioctl_mutex);
 		return error;
 	case INVALID_CDQUERY_IOCTL:
@@ -766,6 +769,7 @@ static int attach_device(unsigned long num, unsigned long long size)
 	rdsk->num = num;
 	rdsk->error_cnt = 0;
 	rdsk->max_blk_alloc = 0;
+	rdsk->max_page_cnt = 0;
 	rdsk->size = size;
 	spin_lock_init(&rdsk->rdsk_lock);
 	INIT_RADIX_TREE(&rdsk->rdsk_pages, GFP_ATOMIC);

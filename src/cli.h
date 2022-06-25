@@ -52,6 +52,8 @@
 #define ACTION_DISABLE_NVMET_PORT	0xd
 #define ACTION_EXPORT_NVMET		0xe
 #define ACTION_UNEXPORT_NVMET		0xf
+#define ACTION_LOCK			0x10
+#define ACTION_UNLOCK			0x11
 
 #define NAMELEN				0x200
 #define FILEDATA			0x40
@@ -159,6 +161,7 @@ int cache_device_unmap(struct RC_PROFILE *, unsigned char *);
 int cache_device_stat(struct RC_PROFILE *, unsigned char *);
 int cache_device_stat_json(struct RC_PROFILE *, unsigned char *);
 int cache_wb_device_stat_json(struct RC_PROFILE *, unsigned char *);
+int device_lock(struct RD_PROFILE *, unsigned char *, bool);
 int nvmet_view_exports(bool);
 int nvmet_view_ports(bool);
 int json_device_list(struct RD_PROFILE *, struct RC_PROFILE *);

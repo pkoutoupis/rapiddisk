@@ -733,3 +733,38 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned c
 
 	return SUCCESS;
 }
+
+int device_lock(struct RD_PROFILE *rd_prof, unsigned char *string, bool lock)
+{
+	int fd, rc = INVALID_VALUE, state = lock;
+	unsigned char file[NAMELEN] = {0};
+
+	while (rd_prof != NULL) {
+		if (strcmp(string, rd_prof->device) == SUCCESS) {
+			rc = SUCCESS;
+		}
+		rd_prof = rd_prof->next;
+	}
+
+	if (rc != SUCCESS) {
+		printf("Error. Device %s does not exist.\n", string);
+		return -ENOENT;
+	}
+
+	sprintf(file, "/dev/%s", string);
+
+	if ((fd = open(file, O_WRONLY)) < SUCCESS) {
+		printf("%s: open: %s\n", __func__, strerror(errno));
+		return -ENOENT;
+	}
+
+	if((ioctl(fd, BLKROSET, &state)) == -1){
+		printf("%s: ioctl: %s\n", __func__, strerror(errno));
+		return -EIO;
+	}
+
+	close(fd);
+	printf("Device %s is now set to %s.\n", string, ((lock == TRUE) ? "read-only" : "read-write"));
+
+	return SUCCESS;
+}
