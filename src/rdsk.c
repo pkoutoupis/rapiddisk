@@ -734,7 +734,7 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned c
 	return SUCCESS;
 }
 
-int device_lock(struct RD_PROFILE *rd_prof, unsigned char *string, bool lock)
+int mem_device_lock(struct RD_PROFILE *rd_prof, unsigned char *string, bool lock)
 {
 	int fd, rc = INVALID_VALUE, state = lock;
 	unsigned char file[NAMELEN] = {0};

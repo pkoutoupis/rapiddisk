@@ -356,14 +356,14 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	case ACTION_LOCK:
 		if (strlen(device) <= 0)
 			goto exec_cmdline_arg_out;
-		rc = device_lock(disk, device, TRUE);
+		rc = mem_device_lock(disk, device, TRUE);
 		if (json_flag == TRUE)
 			json_status_return(rc);
 		break;
 	case ACTION_UNLOCK:
 		if (strlen(device) <= 0)
 			goto exec_cmdline_arg_out;
-		rc = device_lock(disk, device, FALSE);
+		rc = mem_device_lock(disk, device, FALSE);
 		if (json_flag == TRUE)
 			json_status_return(rc);
 		break;
