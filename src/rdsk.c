@@ -376,7 +376,7 @@ abort_stat_collect:
 	return rc;
 }
 
-int mem_device_attach(struct RD_PROFILE *prof, unsigned long size)
+int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size)
 {
 	int dsk;
 	FILE *fp = NULL;
@@ -400,12 +400,13 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long size)
 		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
 		return -ENOENT;
 	}
-	if (fprintf(fp, "rapiddisk attach %llu\n",
-		((unsigned long long)size * 1024)) < 0) {
+	if (fprintf(fp, "rapiddisk attach %d %llu\n", dsk,
+		(size * 1024 * 1024)) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
 		return -EIO;
 	}
-	printf("Attached device rd%d of size %lu Mbytes\n", dsk, size);
+
+	printf("Attached device rd%d of size %llu Mbytes\n", dsk, size);
 	fclose(fp);
 	return SUCCESS;
 }
@@ -471,7 +472,7 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned
 	return SUCCESS;
 }
 
-int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned long size)
+int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned long long size)
 {
 	int rc = INVALID_VALUE;
 	FILE *fp = NULL;
@@ -479,8 +480,8 @@ int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned l
 	/* echo "rapiddisk resize 1 128" > /sys/kernel/rapiddisk/mgmt */
 	while (prof != NULL) {
 		if (strcmp(string, prof->device) == SUCCESS) {
-			if (((unsigned long long)size * 1024) <= (prof->size / 1024)) {
-				printf("Error. Please specify a size larger than %lu Mbytes\n", size);
+			if ((size * 1024) <= (prof->size / 1024)) {
+				printf("Error. Please specify a size larger than %llu Mbytes\n", size);
 				return -EINVAL;
 			}
 			rc = SUCCESS;
@@ -498,12 +499,11 @@ int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned l
 		return -ENOENT;
 	}
 
-	if (fprintf(fp, "rapiddisk resize %s %llu\n", string + 2,
-		((unsigned long long)size * 1024)) < 0) {
+	if (fprintf(fp, "rapiddisk resize %s %llu\n", string + 2, (size * 1024 * 1024)) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
 		return -EIO;
 	}
-	printf("Resized device %s to %lu Mbytes\n", string, size);
+	printf("Resized device %s to %llu Mbytes\n", string, size);
 	fclose(fp);
 
 	return 0;
