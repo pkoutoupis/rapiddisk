@@ -1,0 +1,74 @@
+RAPIDDISK-CACHE STATISTICS
+---------------------------
+
+
+*** Normal output ***
+
+0 78156289 rapiddisk-cache stats:
+	reads(1108), writes(297349)
+	cache hits(699), replacement(134), write replacement(146086)
+	read invalidates(2), write invalidates(34)
+	uncached reads(7), uncached writes(13328)
+	disk reads(409), disk writes(297349)
+	cache reads(699), cache writes(284423)
+
+
+*** JSON output ***
+
+{
+  "statistics": [
+    {
+      "cache_stats": [
+        {
+          "device": "rc-wt_sdf",
+          "reads": 1108,
+          "writes": 297349,
+          "cache_hits": 699,
+          "replacement": 134,
+          "write_replacement": 146086,
+          "read_invalidates": 2,
+          "write_invalidates": 34,
+          "uncached_reads": 7,
+          "uncached_writes": 13328,
+          "disk_reads": 409,
+          "disk_writes": 297349,
+          "cache_reads": 699,
+          "cache_writes": 284423
+        }
+      ]
+    }
+  ]
+}
+
+
+device: RapidDisk-Cache device name.
+
+reads: Number of total reads to the RapidDisk-Cache front-node device. That means total reads that will hit both the cache and backing store devices.
+
+writes: Number of total writes to the RapidDisk-Cache front-node device. That means total writes that will hit both the cache and backing store devices.
+
+cache_hits: Number of read/write operations that hit the cache device.
+
+replacement: Follows a cache miss, where blocks are replaced into the cache device.
+
+write_replacement: Writes replaced out of the cache. Will be "0" in WA mode.
+
+read_invalidates: Invalidated overlapping read cache blocks.
+
+write_invalidates: Invalidated overlapping write cache blocks.
+
+uncached_reads: Backing store reads that were not cached.
+
+uncached_writes: Backing store writes that were not cached.
+
+disk_reads: Reads from the backing store device.
+
+disk_writes: Writes to the backing store device.
+
+cache_reads: Reads from the cache device.
+
+cache_writes: Writes to the cache device.
+
+
+
+* For details on dm-writecache stats, please refer to https://www.kernel.org/doc/html/latest/admin-guide/device-mapper/writecache.html.

@@ -15,7 +15,7 @@ max_sectors: Maximum sectors (in KB) for the request queue. (Default = 127) (int
 nr_requests: Number of requests at a given time for the request queue. (Default = 128) (int)
 rd_nr: Maximum number of RapidDisk devices to load on insertion. (Default = 0) (int)
 rd_size: Size of each RAM disk (in KB) loaded on insertion. (Default = 0) (int)
-rd_max_nr: Maximum number of RAM Disks. (Default = 128) (int)
+rd_max_nr: Maximum number of RAM Disks. (Default = 1024) (int)
 
 
 RapidDisk-Cache
@@ -29,14 +29,17 @@ RapidDisk
 ---------
 It is advised to utilize the userland utility, rapiddisk, but this is essentially what is written to the /sys/kernel/rapiddisk/mgmt sysfs file to manage RapidDisk volumes:
 
-Attach a new RapidDisk volume by typing (size in KB):
+Attach a new RapidDisk volume by typing (size in bytes):
     # echo "rapiddisk attach 8192" > /sys/kernel/rapiddisk/mgmt
 
 Detach an existing RapidDisk volume by typing:
     # echo "rapiddisk detach 0" > /sys/kernel/rapiddisk/mgmt
 
-Resize an existing RapidDisk volume by typing (size in KB):
+Resize an existing RapidDisk volume by typing (size in bytes):
     # echo "rapiddisk resize 65536" > /sys/kernel/rapiddisk/mgmt
+
+To view existing RapidDisk/RapidDisk-Cache volumes directly from the module:
+    # cat /sys/kernel/rapiddisk/devices
 
 
 
