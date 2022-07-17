@@ -86,6 +86,7 @@ struct RD_PROFILE *search_rdsk_targets(void)
 			sprintf(file, "%s/%s", SYS_BLOCK, list[n]->d_name);
 			prof->size = (BYTES_PER_SECTOR * strtoull(read_info(file, "size"), NULL, 10));
 			prof->lock_status = mem_device_lock_status(prof->device);
+			prof->usage = mem_device_get_usage(prof->device);
 
 			if (rdsk_head == NULL)
 				rdsk_head = prof;
@@ -173,8 +174,8 @@ int mem_device_list(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 			sprintf(status, "Unavailable");
 		}
 
-		printf(" RapidDisk Device %d: %s\tSize (KB): %llu\tStatus: %s\n", num,
-		       rd_prof->device, (rd_prof->size / 1024), status);
+		printf(" RapidDisk Device %d: %s\tSize (KB): %llu\tUsage (KB): %llu\tStatus: %s\n", num,
+		       rd_prof->device, (rd_prof->size / 1024), (rd_prof->usage / 1024), status);
 		num++;
 		rd_prof = rd_prof->next;
 	}
@@ -796,4 +797,23 @@ int mem_device_lock_status(unsigned char *string)
 	close(fd);
 
 	return rc;
+}
+
+unsigned long long mem_device_get_usage(unsigned char *string)
+{
+	int fd;
+	unsigned long long rc = INVALID_VALUE;
+	unsigned char file[NAMELEN] = {0};
+
+	sprintf(file, "/dev/%s", string);
+
+	if ((fd = open(file, O_WRONLY)) < SUCCESS)
+		return -ENOENT;
+
+	if((ioctl(fd, RD_GET_USAGE, &rc)) == INVALID_VALUE)
+		return -EIO;
+
+	close(fd);
+
+	return (rc * PAGE_SIZE);
 }

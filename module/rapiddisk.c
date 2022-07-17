@@ -61,6 +61,7 @@
 #define INVALID_CDQUERY_IOCTL	0x5331
 #define INVALID_CDQUERY_IOCTL2	0x5395
 #define RD_GET_STATS		0x0529
+#define RD_GET_USAGE		0x0530
 
 static DEFINE_MUTEX(sysfs_mutex);
 static DEFINE_MUTEX(ioctl_mutex);
@@ -712,6 +713,10 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		return copy_to_user((void __user *)arg,
 			&rdsk->max_blk_alloc,
 			sizeof(rdsk->max_blk_alloc)) ? -EFAULT : 0;
+	case RD_GET_USAGE:
+		return copy_to_user((void __user *)arg,
+			&rdsk->max_page_cnt,
+			sizeof(rdsk->max_page_cnt)) ? -EFAULT : 0;
 	case BLKPBSZGET:
 	case BLKBSZGET:
 	case BLKSSZGET:

@@ -32,9 +32,11 @@
 #include <malloc.h>
 
 #define RD_GET_STATS     0x0529
+#define RD_GET_USAGE     0x0530
 
 int main () {
 	int fd, max_sectors;
+	unsigned long long max_usage;
 
 	if ((fd = open("/dev/rd0", O_WRONLY)) < 0) {
 		printf("%s\n", strerror(errno));
@@ -46,6 +48,20 @@ int main () {
 		return errno;
 	} else {
 		printf("max sectors allocated: %d\n", max_sectors);
+	}
+
+	close (fd);
+
+	if ((fd = open("/dev/rd0", O_WRONLY)) < 0) {
+		printf("%s\n", strerror(errno));
+		return errno;
+	}
+
+	if (ioctl(fd, RD_GET_USAGE, &max_usage) == -1) {
+		printf("%s\n", strerror(errno));
+		return errno;
+	} else {
+		printf("max pages allocated: %llu\n", max_usage);
 	}
 
 	close (fd);
