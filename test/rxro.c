@@ -34,7 +34,7 @@
 #define XFER_SIZE         4096
 #define BYTES_PER_BLOCK   512
 
-int main (){
+int main () {
 	int fd, state = 1;
 	unsigned char *buf;
 	off_t offset = 0;
@@ -48,18 +48,26 @@ int main (){
 	}
 
 	/* You get the same result with: "blockdev --setro /dev/rd0" */
-	if((ioctl(fd, BLKROSET, &state)) == -1){
+	if ((ioctl(fd, BLKROSET, &state)) == -1) {
 		printf("%s\n", strerror(errno));
 		return errno;
-	}else{
+	} else {
 		printf("device rd0 set to read-only\n");
 	}
 
-	if((write (fd, buf, XFER_SIZE)) <= 0)
+	state = -1;
+	if((ioctl(fd, BLKROGET, &state)) == -1){
+		printf("%s\n", strerror(errno));
+		return errno;
+	} else {
+		printf("Verifying lock state on device rd0: %d\n", state);
+	}
+
+	if ((write (fd, buf, XFER_SIZE)) <= 0)
 		printf("Write: %s\n", strerror(errno));
 
 	offset = (offset + 65536);
-	if((lseek (fd, offset, SEEK_SET)) != offset){
+	if ((lseek (fd, offset, SEEK_SET)) != offset) {
 		printf("%s\n", strerror(errno));
 		return errno;
 	}
@@ -74,11 +82,19 @@ int main (){
 	state = 0;
 
 	/* You get the same result with: "blockdev --setrw /dev/rd0" */
-	if((ioctl(fd, BLKROSET, &state)) == -1){
+	if ((ioctl(fd, BLKROSET, &state)) == -1) {
 		printf("%s\n", strerror(errno));
 		return errno;
-	}else{
+	} else {
 		printf("device rd0 set to read-write\n");
+	}
+
+	state = -1;
+	if((ioctl(fd, BLKROGET, &state)) == -1){
+		printf("%s\n", strerror(errno));
+		return errno;
+	} else {
+		printf("Verifying lock state on device rd0: %d\n", state);
 	}
 
 	close (fd);

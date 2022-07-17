@@ -61,11 +61,13 @@ Retrieve rapiddisk/cache information. Example output:
       "rapiddisk": [
         {
           "device": "rd1",
-          "size": 67108864
+          "size": 67108864,
+          "status": "locked"
         },
         {
           "device": "rd0",
-          "size": 67108864
+          "size": 67108864,
+          "status": "unlocked"
         }
       ]
     },

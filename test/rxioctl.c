@@ -33,18 +33,18 @@
 
 #define RD_GET_STATS     0x0529
 
-int main (){
+int main () {
 	int fd, max_sectors;
 
-	if((fd = open("/dev/rd0", O_WRONLY)) < 0){
+	if ((fd = open("/dev/rd0", O_WRONLY)) < 0) {
 		printf("%s\n", strerror(errno));
 		return errno;
 	}
 
-	if(ioctl(fd, RD_GET_STATS, &max_sectors) == -1){
+	if (ioctl(fd, RD_GET_STATS, &max_sectors) == -1) {
 		printf("%s\n", strerror(errno));
 		return errno;
-	}else{
+	} else {
 		printf("max sectors allocated: %d\n", max_sectors);
 	}
 

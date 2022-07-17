@@ -68,6 +68,7 @@
 typedef struct RD_PROFILE {      /* For RapidDisk device list     */
 	unsigned char device[0xf];
 	unsigned long long size;
+	int lock_status;
 	struct RD_PROFILE *next;
 } RD_PROFILE;
 
@@ -157,6 +158,7 @@ int mem_device_detach(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *)
 int mem_device_resize(struct RD_PROFILE *, unsigned char *, unsigned long long);
 int mem_device_flush(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
 int mem_device_lock(struct RD_PROFILE *, unsigned char *, bool);
+int mem_device_lock_status(unsigned char *);
 int cache_device_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, unsigned char *, int);
 int cache_device_unmap(struct RC_PROFILE *, unsigned char *);
 int cache_device_stat(struct RC_PROFILE *, unsigned char *);

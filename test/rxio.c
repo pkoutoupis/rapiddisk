@@ -34,7 +34,7 @@
 #define XFER_SIZE         4096
 #define BYTES_PER_BLOCK   512
 
-int main (){
+int main () {
 	int fd;
 	unsigned long long size;
 	unsigned char *buf;
@@ -43,33 +43,33 @@ int main (){
 	buf = (char *)malloc(XFER_SIZE);
 	memset(buf, 0x2F, XFER_SIZE);
 
-	if((fd = open("/dev/rd0", O_RDWR, O_NONBLOCK)) < 0){
+	if ((fd = open("/dev/rd0", O_RDWR, O_NONBLOCK)) < 0) {
 		printf("%s\n", strerror(errno));
 		return errno;
 	}
 
-	if((ioctl(fd, BLKGETSIZE, &size)) == -1){
+	if ((ioctl(fd, BLKGETSIZE, &size)) == -1) {
 		printf("%s\n", strerror(errno));
 		return errno;
-	}else{
+	} else {
 		printf("total block count: %llu\n", size);
 		printf("total bytes count: %llu\n", (size * BYTES_PER_BLOCK));
 	}
 
-	if((write (fd, buf, XFER_SIZE)) <= 0){
+	if ((write (fd, buf, XFER_SIZE)) <= 0) {
 		printf("%s\n", strerror(errno));
 		return errno;
 	}
 	printf ("wrote %d bytes at offset %lu\n", XFER_SIZE, offset);
 
 	offset = (offset + 65536);
-	if((lseek (fd, offset, SEEK_SET)) != offset){
+	if ((lseek (fd, offset, SEEK_SET)) != offset) {
 		printf("%s\n", strerror(errno));
 		return errno;
 	}
 	printf ("seeked to offset %lu\n", offset);
 
-	if((read(fd, buf, XFER_SIZE)) <= 0){
+	if ((read(fd, buf, XFER_SIZE)) <= 0) {
 		printf("%s\n", strerror(errno));
 		return errno;
 	}
