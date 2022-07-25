@@ -47,6 +47,8 @@ typedef struct PTHREAD_ARGS {
 #define CMD_RDSK_REMOVE		"/v1/removeRapidDisk"
 #define CMD_RDSK_RESIZE		"/v1/resizeRapidDisk"
 #define CMD_RDSK_FLUSH		"/v1/flushRapidDisk"
+#define CMD_RDSK_LOCK		"/v1/lockRapidDisk"
+#define CMD_RDSK_UNLOCK		"/v1/unlockRapidDisk"
 #define CMD_RCACHE_CREATE	"/v1/createRapidDiskCache"
 #define CMD_RCACHE_REMOVE	"/v1/removeRapidDiskCache"
 #define CMD_RCACHE_STATS	"/v1/showRapidDiskCacheStats"

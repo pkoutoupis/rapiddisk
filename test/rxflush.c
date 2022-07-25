@@ -30,10 +30,10 @@
 #include <errno.h>
 #include <string.h>
 
-int main (){
+int main () {
 	int fd, rc;
 
-	if((fd = open("/dev/rd0", O_WRONLY)) < 0){
+	if ((fd = open("/dev/rd0", O_WRONLY)) < 0) {
 		printf("%s\n", strerror(errno));
 		return errno;
 	}

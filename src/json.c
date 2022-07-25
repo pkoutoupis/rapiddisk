@@ -62,11 +62,15 @@ int json_status_return(int status)
  *       "rapiddisk": [
  *         {
  *           "device": "rd1",
- *           "size": 67108864
+ *           "size": 67108864,
+ *           "usage": 4096,
+ *           "status": "locked"
  *         },
  *         {
  *           "device": "rd0",
- *           "size": 67108864
+ *           "size": 67108864,
+ *           "usage": 65536,
+ *           "status": "unlocked"
  *         }
  *       ]
  *     },
@@ -95,6 +99,16 @@ int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
 		json_t *object = json_object();
 		json_object_set_new(object, "device", json_string(rd->device));
 		json_object_set_new(object, "size", json_integer(rd->size));
+		json_object_set_new(object, "usage", json_integer(rd->usage));
+		memset(mode, 0x0, sizeof(mode));
+		if (rd->lock_status == TRUE) {
+			sprintf(mode, "locked");
+		} else if (rd->lock_status == FALSE) {
+			sprintf(mode, "unlocked");
+		} else {
+			sprintf(mode, "unavailable");
+		}
+		json_object_set_new(object, "status", json_string(mode));
 		json_array_append_new(rd_array, object);
 		rd = rd->next;
 	}

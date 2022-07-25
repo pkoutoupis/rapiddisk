@@ -20,7 +20,7 @@ ifeq ($(CC),)
 	CC := gcc -Werror
 endif
 
-BIN = rxflush rxio rxioctl
+BIN = rxflush rxio rxioctl rxro
 
 .PHONY: all
 all: $(BIN)
@@ -39,6 +39,9 @@ rxflush: rxflush.c
 
 rxio: rxio.c
 	$(CC) rxio.c -o rxio
+
+rxro: rxro.c
+	$(CC) rxro.c -o rxro
 
 rxioctl: rxioctl.c
 	$(CC) rxioctl.c -o rxioctl

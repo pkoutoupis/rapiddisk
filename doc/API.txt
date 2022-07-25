@@ -61,11 +61,15 @@ Retrieve rapiddisk/cache information. Example output:
       "rapiddisk": [
         {
           "device": "rd1",
-          "size": 67108864
+          "size": 67108864,
+          "usage": 4096,
+          "status": "locked"
         },
         {
           "device": "rd0",
-          "size": 67108864
+          "size": 67108864,
+          "usage": 65536,
+          "status": "unlocked"
         }
       ]
     },
@@ -215,6 +219,32 @@ If it is writeback cache, it will look like this:
       ]
     }
   ]
+}
+
+-------------------------
+POST /v1/lockRapidDisk/@volume
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/lockRapidDisk/rd0|jq .
+
+status code: 200 (on success)
+
+Lock an existing rapiddisk volume (set to read-only). Example output:
+
+{
+  "status": "Success"
+}
+
+-------------------------
+POST /v1/unlockRapidDisk/@volume
+
+ex) curl -X POST -s 127.0.0.1:9118/v1/unlockRapidDisk/rd0|jq .
+
+status code: 200 (on success)
+
+Lock an existing rapiddisk volume (set to read-write). Example output:
+
+{
+  "status": "Success"
 }
 
 -------------------------

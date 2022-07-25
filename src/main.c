@@ -52,6 +52,7 @@ void online_menu(unsigned char *string)
 	       "\t-h\t\tDisplay the help menu.\n"
 	       "\t-i\t\tDefine the network interface to enable for NVMe Target exporting.\n"
 	       "\t-j\t\tEnable JSON formatted output.\n"
+	       "\t-L\t\tLock a RapidDisk block device (set to read-only).\n"
 	       "\t-l\t\tList all attached RAM disk devices.\n"
 	       "\t-m\t\tMap an RapidDisk device as a caching node to another block device.\n"
 	       "\t-N\t\tList only enabled NVMe Target ports.\n"
@@ -64,6 +65,7 @@ void online_menu(unsigned char *string)
 	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
 	       "\t-t\t\tDefine the NVMe Target port's transfer protocol (i.e. tcp or rdma).\n"
+	       "\t-U\t\tUnlock a RapidDisk block device (set to read-write).\n"
 	       "\t-u\t\tUnmap a RapidDisk device from another block device.\n"
 	       "\t-v\t\tDisplay the utility version string.\n"
 	       "\t-X\t\tRemove the NVMe Target port (must be unused).\n"
@@ -76,6 +78,8 @@ void online_menu(unsigned char *string)
 	       "\trapiddisk -m rd3 -b /dev/mapper/rc-wa_sdb -p wb\n"
 	       "\trapiddisk -u rc-wt_sdb\n"
 	       "\trapiddisk -f rd2\n"
+	       "\trapiddisk -L rd2\n"
+	       "\trapiddisk -U rd3\n"
 	       "\trapiddisk -i eth0 -P 1 -t tcp\n"
 	       "\trapiddisk -X -P 1\n"
 	       "\trapiddisk -e -b rd3 -P 1 -H nqn.host1\n"
@@ -96,7 +100,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	sprintf(header, "%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:gH:hi:jlm:NnP:p:qr:s:t:u:VvXx")) != INVALID_VALUE) {
+	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:gH:hi:jL:lm:NnP:p:qr:s:t:U:u:VvXx")) != INVALID_VALUE) {
 		switch (i) {
 		case 'h':
 			printf("%s", header);
@@ -137,6 +141,10 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		case 'j':
 			json_flag = TRUE;
 			break;
+		case 'L':
+			action = ACTION_LOCK;
+			sprintf(device, "%s", optarg);
+			break;
 		case 'l':
 			action = ACTION_LIST;
 			break;
@@ -174,6 +182,10 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		case 't':
 			if (strcmp(optarg, "rdma") == 0)
 				xfer = XFER_MODE_RDMA;
+			break;
+		case 'U':
+			action = ACTION_UNLOCK;
+			sprintf(device, "%s", optarg);
 			break;
 		case 'u':
 			action = ACTION_CACHE_UNMAP;
@@ -340,6 +352,20 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		if (strlen(backing) <= 0)
 			goto exec_cmdline_arg_out;
 		rc = nvmet_unexport_volume(backing, host, port);
+		break;
+	case ACTION_LOCK:
+		if (strlen(device) <= 0)
+			goto exec_cmdline_arg_out;
+		rc = mem_device_lock(disk, device, TRUE);
+		if (json_flag == TRUE)
+			json_status_return(rc);
+		break;
+	case ACTION_UNLOCK:
+		if (strlen(device) <= 0)
+			goto exec_cmdline_arg_out;
+		rc = mem_device_lock(disk, device, FALSE);
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_NONE:
 		if (header_flag == FALSE) {
