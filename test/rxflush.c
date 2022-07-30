@@ -30,6 +30,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define IOCTL_RD_BLKFLSBUF	0x0531
+
 int main () {
 	int fd, rc;
 
@@ -38,8 +40,8 @@ int main () {
 		return errno;
 	}
 
-	rc = ioctl(fd, BLKFLSBUF, 0);
-	printf("Sent ioctl() BLKFLSBUF and got return: %d\n", rc);
+	rc = ioctl(fd, IOCTL_RD_BLKFLSBUF, 0);
+	printf("Sent ioctl() IOCTL_RD_BLKFLSBUF and got return: %d\n", rc);
 
 	close (fd);
 
