@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # HFSplus Not Journaled = Faster but Not safer.
 # HFSplus does Not work with large drives >2TB.
 # Linux Free HFSplus driver is incomplete, works in OSX, but Not with Bootcamp 5 drivers in Windows.
