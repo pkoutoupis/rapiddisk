@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # Ext4 was invented in 1996 
 # since K/Ubuntu 17 there is Ext4 v2 called v1 that should be called Ext5
 # Ext4 v2 has 64-Bit Headers, Magic Number, etc...
