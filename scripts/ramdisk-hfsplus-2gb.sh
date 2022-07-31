@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # HFSplus Not Journaled = Faster but Not safer.
 # HFSplus Journaled is Read Only = useless for Ramdrive.
 # Journal is useful for drives that store information after power loss = useless for Ramdrive.
