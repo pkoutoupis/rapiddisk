@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # Btrfs = Ultra safe, but has too much Journaling = 1.7GB Free.
 # Better than NTFS, allows special characters like: ?
 # Btrfs is Unknown with very large drives: 18TB, 20TB.
