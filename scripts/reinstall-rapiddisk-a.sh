@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # Reinstall script Part 1/3 for Rapiddisk 8.2.0 Linux.
 # Everytime there is a Kernet change, Rapiddisk needs to be reinstalled.
 # To execute: save and `chmod +x ./reinstall-rapiddisk-a.sh` then `./reinstall-rapiddisk-a.sh`
