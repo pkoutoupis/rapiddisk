@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # To execute: save and `chmod +x ./ramdisk-cache-xfs-2gb.sh` then `./ramdisk-cache-xfs-2gb.sh`
 # you need to know what is the XFS drive & partition you want to add the cache.
 # EDIT sd?# BEFORE Running.
