@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # Ext4 v2.0 is Not recomended for very large drives >2TB.
 # you need to know what is the Ext4 drive & partition you want to add the cache.
 # EDIT sd?# BEFORE Running.
