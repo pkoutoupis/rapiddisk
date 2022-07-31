@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # Uninstall script for Rapiddisk 8.2.0 Linux.
 # To execute: save and `chmod +x ./uninstall-linux.sh` then `./uninstall-rapiddisk.sh`
 
