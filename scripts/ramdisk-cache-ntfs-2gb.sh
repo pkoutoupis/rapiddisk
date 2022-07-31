@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # sometimes a necesary evil.
 # you need to know what is the NTFS drive & partition you want to add the ram cache.
 # EDIT sd?# BEFORE Running.
