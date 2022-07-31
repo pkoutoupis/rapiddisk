@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # XFS is the Only FileSystem that works ok with VeryLargeDrives: 18TB, 20TB.
 # forget Ext4 over >2TB, makes weird noises, can damage mechanical drives.
 # Linux Free HFSplus, better than NTFS, but does Not work over >2TB.
