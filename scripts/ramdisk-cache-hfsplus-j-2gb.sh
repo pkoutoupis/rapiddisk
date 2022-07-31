@@ -1,5 +1,6 @@
 #!/bin/bash
 # For Debian: v1.01
+# Warning: ECC Memory recommended.
 # HFSplus Journaled.
 # HFSplus Journaled is Read Only = useless for Ramdrive.
 # consider Paragon HFSplus & APFS paid drivers for Linux is Unknown.
