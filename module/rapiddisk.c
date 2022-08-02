@@ -656,6 +656,18 @@ io_error:
 #endif
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+static inline int bdev_openers(struct block_device *bdev)
+{
+	return atomic_read(&bdev->bd_openers);
+}
+#else
+static inline int bdev_openers(struct block_device *bdev)
+{
+	return bdev->bd_openers;
+}
+#endif
+
 static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		      unsigned int cmd, unsigned long arg)
 {
@@ -683,7 +695,7 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		mutex_lock(&bdev->bd_mutex);
 #endif
 		error = -EBUSY;
-		if (bdev->bd_openers <= 1) {
+		if (bdev_openers(bdev) <= 1) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR == 8 && RHEL_MINOR >= 4)
 			invalidate_bdev(bdev);
@@ -833,7 +845,11 @@ static int attach_device(unsigned long num, unsigned long long size)
 	disk->queue->nr_requests = nr_requests;
 	disk->queue->limits.discard_granularity = PAGE_SIZE;
 	disk->queue->limits.max_discard_sectors = UINT_MAX;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+	blk_queue_max_discard_sectors(disk->queue, 0);
+#else
 	blk_queue_flag_set(QUEUE_FLAG_DISCARD, disk->queue);
+#endif
 	blk_queue_flag_set(QUEUE_FLAG_NONROT, disk->queue);
 #else
 	rdsk->rdsk_queue->limits.max_sectors = (max_sectors * 2);
