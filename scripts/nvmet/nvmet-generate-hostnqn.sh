@@ -81,12 +81,17 @@ case "${arr[0]}" in
 		if [ ! -d /etc/nvme ]; then
 			mkdir -p /etc/nvme
 			if [ $? -ne 0 ]; then
-				echo -e "Unable to create the /etc/nvme directory."
+				echo -e "Error. Unable to create the /etc/nvme directory."
 				exit 1
 			fi
 		fi	
 		echo "${NQN}" > /etc/nvme/hostnqn
-		echo "${NQN} has been set to /etc/nvme/hostnqn."
+		if [ $? -ne 0 ]; then
+			echo "Error. Unable to set ${NQN} to /etc/nvme/hostnqn."
+			exit 1
+		else
+			echo "${NQN} has been set to /etc/nvme/hostnqn."
+		fi
 	fi
         ;;
 --help)
