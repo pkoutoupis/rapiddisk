@@ -63,6 +63,9 @@ The port to export / unexport the NVMe Target to / from.
 Define cache policy: write-through (wt), write-around (wa) or writeback (wb) (dangerous) (default: write-through).
 Writeback caching is supplied by the dm-writecache kernel module and is not intended for production use as it may result in data loss on hardware/power failure.
 .TP
+-R
+Revalidate size of NVMe export using existing RapidDisk device.
+.TP
 -r
 Dynamically grow the size of an existing RapidDisk device.
 .TP
@@ -123,6 +126,8 @@ rapiddisk -i eth0 -P 1 -t tcp
 rapiddisk -X -P 1
 .TP
 rapiddisk -e -b rd3 -P 1 -H nqn.host1
+.TP
+rapiddisk -R -b rd0
 .TP
 rapiddisk -x -b rd3 -P 1 -H nqn.host1
 .SH EXIT STATUS

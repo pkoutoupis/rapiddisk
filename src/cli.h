@@ -54,6 +54,7 @@
 #define ACTION_UNEXPORT_NVMET		0xf
 #define ACTION_LOCK			0x10
 #define ACTION_UNLOCK			0x11
+#define ACTION_REVALIDATE_NVMET_SIZE	0x12
 
 #define NAMELEN				0x200
 #define FILEDATA			0x40
@@ -181,6 +182,7 @@ int json_nvmet_view_ports(struct NVMET_PORTS *);
 int nvmet_enable_port(unsigned char *, int, int);
 int nvmet_disable_port(int);
 int nvmet_export_volume(struct RD_PROFILE *, RC_PROFILE *, unsigned char *, unsigned char *, int);
+int nvmet_revalidate_size(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
 int nvmet_unexport_volume(unsigned char *, unsigned char *, int);
 int get_memory_usage(struct MEM_PROFILE *);
 struct VOLUME_PROFILE *search_volumes_targets(void);

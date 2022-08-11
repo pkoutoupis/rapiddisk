@@ -62,6 +62,7 @@ void online_menu(unsigned char *string)
 	       "\t\t\t(default: write-through). Writeback caching is supplied by the dm-writecache\n"
 	       "\t\t\tkernel module and is not intended for production use as it may result in data\n"
 	       "\t\t\tloss on hardware/power failure.\n"
+	       "\t-R\t\tRevalidate size of NVMe export using existing RapidDisk device.\n"
 	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
 	       "\t-t\t\tDefine the NVMe Target port's transfer protocol (i.e. tcp or rdma).\n"
@@ -83,6 +84,7 @@ void online_menu(unsigned char *string)
 	       "\trapiddisk -i eth0 -P 1 -t tcp\n"
 	       "\trapiddisk -X -P 1\n"
 	       "\trapiddisk -e -b rd3 -P 1 -H nqn.host1\n"
+	       "\trapiddisk -R -b rd0\n"
 	       "\trapiddisk -x -b rd3 -P 1 -H nqn.host1\n\n");
 }
 
@@ -100,7 +102,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	sprintf(header, "%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:gH:hi:jL:lm:NnP:p:qr:s:t:U:u:VvXx")) != INVALID_VALUE) {
+	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:gH:hi:jL:lm:NnP:p:qRr:s:t:U:u:VvXx")) != INVALID_VALUE) {
 		switch (i) {
 		case 'h':
 			printf("%s", header);
@@ -170,6 +172,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			break;
 		case 'q':
 			action = ACTION_QUERY_RESOURCES;
+			break;
+		case 'R':
+			action = ACTION_REVALIDATE_NVMET_SIZE;
 			break;
 		case 'r':
 			action = ACTION_RESIZE;
@@ -364,6 +369,13 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		if (strlen(device) <= 0)
 			goto exec_cmdline_arg_out;
 		rc = mem_device_lock(disk, device, FALSE);
+		if (json_flag == TRUE)
+			json_status_return(rc);
+		break;
+	case ACTION_REVALIDATE_NVMET_SIZE:
+		if (strlen(backing) <= 0)
+			goto exec_cmdline_arg_out;
+		rc = nvmet_revalidate_size(disk, cache, backing);
 		if (json_flag == TRUE)
 			json_status_return(rc);
 		break;

@@ -353,6 +353,17 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 		fclose(fp);
 	}
 
+	/* Set model */
+	sprintf(path, "%s/%s%s-%s/attr_model", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+	if (access(path, F_OK) == SUCCESS) {
+		if((fp = fopen(path, "w")) == NULL){
+			printf("Error. Unable to set model string to file %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
+			return INVALID_VALUE;
+		}
+		fprintf(fp, "RapidDisk");
+		fclose(fp);
+	}
+
 	/* Create namespace */
 	sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
@@ -419,6 +430,66 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 	sprintf(path, "port %d", port);
 	printf("Block device %s has been mapped to %s through %s as %s%s-%s\n", device, ((strlen(host) == 0) ? "all hosts" : (char *)host),
 	       ((port == INVALID_VALUE) ? "all ports" : (char *)path), NQN_HDR_STR, hostname, device);
+
+	return SUCCESS;
+}
+
+/*
+ *
+ */
+int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned char *device)
+{
+	int rc = INVALID_VALUE, n, err;
+	FILE *fp;
+	unsigned char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0};
+
+	/* Check to see if device exists */
+	while (rd_prof != NULL) {
+		if (strcmp(device, rd_prof->device) == SUCCESS)
+			rc = SUCCESS;
+		rd_prof = rd_prof->next;
+	}
+	while (rc_prof != NULL) {
+		if (strcmp(device, rc_prof->device) == SUCCESS)
+			rc = SUCCESS;
+		rc_prof = rc_prof->next;
+	}
+	if (rc != SUCCESS) {
+		printf("Error. Device %s does not exist.\n", device);
+		return INVALID_VALUE;
+	} else
+		rc = INVALID_VALUE;
+
+	gethostname(hostname, sizeof(hostname));
+	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+	if (access(path, F_OK) != SUCCESS) {
+		sprintf(path, "%s%s-%s", NQN_HDR_STR, hostname, device);
+		printf("Error. NQN export: %s does not exist.\n", path);
+		return rc;
+	}
+
+	/* Check if namespace 1 exists. That is the only namespace we define. */
+	sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+	if (access(path, F_OK) != SUCCESS) {
+		printf("%s: A RapidDisk defined namespace does not exist.\n", __func__);
+		return rc;
+	}
+
+	/* Check if the revalidate_size attribute exists. */
+	sprintf(path, "%s/%s%s-%s/namespaces/1/revalidate_size", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+	if (access(path, F_OK) != SUCCESS) {
+		printf("%s: The kernel nvmet module version utilized does not support this function.\n", __func__);
+		return rc;
+	}
+
+	if((fp = fopen(path, "w")) == NULL){
+		printf("Error. Unable to open %s.\n%s: fopen: %s\n", path, __func__, strerror(errno));
+		return rc;
+	}
+	fprintf(fp, "1");
+	fclose(fp);
+
+	printf("NVMe Target Namespace size for %s revalidated.\n", device);
 
 	return SUCCESS;
 }
