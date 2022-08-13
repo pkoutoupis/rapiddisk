@@ -15,3 +15,4 @@ test/rxflush
 test/rxio
 test/rxioctl
 test/rxro
+test/rxdebug

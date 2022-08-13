@@ -62,6 +62,11 @@
 #define INVALID_CDQUERY_IOCTL2	0x5395
 #define RD_GET_STATS		0x0529
 #define RD_GET_USAGE		0x0530
+#define IOCTL_DBG_WR_ERR_MODE	0x0532
+#define IOCTL_DBG_RD_ERR_MODE	0x0533
+
+#define DEBUG_MODE_WRITE_ERR	0x00
+#define DEBUG_MODE_READ_ERR	0x01
 
 static DEFINE_MUTEX(sysfs_mutex);
 static DEFINE_MUTEX(ioctl_mutex);
@@ -77,6 +82,7 @@ struct rdsk_device {
 	unsigned long long max_page_cnt;
 	unsigned long long size;
 	unsigned long error_cnt;
+	unsigned short debug_mode;
 	spinlock_t rdsk_lock;
 	struct radix_tree_root rdsk_pages;
 };
@@ -150,10 +156,10 @@ static ssize_t devices_show(struct kobject *kobj, struct kobj_attribute *attr, c
 
         mutex_lock(&sysfs_mutex);
 
-        len += sprintf(buf + len, "Device\tSize\tErrors\tUsed\n");
+        len += sprintf(buf + len, "Device\tSize\tErrors\tUsed\tDebug\n");
         list_for_each_entry(rdsk, &rdsk_devices, rdsk_list) {
-                len += scnprintf(buf + len, PAGE_SIZE - len, "rd%d\t%llu\t%lu\t%llu\n", rdsk->num,
-                                 rdsk->size, rdsk->error_cnt, (rdsk->max_page_cnt * PAGE_SIZE));
+                len += scnprintf(buf + len, PAGE_SIZE - len, "rd%d\t%llu\t%lu\t%llu\t%u\n", rdsk->num,
+                                 rdsk->size, rdsk->error_cnt, (rdsk->max_page_cnt * PAGE_SIZE), rdsk->debug_mode);
         }
 
         mutex_unlock(&sysfs_mutex);
@@ -593,6 +599,26 @@ rdsk_make_request(struct request_queue *q, struct bio *bio)
 		rw = READ;
 #endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
+	if (rw == READ) {
+#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+	if (!bio_op(bio)) {
+#else
+	if (!op_is_write(bio_op(bio))) {
+#endif
+#endif
+		if (((rdsk->debug_mode >> DEBUG_MODE_READ_ERR) & 1UL) == 1) {
+			err = -EIO;
+			goto io_error;
+		}
+	} else {
+		if (((rdsk->debug_mode >> DEBUG_MODE_WRITE_ERR) & 1UL) == 1) {
+			err = -EIO;
+			goto io_error;
+		}
+	}
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
 	bio_for_each_segment(bvec, bio, iter) {
 		unsigned int len = bvec.bv_len;
@@ -729,6 +755,20 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		return copy_to_user((void __user *)arg,
 			&rdsk->max_page_cnt,
 			sizeof(rdsk->max_page_cnt)) ? -EFAULT : 0;
+	case IOCTL_DBG_WR_ERR_MODE:
+		if (((rdsk->debug_mode >> DEBUG_MODE_WRITE_ERR) & 1UL) != 1)
+			rdsk->debug_mode |= 1UL << DEBUG_MODE_WRITE_ERR;    /* set   */
+		else
+			rdsk->debug_mode &= ~(1UL << DEBUG_MODE_WRITE_ERR); /* unset */
+		return copy_to_user((void __user *)arg, &rdsk->debug_mode,
+		       sizeof(rdsk->debug_mode)) ? -EFAULT : 0;
+	case IOCTL_DBG_RD_ERR_MODE:
+		if (((rdsk->debug_mode >> DEBUG_MODE_READ_ERR) & 1UL) != 1)
+			rdsk->debug_mode |= 1UL << DEBUG_MODE_READ_ERR;    /* set   */
+		else
+			rdsk->debug_mode &= ~(1UL << DEBUG_MODE_READ_ERR); /* unset */
+		return copy_to_user((void __user *)arg, &rdsk->debug_mode,
+		       sizeof(rdsk->debug_mode)) ? -EFAULT : 0;
 	case BLKPBSZGET:
 	case BLKBSZGET:
 	case BLKSSZGET:
@@ -787,6 +827,7 @@ static int attach_device(unsigned long num, unsigned long long size)
 	rdsk->error_cnt = 0;
 	rdsk->max_blk_alloc = 0;
 	rdsk->max_page_cnt = 0;
+	rdsk->debug_mode = 0;
 	rdsk->size = size;
 	spin_lock_init(&rdsk->rdsk_lock);
 	INIT_RADIX_TREE(&rdsk->rdsk_pages, GFP_ATOMIC);
