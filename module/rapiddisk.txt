@@ -2,9 +2,15 @@ RapidDisk RAM disk and RapidDisk-Cache Linux modules
 
 == Description ==
 
-RapidDisk was designed to be used in high performing environments and has been designed with simplicity in mind. Utilizing a user land binary, the system administrator is capable of dynamically adding new RAM based block devices of varying sizes, removing existing ones to even listing all existing RAM block devices. The rapiddisk module has been designed to allocate from the system's memory pages and is capable of addressing memory to support Gigabytes if not a Terabyte of available Random Access Memory.
+RapidDisk was designed to be used in high performing environments and has been designed with simplicity
+in mind. Utilizing a user land binary, the system administrator is capable of dynamically adding new RAM
+based block devices of varying sizes, removing existing ones to even listing all existing RAM block
+devices. The rapiddisk module has been designed to allocate from the system's memory pages and is capable
+of addressing memory to support Gigabytes if not a Terabyte of available Random Access Memory.
 
-RapidDisk-Cache is designed to leverage the high speed performing technologies of the RapidDisk RAM disk and utilizing the Device Mapper framework, map an RapidDisk volume to act as a block device's Write/Read-through cache. This can significantly boost the performance of a local or remote disk device.
+RapidDisk-Cache is designed to leverage the high speed performing technologies of the RapidDisk RAM disk
+and utilizing the Device Mapper framework, map an RapidDisk volume to act as a block device's Write/Read-
+through cache. This can significantly boost the performance of a local or remote disk device.
 
 
 == Module Parameters ==
@@ -27,16 +33,17 @@ None.
 
 RapidDisk
 ---------
-It is advised to utilize the userland utility, rapiddisk, but this is essentially what is written to the /sys/kernel/rapiddisk/mgmt sysfs file to manage RapidDisk volumes:
+It is advised to utilize the userland utility, rapiddisk, but this is essentially what is written to the
+/sys/kernel/rapiddisk/mgmt sysfs file to manage RapidDisk volumes:
 
-Attach a new RapidDisk volume by typing (size in bytes):
-    # echo "rapiddisk attach 8192" > /sys/kernel/rapiddisk/mgmt
+Attach a new RapidDisk volume labeled rd0 by typing both the numeric value of the device and the size in bytes:
+    # echo "rapiddisk attach 0 8192" > /sys/kernel/rapiddisk/mgmt
 
-Detach an existing RapidDisk volume by typing:
+Detach an existing RapidDisk volume by typing the numeric value of the device:
     # echo "rapiddisk detach 0" > /sys/kernel/rapiddisk/mgmt
 
-Resize an existing RapidDisk volume by typing (size in bytes):
-    # echo "rapiddisk resize 65536" > /sys/kernel/rapiddisk/mgmt
+Resize an existing RapidDisk volume by typing both the numeric value of the device and the size in bytes:
+    # echo "rapiddisk resize 0 65536" > /sys/kernel/rapiddisk/mgmt
 
 To view existing RapidDisk/RapidDisk-Cache volumes directly from the module:
     # cat /sys/kernel/rapiddisk/devices
