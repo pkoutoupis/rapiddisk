@@ -88,6 +88,54 @@ void online_menu(unsigned char *string)
 	       "\trapiddisk -x -b rd3 -P 1 -H nqn.host1\n\n");
 }
 
+int remove_last_rc(RC_PROFILE *head) {
+
+	int retval;
+
+	/* if there is only one item in the list, remove it */
+	if (head->next == NULL) {
+		retval = 1;
+		free(head);
+		return retval;
+	}
+
+	/* get to the second to last node in the list */
+	struct RC_PROFILE *current = head;
+	while (current->next->next != NULL) {
+		current = current->next;
+	}
+
+	/* now current points to the second to last item of the list, so let's remove current->next */
+	retval = 0;
+	free(current->next);
+	current->next = NULL;
+	return retval;
+}
+
+int remove_last_rd(RD_PROFILE *head) {
+
+	int retval;
+
+	/* if there is only one item in the list, remove it */
+	if (head->next == NULL) {
+		retval = 1;
+		free(head);
+		return retval;
+	}
+
+	/* get to the second to last node in the list */
+	struct RD_PROFILE *current = head;
+	while (current->next->next != NULL) {
+		current = current->next;
+	}
+
+	/* now current points to the second to last item of the list, so let's remove current->next */
+	retval = 0;
+	free(current->next);
+	current->next = NULL;
+	return retval;
+}
+
 int exec_cmdline_arg(int argcin, char *argvin[])
 {
 	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE, xfer = XFER_MODE_TCP;
@@ -388,6 +436,14 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	}
 
 	if (mem) free(mem);
+
+	while (TRUE) {
+		if (remove_last_rc(cache) == 1) break;
+	}
+
+	while (TRUE) {
+		if (remove_last_rd(disk) == 1) break;
+	}
 
 	return rc;
 

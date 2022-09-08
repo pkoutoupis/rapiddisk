@@ -97,6 +97,7 @@ struct RD_PROFILE *search_rdsk_targets(void)
 		}
 		if (list[n] != NULL) free(list[n]);
 	}
+	free(list);
 	return rdsk_head;
 }
 
@@ -144,6 +145,7 @@ struct RC_PROFILE *search_cache_targets(void)
 					}
 				}
 			}
+			free(maps);
 			if (cache_head == NULL)
 				cache_head = prof;
 			else
@@ -153,7 +155,9 @@ struct RC_PROFILE *search_cache_targets(void)
 		}
 		if (list[n] != NULL) free(list[n]);
 	}
+	free(list);
 	for (i = 0;i < num2; i++) if (nodes[i] != NULL) free(nodes[i]);
+	free(nodes);
 	return cache_head;
 }
 

@@ -175,6 +175,7 @@ int check_loaded_modules(void)
 		}
 		if (list[n] != NULL) free(list[n]);
 	}
+	free(list);
 
 	return rc;
 }
