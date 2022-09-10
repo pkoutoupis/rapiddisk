@@ -136,6 +136,29 @@ int remove_last_rd(RD_PROFILE *head) {
 	return retval;
 }
 
+int remove_last_vp(VOLUME_PROFILE *head) {
+    int retval;
+
+    /* if there is only one item in the list, remove it */
+    if (head->next == NULL) {
+        retval = 1;
+        free(head);
+        return retval;
+    }
+
+    /* get to the second to last node in the list */
+    struct VOLUME_PROFILE *current = head;
+    while (current->next->next != NULL) {
+        current = current->next;
+    }
+
+    /* now current points to the second to last item of the list, so let's remove current->next */
+    retval = 0;
+    free(current->next);
+    current->next = NULL;
+    return retval;
+}
+
 int exec_cmdline_arg(int argcin, char *argvin[])
 {
 	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE, xfer = XFER_MODE_TCP;
@@ -371,6 +394,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			rc = json_resources_list(mem, volumes);
 		else
 			rc =  resources_list(mem, volumes);
+		while (TRUE) {
+			if (remove_last_vp(volumes) == 1) break;
+		}
 		break;
 	case ACTION_LIST_NVMET_PORTS:
 		rc = nvmet_view_ports(json_flag);

@@ -47,7 +47,9 @@ int json_status_return(int status)
 
 	json_object_set_new(root, "status", json_string((status == SUCCESS) ? "Success" : "Failed"));
 
-	printf("%s\n", json_dumps(root, 0));
+	char *jdumped = json_dumps(root, 0);
+	printf("%s\n", jdumped);
+	free(jdumped);
 
 	json_decref(root);
 
@@ -136,12 +138,13 @@ int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
 	json_array_append_new(array, rc_object);
 
 	root = json_pack("{s:o}", "volumes", array);
+	char *jdumped = json_dumps(root, 0);
+	printf("%s\n", jdumped);
+	free(jdumped);
 
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(rd_array);
-	json_decref(rc_array);
-	json_decref(array);
+//	json_decref(rd_array);
+//	json_decref(rc_array);
+//	json_decref(array);
 	json_decref(root);
 
 	return SUCCESS;
@@ -200,12 +203,13 @@ int json_resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volume)
 	json_array_append_new(array, vol_object);
 
 	root = json_pack("{s:o}", "resources", array);
+	char *jdumped = json_dumps(root, 0);
+	printf("%s\n", jdumped);
+	free(jdumped);
 
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(mem_array);
-	json_decref(vol_array);
-	json_decref(array);
+//	json_decref(mem_array);
+//	json_decref(vol_array);
+//	json_decref(array);
 	json_decref(root);
 
 	return SUCCESS;
@@ -265,10 +269,10 @@ int json_cache_statistics(struct RC_STATS *stats)
 	json_array_append_new(array, stats_object);
 
 	root = json_pack("{s:o}", "statistics", array);
-
-	printf("%s\n", json_dumps(root, 0));
-
-        json_decref(stats_array);
+	char *jdumped = json_dumps(root, 0);
+	printf("%s\n", jdumped);
+	free(jdumped);
+//        json_decref(stats_array);
 	json_decref(root);
 
 	return SUCCESS;

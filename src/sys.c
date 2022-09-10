@@ -106,6 +106,7 @@ struct VOLUME_PROFILE *search_volumes_targets(void)
                 }
                 if (list[n] != NULL) free(list[n]);
         }
+        free(list);
         return volume_head;
 }
 
