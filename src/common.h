@@ -63,5 +63,5 @@ typedef char bool;
 #define SYS_MODULE		"/sys/module"
 
 int check_loaded_modules(void);
-
+struct dirent **clean_scandir(struct dirent **, int);
 #endif

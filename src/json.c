@@ -48,9 +48,11 @@ int json_status_return(int status)
 	json_object_set_new(root, "status", json_string((status == SUCCESS) ? "Success" : "Failed"));
 
 	char *jdumped = json_dumps(root, 0);
-	printf("%s\n", jdumped);
-	free(jdumped);
-
+	if (jdumped != NULL) {
+		printf("%s\n", jdumped);
+		free(jdumped);
+		jdumped = NULL;
+	}
 	json_decref(root);
 
 	return SUCCESS;
@@ -94,8 +96,8 @@ int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
 {
 	json_t *root, *array = json_array();
 	json_t *rd_array = json_array(), *rc_array = json_array();
-        json_t *rd_object = json_object(), *rc_object = json_object() ;
-	unsigned char mode[0x20] = {0x0};
+	json_t *rd_object = json_object(), *rc_object = json_object() ;
+	char mode[0x20] = {0x0};
 
 	while (rd != NULL) {
 		json_t *object = json_object();
@@ -139,12 +141,12 @@ int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
 
 	root = json_pack("{s:o}", "volumes", array);
 	char *jdumped = json_dumps(root, 0);
-	printf("%s\n", jdumped);
-	free(jdumped);
+	if (jdumped != NULL) {
+		printf("%s\n", jdumped);
+		free(jdumped);
+		jdumped = NULL;
+	}
 
-//	json_decref(rd_array);
-//	json_decref(rc_array);
-//	json_decref(array);
 	json_decref(root);
 
 	return SUCCESS;
@@ -190,26 +192,26 @@ int json_resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volume)
 	json_object_set_new(mem_object, "memory", mem_array);
 	json_array_append_new(array, mem_object);
 
-        while (volume != NULL) {
-                json_t *object = json_object();
-                json_object_set_new(object, "device", json_string(volume->device));
-                json_object_set_new(object, "size", json_integer(volume->size));
-                json_object_set_new(object, "vendor", json_string(volume->vendor));
-                json_object_set_new(object, "model", json_string(volume->model));
-                json_array_append_new(vol_array, object);
-                volume = volume->next;
-        }
+	while (volume != NULL) {
+		json_t *object = json_object();
+		json_object_set_new(object, "device", json_string(volume->device));
+		json_object_set_new(object, "size", json_integer(volume->size));
+		json_object_set_new(object, "vendor", json_string(volume->vendor));
+		json_object_set_new(object, "model", json_string(volume->model));
+		json_array_append_new(vol_array, object);
+		volume = volume->next;
+	}
 	json_object_set_new(vol_object, "volumes", vol_array);
 	json_array_append_new(array, vol_object);
 
 	root = json_pack("{s:o}", "resources", array);
 	char *jdumped = json_dumps(root, 0);
-	printf("%s\n", jdumped);
-	free(jdumped);
+	if (jdumped != NULL) {
+		printf("%s\n", jdumped);
+		free(jdumped);
+		jdumped = NULL;
+	}
 
-//	json_decref(mem_array);
-//	json_decref(vol_array);
-//	json_decref(array);
 	json_decref(root);
 
 	return SUCCESS;
@@ -270,9 +272,12 @@ int json_cache_statistics(struct RC_STATS *stats)
 
 	root = json_pack("{s:o}", "statistics", array);
 	char *jdumped = json_dumps(root, 0);
-	printf("%s\n", jdumped);
-	free(jdumped);
-//        json_decref(stats_array);
+	if (jdumped != NULL) {
+		printf("%s\n", jdumped);
+		free(jdumped);
+		jdumped = NULL;
+	}
+
 	json_decref(root);
 
 	return SUCCESS;
@@ -326,10 +331,13 @@ int json_cache_wb_statistics(struct WC_STATS *stats)
 	json_array_append_new(array, stats_object);
 
 	root = json_pack("{s:o}", "statistics", array);
+	char *jdumped = json_dumps(root, 0);
+	if (jdumped != NULL) {
+		printf("%s\n", jdumped);
+		free(jdumped);
+		jdumped = NULL;
+	}
 
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(stats_array);
 	json_decref(root);
 
 	return SUCCESS;
@@ -399,12 +407,13 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
 	json_array_append_new(array, ports_object);
 
 	root = json_pack("{s:o}", "targets", array);
+	char *jdumped = json_dumps(root, 0);
+	if (jdumped != NULL) {
+		printf("%s\n", jdumped);
+		free(jdumped);
+		jdumped = NULL;
+	}
 
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(nvmet_array);
-	json_decref(ports_array);
-	json_decref(array);
 	json_decref(root);
 
 	return SUCCESS;
@@ -443,11 +452,13 @@ int json_nvmet_view_ports(struct NVMET_PORTS *ports)
 	json_array_append_new(array, ports_object);
 
 	root = json_pack("{s:o}", "targets", array);
+	char *jdumped = json_dumps(root, 0);
+	if (jdumped != NULL) {
+		printf("%s\n", jdumped);
+		free(jdumped);
+		jdumped = NULL;
+	}
 
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(ports_array);
-	json_decref(array);
 	json_decref(root);
 
 	return SUCCESS;
@@ -463,14 +474,19 @@ int json_nvmet_view_ports(struct NVMET_PORTS *ports)
  * }
  */
 
-int json_status_check(unsigned char *message)
+int json_status_check(char *message)
 {
 	json_t *root = json_object();
 
 	json_object_set_new(root, "status", json_string("OK"));
 	json_object_set_new(root, "version", json_string(VERSION_NUM));
 
-	sprintf(message, "%s\n", json_dumps(root, 0));
+	char *jdumped = json_dumps(root, 0);
+	if (jdumped != NULL) {
+		sprintf(message, "%s\n", jdumped);
+		free(jdumped);
+		jdumped = NULL;
+	}
 
 	json_decref(root);
 
@@ -484,13 +500,18 @@ int json_status_check(unsigned char *message)
  * }
  */
 
-int json_status_unsupported(unsigned char *message)
+int json_status_unsupported(char *message)
 {
 	json_t *root = json_object();
 
 	json_object_set_new(root, "status", json_string("Unsupported"));
 
-	sprintf(message, "%s\n", json_dumps(root, 0));
+	char *jdumped = json_dumps(root, 0);
+	if (jdumped != NULL) {
+		sprintf(message, "%s\n", jdumped);
+		free(jdumped);
+		jdumped = NULL;
+	}
 
 	json_decref(root);
 

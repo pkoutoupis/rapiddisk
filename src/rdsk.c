@@ -38,12 +38,12 @@ struct RD_PROFILE *rdsk_end =   (struct RD_PROFILE *) NULL;
 struct RC_PROFILE *cache_head = (struct RC_PROFILE *) NULL;
 struct RC_PROFILE *cache_end =  (struct RC_PROFILE *) NULL;
 
-unsigned char *read_info(unsigned char *name, unsigned char *string)
+char *read_info(char *name, char *string)
 {
-	int len;
-	unsigned char file[NAMELEN] = {0};
-	unsigned char buf[0xFF] = {0};
-	static unsigned char obuf[0xFF] = {0};
+	size_t len;
+	char file[NAMELEN] = {0};
+	char buf[0xFF] = {0};
+	static char obuf[0xFF] = {0};
 	FILE *fp = NULL;
 
 	memset(&buf, 0, sizeof(buf));
@@ -67,7 +67,7 @@ unsigned char *read_info(unsigned char *name, unsigned char *string)
 struct RD_PROFILE *search_rdsk_targets(void)
 {
 	int rc, n = 0;
-	unsigned char file[NAMELEN] = {0};
+	char file[NAMELEN] = {0};
 	struct dirent **list;
 	struct RD_PROFILE *prof = NULL;
 
@@ -80,11 +80,12 @@ struct RD_PROFILE *search_rdsk_targets(void)
 			prof = (struct RD_PROFILE *)calloc(1, sizeof(struct RD_PROFILE));
 			if (prof == NULL) {
 				printf("%s: calloc: %s\n", __func__, strerror(errno));
+				list = clean_scandir(list, rc);
 				return NULL;
 			}
-			strcpy(prof->device, (unsigned char *)list[n]->d_name);
+			strcpy(prof->device, (char *)list[n]->d_name);
 			sprintf(file, "%s/%s", SYS_BLOCK, list[n]->d_name);
-			prof->size = (BYTES_PER_SECTOR * strtoull(read_info(file, "size"), NULL, 10));
+			prof->size = (BYTES_PER_SECTOR * strtoll(read_info(file, "size"), NULL, 10));
 			prof->lock_status = mem_device_lock_status(prof->device);
 			prof->usage = mem_device_get_usage(prof->device);
 
@@ -95,9 +96,9 @@ struct RD_PROFILE *search_rdsk_targets(void)
 			rdsk_end = prof;
 			prof->next = NULL;
 		}
-		if (list[n] != NULL) free(list[n]);
+//		if (list[n] != NULL) free(list[n]);
 	}
-	free(list);
+	list = clean_scandir(list, rc);
 	return rdsk_head;
 }
 
@@ -105,12 +106,13 @@ struct RC_PROFILE *search_cache_targets(void)
 {
 	int num, num2, num3, n = 0, i, z;
 	struct dirent **list, **nodes, **maps;
-	unsigned char file[NAMELEN] = {0};
+	char file[NAMELEN] = {0};
 	struct RC_PROFILE *prof = NULL;
 
 	if ((num = scandir(DEV_MAPPER, &list, NULL, NULL)) < 0) return NULL;
 	if ((num2 = scandir(SYS_BLOCK, &nodes, NULL, NULL)) < 0) {
 		printf("%s: scandir: %s\n", __func__, strerror(errno));
+		list = clean_scandir(list, num);
 		return NULL;
 	}
 
@@ -119,9 +121,11 @@ struct RC_PROFILE *search_cache_targets(void)
 			prof = (struct RC_PROFILE *)calloc(1, sizeof(struct RC_PROFILE));
 			if (prof == NULL) {
 				printf("%s: calloc: %s\n", __func__, strerror(errno));
+				list = clean_scandir(list, num);
+				nodes = clean_scandir(nodes, num2);
 				return NULL;
 			}
-			strcpy(prof->device, (unsigned char *)list[n]->d_name);
+			strcpy(prof->device, (char *)list[n]->d_name);
 			for (i = 0;i < num2; i++) {
 				if (strncmp(nodes[i]->d_name, "dm-", 3) == SUCCESS) {
 					sprintf(file, "%s/%s", SYS_BLOCK, nodes[i]->d_name);
@@ -129,23 +133,23 @@ struct RC_PROFILE *search_cache_targets(void)
 					    sizeof(prof->device)) == 0) {
 						sprintf(file, "%s/%s/slaves", SYS_BLOCK, nodes[i]->d_name);
 						if ((num3 = scandir(file, &maps, NULL, NULL)) < 0) {
-							printf("%s: scandir: %s\n", __func__,
-							       strerror(errno));
+							printf("%s: scandir: %s\n", __func__, strerror(errno));
+							list = clean_scandir(list, num);
+							nodes = clean_scandir(nodes, num2);
 							return NULL;
 						}
 						for (z=0;z < num3; z++) {
 							if (strncmp(maps[z]->d_name, ".", 1) != SUCCESS) {
 								if (strncmp(maps[z]->d_name, "rd", 2) == SUCCESS)
-									strcpy(prof->cache, (unsigned char *)maps[z]->d_name);
+									strcpy(prof->cache, (char *)maps[z]->d_name);
 								else
-									strcpy(prof->source, (unsigned char *)maps[z]->d_name);
+									strcpy(prof->source, (char *)maps[z]->d_name);
 							}
-							if (maps[z] != NULL) free(maps[z]);
 						}
+						maps = clean_scandir(maps, num3);
 					}
 				}
 			}
-			free(maps);
 			if (cache_head == NULL)
 				cache_head = prof;
 			else
@@ -153,18 +157,17 @@ struct RC_PROFILE *search_cache_targets(void)
 			cache_end = prof;
 			prof->next = NULL;
 		}
-		if (list[n] != NULL) free(list[n]);
+//		if (list[n] != NULL) free(list[n]);
 	}
-	free(list);
-	for (i = 0;i < num2; i++) if (nodes[i] != NULL) free(nodes[i]);
-	free(nodes);
+	list = clean_scandir(list, num);
+	nodes = clean_scandir(nodes, num2);
 	return cache_head;
 }
 
 int mem_device_list(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof)
 {
 	int num = 1;
-	unsigned char status[0xf] = {0};
+	char status[0xf] = {0};
 
 	printf("List of RapidDisk device(s):\n\n");
 
@@ -207,9 +210,9 @@ list_out:
 	return SUCCESS;
 }
 
-int cache_device_stat(struct RC_PROFILE *rc_prof, unsigned char *cache)
+int cache_device_stat(struct RC_PROFILE *rc_prof, char *cache)
 {
-	unsigned char cmd[NAMELEN] = {0};
+	char cmd[NAMELEN] = {0};
 
 	if (rc_prof == NULL) {
 		printf("  No RapidDisk-Cache Mappings exist.\n\n");
@@ -220,12 +223,12 @@ int cache_device_stat(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	return SUCCESS;
 }
 
-int cache_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
+int cache_device_stat_json(struct RC_PROFILE *rc_prof, char *cache)
 {
 	int rc = INVALID_VALUE;
-	unsigned char cmd[NAMELEN] = {0};
+	char cmd[NAMELEN] = {0};
 	FILE *stream;
-	unsigned char *buf = NULL, *dup = NULL, *token = NULL;
+	char *buf = NULL, *dup = NULL, *token = NULL;
 	struct RC_STATS *stats = NULL;
 
 	if (rc_prof == NULL) {
@@ -233,7 +236,7 @@ int cache_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
 		return 1;
 	}
 
-	buf = (unsigned char *)calloc(1, BUFSZ);
+	buf = (char *)calloc(1, BUFSZ);
 	if (buf == NULL) {
 		printf("%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
 		return INVALID_VALUE;
@@ -242,6 +245,7 @@ int cache_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	stats = (struct RC_STATS *)calloc(1, sizeof(struct RC_STATS));
 	if (stats == NULL) {
 		printf("%s: calloc: %s\n", __func__, strerror(errno));
+		if (buf) free(buf);
 		return INVALID_VALUE;
 	}
 
@@ -303,12 +307,12 @@ int cache_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
 	return rc;
 }
 
-int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
+int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, char *cache)
 {
 	int rc = INVALID_VALUE;
-	unsigned char cmd[NAMELEN] = {0};
+	char cmd[NAMELEN] = {0};
 	FILE *stream;
-	unsigned char *buf = NULL, *dup = NULL, *token = NULL;
+	char *buf = NULL, *dup = NULL, *token = NULL;
 	struct WC_STATS *stats = NULL;
 
 	if (rc_prof == NULL) {
@@ -316,7 +320,7 @@ int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, unsigned char *cache)
 		return 1;
 	}
 
-	buf = (unsigned char *)calloc(1, BUFSZ);
+	buf = (char *)calloc(1, BUFSZ);
 	if (buf == NULL) {
 		printf("%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
 		return INVALID_VALUE;
@@ -387,8 +391,8 @@ abort_stat_collect:
 	rc = json_cache_wb_statistics(stats);
 
 	if (dup) free(dup);
-	if (stats) free(stats);
 	if (buf) free(buf);
+	if (stats) free(stats);
 	return rc;
 }
 
@@ -396,7 +400,7 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size)
 {
 	int dsk;
 	FILE *fp = NULL;
-	unsigned char string[BUFSZ] = {0}, name[16] = {0};
+	char string[BUFSZ] = {0}, name[16] = {0};
 
 	/* echo "rapiddisk attach 64" > /sys/kernel/rapiddisk/mgmt <- in sectors*/
 	for (dsk = 0; prof != NULL; dsk++) {
@@ -416,9 +420,9 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size)
 		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
 		return -ENOENT;
 	}
-	if (fprintf(fp, "rapiddisk attach %d %llu\n", dsk,
-		(size * 1024 * 1024)) < 0) {
+	if (fprintf(fp, "rapiddisk attach %d %llu\n", dsk, (size * 1024 * 1024)) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
+		fclose(fp);
 		return -EIO;
 	}
 
@@ -427,11 +431,11 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size)
 	return SUCCESS;
 }
 
-int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned char *string)
+int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, char *string)
 {
 	int rc = INVALID_VALUE;
 	FILE *fp = NULL;
-	unsigned char *buf = NULL;
+	char *buf = NULL;
 
 	/* echo "rapiddisk detach 1" > /sys/kernel/rapiddisk/mgmt */
 	while (rd_prof != NULL) {
@@ -453,7 +457,7 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned
 		rc_prof = rc_prof->next;
 	}
 
-	if ((buf = (char *)malloc(BUFSZ)) == NULL) {
+	if ((buf = (char *)calloc(1, BUFSZ)) == NULL) {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
 		return INVALID_VALUE;
 	}
@@ -461,23 +465,28 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned
 	/* Here we are starting to check to see if the device is mounted */
 	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, ETC_MTAB, strerror(errno));
+		if (buf) free(buf);
 		return -ENOENT;
 	}
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, string) != NULL)) {
 		printf("%s is currently mounted. Please \"umount\" and retry.\n", string);
+		if (buf) free(buf);
 		return INVALID_VALUE;
 	}
 
 	/* This is where we begin to detach the block device */
 	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
+		if (buf) free(buf);
 		return -ENOENT;
 	}
 
 	if (fprintf(fp, "rapiddisk detach %s\n", string + 2) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
+		if (buf) free(buf);
+		fclose(fp);
 		return -EIO;
 	}
 	printf("Detached device %s\n", string);
@@ -488,7 +497,7 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, unsigned
 	return SUCCESS;
 }
 
-int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned long long size)
+int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long size)
 {
 	int rc = INVALID_VALUE;
 	FILE *fp = NULL;
@@ -517,6 +526,7 @@ int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned l
 
 	if (fprintf(fp, "rapiddisk resize %s %llu\n", string + 2, (size * 1024 * 1024)) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
+		fclose(fp);
 		return -EIO;
 	}
 	printf("Resized device %s to %llu Mbytes\n", string, size);
@@ -526,12 +536,12 @@ int mem_device_resize(struct RD_PROFILE *prof, unsigned char *string, unsigned l
 }
 
 int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
-		     unsigned char *cache, unsigned char *source, int mode)
+		     char *cache, char *source, int mode)
 {
 	int rc = INVALID_VALUE, node, fd;
 	unsigned long long source_sz = 0, cache_sz = 0;
 	FILE *fp = NULL;
-	unsigned char *buf, string[BUFSZ] = {0}, name[NAMELEN] = {0}, str[NAMELEN - 6] = {0}, *dup = NULL, *token = NULL;
+	char *buf, string[BUFSZ] = {0}, name[NAMELEN] = {0}, str[NAMELEN - 6] = {0}, *dup = NULL, *token = NULL;
 
 	while (rd_prof != NULL) {
 		if (strcmp(cache, rd_prof->device) == SUCCESS) {
@@ -561,24 +571,29 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 		rc_prof = rc_prof->next;
 	}
 
-	if ((buf = (char *)malloc(BUFSZ)) == NULL) {
+	if ((buf = (char *)calloc(1,BUFSZ)) == NULL) {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
 		return INVALID_VALUE;
 	}
 	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, ETC_MTAB, strerror(errno));
+		if (buf) free(buf);
 		return INVALID_VALUE;
 	}
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, cache) != NULL)) {
 		printf("%s is currently mounted. Please \"umount\" and retry.\n", cache);
+		if (buf) free(buf);
 		return INVALID_VALUE;
 	}
 	if ((strstr(buf, source) != NULL)) {
 		printf("%s is currently mounted. Please \"umount\" and retry.\n", source);
+		if (buf) free(buf);
 		return INVALID_VALUE;
 	}
+
+	if (buf) free(buf);
 
 	if ((fd = open(source, O_RDONLY)) < SUCCESS) {
 		printf("%s: open: %s\n", __func__, strerror(errno));
@@ -587,6 +602,7 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 
 	if (ioctl(fd, BLKGETSIZE, &source_sz) == INVALID_VALUE) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
+		close(fd);
 		return -EIO;
 	}
 	close(fd);
@@ -599,6 +615,7 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 
 	if (ioctl(fd, BLKGETSIZE, &cache_sz) == INVALID_VALUE) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
+		close(fd);
 		return -EIO;
 	}
 	close(fd);
@@ -636,15 +653,16 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE * rc_prof,
 	} else
 		printf("Error. Unable to create map. Please verify all input values are correct.\n\n");
 
+	if (dup) free(dup);
 	return rc;
 }
 
-int cache_device_unmap(struct RC_PROFILE *prof, unsigned char *string)
+int cache_device_unmap(struct RC_PROFILE *prof, char *string)
 {
 	int rc = INVALID_VALUE;
 	FILE *fp = NULL;
-	unsigned char *buf = NULL;
-	unsigned char cmd[NAMELEN] = {0};
+	char *buf = NULL;
+	char cmd[NAMELEN] = {0};
 
 	/* dmsetup remove rc-wt_sdb */
 	while (prof != NULL) {
@@ -657,7 +675,7 @@ int cache_device_unmap(struct RC_PROFILE *prof, unsigned char *string)
 		return -ENOENT;
 	}
 
-	if ((buf = (char *)malloc(BUFSZ)) == NULL) {
+	if ((buf = (char *)calloc(1,BUFSZ)) == NULL) {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
 		return -ENOMEM;
 	}
@@ -665,15 +683,17 @@ int cache_device_unmap(struct RC_PROFILE *prof, unsigned char *string)
 	/* Here we are starting to check to see if the device is mounted */
 	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, ETC_MTAB, strerror(errno));
+		if (buf) free(buf);
 		return -ENOENT;
 	}
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, string) != NULL)) {
 		printf("%s is currently mounted. Please \"umount\" and retry.\n", string);
+		if (buf) free(buf);
 		return -EBUSY;
 	}
-
+	if (buf) free(buf);
 	if (strstr(string, "rc-wb") != NULL) {
 		sprintf(cmd, "dmsetup message %s 0 flush\n", string);
 		if ((rc = system(cmd)) != SUCCESS)
@@ -690,10 +710,10 @@ int cache_device_unmap(struct RC_PROFILE *prof, unsigned char *string)
 	return rc;
 }
 
-int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned char *string)
+int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *string)
 {
 	int fd, rc = INVALID_VALUE;
-	unsigned char file[NAMELEN] = {0}, *buf = NULL;
+	char file[NAMELEN] = {0}, *buf = NULL;
 	FILE *fp = NULL;
 
 	while (rd_prof != NULL) {
@@ -716,7 +736,7 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned c
 		rc_prof = rc_prof->next;
 	}
 
-	if ((buf = (char *)malloc(BUFSZ)) == NULL) {
+	if ((buf = (char *)calloc(1, BUFSZ)) == NULL) {
 		printf("%s: malloc: Unable to allocate memory.\n", __func__);
 		return -ENOMEM;
 	}
@@ -724,15 +744,17 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned c
 	/* Here we are starting to check to see if the device is mounted */
 	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
 		printf("%s: fopen: %s: %s\n", __func__, ETC_MTAB, strerror(errno));
+		if (buf) free(buf);
 		return -ENOENT;
 	}
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, string) != NULL)) {
 		printf("%s is currently mounted. Please \"umount\" and retry.\n", string);
+		if (buf) free(buf);
 		return -EBUSY;
 	}
-
+	if (buf) free(buf);
 	sprintf(file, "/dev/%s", string);
 
 	if ((fd = open(file, O_WRONLY)) < SUCCESS) {
@@ -742,6 +764,7 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned c
 
 	if (ioctl(fd, BLKFLSBUF, 0) == INVALID_VALUE) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
+		close(fd);
 		return -EIO;
 	}
 	close(fd);
@@ -750,10 +773,10 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned c
 	return SUCCESS;
 }
 
-int mem_device_lock(struct RD_PROFILE *rd_prof, unsigned char *string, bool lock)
+int mem_device_lock(struct RD_PROFILE *rd_prof, char *string, bool lock)
 {
-	int fd, rc = INVALID_VALUE, state = lock;
-	unsigned char file[NAMELEN] = {0};
+	int fd, rc = INVALID_VALUE, state = (unsigned char)lock;
+	char file[NAMELEN] = {0};
 
 	while (rd_prof != NULL) {
 		if (strcmp(string, rd_prof->device) == SUCCESS) {
@@ -776,6 +799,7 @@ int mem_device_lock(struct RD_PROFILE *rd_prof, unsigned char *string, bool lock
 
 	if((ioctl(fd, BLKROSET, &state)) == INVALID_VALUE){
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
+		close(fd);
 		return -EIO;
 	}
 
@@ -785,39 +809,41 @@ int mem_device_lock(struct RD_PROFILE *rd_prof, unsigned char *string, bool lock
 	return SUCCESS;
 }
 
-int mem_device_lock_status(unsigned char *string)
+int mem_device_lock_status(char *string)
 {
 	int fd, rc = INVALID_VALUE;
-	unsigned char file[NAMELEN] = {0};
+	char file[NAMELEN] = {0};
 
 	sprintf(file, "/dev/%s", string);
 
 	if ((fd = open(file, O_WRONLY)) < SUCCESS)
 		return -ENOENT;
 
-	if((ioctl(fd, BLKROGET, &rc)) == INVALID_VALUE)
+	if((ioctl(fd, BLKROGET, &rc)) == INVALID_VALUE) {
+		close(fd);
 		return -EIO;
+	}
 
 	close(fd);
 
 	return rc;
 }
 
-unsigned long long mem_device_get_usage(unsigned char *string)
+unsigned long long mem_device_get_usage( char *string)
 {
 	int fd;
 	unsigned long long rc = INVALID_VALUE;
-	unsigned char file[NAMELEN] = {0};
+	char file[NAMELEN] = {0};
 
 	sprintf(file, "/dev/%s", string);
 
 	if ((fd = open(file, O_WRONLY)) < SUCCESS)
 		return -ENOENT;
 
-	if((ioctl(fd, RD_GET_USAGE, &rc)) == INVALID_VALUE)
+	if((ioctl(fd, RD_GET_USAGE, &rc)) == INVALID_VALUE) {
+		close(fd);
 		return -EIO;
-
-	close(fd);
+	}
 
 	return (rc * PAGE_SIZE);
 }

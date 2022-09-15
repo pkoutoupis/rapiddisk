@@ -22,6 +22,8 @@ ifeq ($(CC),)
 	CC := gcc -Werror
 endif
 
+DBG := -DDEBUG -Og -g -Wl,--export-dynamic -gdwarf
+
 CHMOD := chmod
 CP := cp
 RM := rm -f
@@ -78,3 +80,7 @@ $(BIN)d: daemon.c json-server.o net.o sys-server.o
 .PHONY: clean
 clean:
 	rm -f *.o $(BIN) $(BIN)d
+
+.PHONY: debug
+debug: CC += $(DBG)
+debug: $(BIN) $(BIN)d

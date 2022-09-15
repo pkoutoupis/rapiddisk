@@ -40,3 +40,7 @@ uninstall:
 .PHONY: clean
 clean:
 	@echo Nothing to do.
+
+.PHONY: debug
+debug:
+	@echo Nothing to do.

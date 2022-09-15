@@ -53,3 +53,7 @@ tools-uninstall:
 	$(MAKE) -C src uninstall
 	$(MAKE) -C conf uninstall
 	$(MAKE) -C doc uninstall
+
+debug:
+	$(MAKE) -C src $@
+	$(MAKE) -C module $@

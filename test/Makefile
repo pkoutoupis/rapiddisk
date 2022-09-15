@@ -49,3 +49,7 @@ rxioctl: rxioctl.c
 .PHONY: clean
 clean:
 	rm -f $(BIN)
+
+.PHONY: debug
+debug:
+	@echo Nothing to do.

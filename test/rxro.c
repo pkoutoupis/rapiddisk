@@ -36,7 +36,7 @@
 
 int main () {
 	int fd, state = 1;
-	unsigned char *buf;
+	char *buf;
 	off_t offset = 0;
 
 	buf = (char *)malloc(XFER_SIZE);

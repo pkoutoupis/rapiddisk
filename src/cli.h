@@ -69,8 +69,15 @@
 
 #define RD_GET_USAGE			0x0530
 
+#define ERR_INVALID_ARG		"Error. Invalid argument(s) or values entered.\n"
+#define ERR_NOWB_MODULE		"Please ensure that the dm-writecache module is loaded and retry.\n"
+#define ERR_NO_DEVICES		"Unable to locate any RapidDisk devices.\n"
+#define ERR_NO_MEMUSAGE		"Error. Unable to retrieve memory usage data.\n"
+#define ERR_INVALID_PORT	"Error. Invalid port number.\n"
+#define ERR_NO_RDEVICES		"No RapidDisk devices exist on the system.\n"
+
 typedef struct RD_PROFILE {      /* For RapidDisk device list     */
-	unsigned char device[0xf];
+	char device[0xf];
 	unsigned long long size;
 	int lock_status;
 	unsigned long long usage;
@@ -78,14 +85,14 @@ typedef struct RD_PROFILE {      /* For RapidDisk device list     */
 } RD_PROFILE;
 
 typedef struct RC_PROFILE {      /* For RapidDisk-Cache node list */
-	unsigned char device[NAMELEN];
-	unsigned char cache[0x20];
-	unsigned char source[NAMELEN];
+	char device[NAMELEN];
+	char cache[0x20];
+	char source[NAMELEN];
 	struct RC_PROFILE *next;
 } RC_PROFILE;
 
 typedef struct RC_STATS {
-	unsigned char device[NAMELEN];
+	char device[NAMELEN];
 	unsigned int reads;
 	unsigned int writes;
 	unsigned int cache_hits;
@@ -106,7 +113,7 @@ typedef struct RC_STATS {
 } RC_STATS;
 
 typedef struct WC_STATS {
-	unsigned char device[NAMELEN];
+	char device[NAMELEN];
 	bool expanded;
 	int errors;
 	unsigned int num_blocks;
@@ -131,45 +138,45 @@ typedef struct MEM_PROFILE {
 } MEM_PROFILE;
 
 typedef struct VOLUME_PROFILE {
-	unsigned char device[0x20];
+	char device[0x20];
 	unsigned long long size;
-	unsigned char vendor[FILEDATA];
-	unsigned char model[FILEDATA];
+	char vendor[FILEDATA];
+	char model[FILEDATA];
 	struct VOLUME_PROFILE *next;
 } VOLUME_PROFILE;
 
 typedef struct NVMET_PROFILE {
-	unsigned char nqn[NAMELEN];
+	char nqn[NAMELEN];
 	int namespc;
-	unsigned char device[0x1F];
+	char device[0x1F];
 	int enabled;
 	struct NVMET_PROFILE *next;
 } NVMET_PROFILE;
 
 typedef struct NVMET_PORTS {
 	int port;
-	unsigned char addr[0x1F];
-	unsigned char nqn[NAMELEN];
-	unsigned char protocol[0xF];
+	char addr[0x1F];
+	char nqn[NAMELEN];
+	char protocol[0xF];
 	struct NVMET_PORTS *next;
 } NVMET_PORTS;
 
 struct RD_PROFILE *search_rdsk_targets(void);
 struct RC_PROFILE *search_cache_targets(void);
-unsigned char *read_info(unsigned char *, unsigned char *);
+char *read_info(char *, char *);
 int mem_device_list(struct RD_PROFILE *, struct RC_PROFILE *);
 int mem_device_attach(struct RD_PROFILE *, unsigned long long);
-int mem_device_detach(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *);
-int mem_device_resize(struct RD_PROFILE *, unsigned char *, unsigned long long);
-int mem_device_flush(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
-int mem_device_lock(struct RD_PROFILE *, unsigned char *, bool);
-int mem_device_lock_status(unsigned char *);
-unsigned long long mem_device_get_usage(unsigned char *);
-int cache_device_map(struct RD_PROFILE *, struct RC_PROFILE *, unsigned char *, unsigned char *, int);
-int cache_device_unmap(struct RC_PROFILE *, unsigned char *);
-int cache_device_stat(struct RC_PROFILE *, unsigned char *);
-int cache_device_stat_json(struct RC_PROFILE *, unsigned char *);
-int cache_wb_device_stat_json(struct RC_PROFILE *, unsigned char *);
+int mem_device_detach(struct RD_PROFILE *, struct RC_PROFILE *, char *);
+int mem_device_resize(struct RD_PROFILE *, char *, unsigned long long);
+int mem_device_flush(struct RD_PROFILE *, RC_PROFILE *, char *);
+int mem_device_lock(struct RD_PROFILE *, char *, bool);
+int mem_device_lock_status(char *);
+unsigned long long mem_device_get_usage(char *);
+int cache_device_map(struct RD_PROFILE *, struct RC_PROFILE *, char *, char *, int);
+int cache_device_unmap(struct RC_PROFILE *, char *);
+int cache_device_stat(struct RC_PROFILE *, char *);
+int cache_device_stat_json(struct RC_PROFILE *, char *);
+int cache_wb_device_stat_json(struct RC_PROFILE *, char *);
 int nvmet_view_exports(bool);
 int nvmet_view_ports(bool);
 int json_device_list(struct RD_PROFILE *, struct RC_PROFILE *);
@@ -179,11 +186,11 @@ int json_cache_wb_statistics(struct WC_STATS *);
 int json_status_return(int);
 int json_nvmet_view_exports(struct NVMET_PROFILE *, struct NVMET_PORTS *);
 int json_nvmet_view_ports(struct NVMET_PORTS *);
-int nvmet_enable_port(unsigned char *, int, int);
+int nvmet_enable_port(char *, int, int);
 int nvmet_disable_port(int);
-int nvmet_export_volume(struct RD_PROFILE *, RC_PROFILE *, unsigned char *, unsigned char *, int);
-int nvmet_revalidate_size(struct RD_PROFILE *, RC_PROFILE *, unsigned char *);
-int nvmet_unexport_volume(unsigned char *, unsigned char *, int);
+int nvmet_export_volume(struct RD_PROFILE *, RC_PROFILE *, char *, char *, int);
+int nvmet_revalidate_size(struct RD_PROFILE *, RC_PROFILE *, char *);
+int nvmet_unexport_volume(char *, char *, int);
 int get_memory_usage(struct MEM_PROFILE *);
 struct VOLUME_PROFILE *search_volumes_targets(void);
 int resources_list(struct MEM_PROFILE *, struct VOLUME_PROFILE *);

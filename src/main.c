@@ -32,7 +32,7 @@
 
 bool writeback_enabled;
 
-void online_menu(unsigned char *string)
+void online_menu(char *string)
 {
 	printf("%s is an administration tool to manage RapidDisk RAM disk devices and\n"
 	       "\tRapidDisk-Cache mappings.\n\n", string);
@@ -95,7 +95,8 @@ int remove_last_rc(RC_PROFILE *head) {
 	/* if there is only one item in the list, remove it */
 	if (head->next == NULL) {
 		retval = 1;
-		free(head);
+		if (head != NULL) free(head);
+		head = NULL;
 		return retval;
 	}
 
@@ -107,8 +108,10 @@ int remove_last_rc(RC_PROFILE *head) {
 
 	/* now current points to the second to last item of the list, so let's remove current->next */
 	retval = 0;
-	free(current->next);
-	current->next = NULL;
+	if (current->next != NULL) {
+		free(current->next);
+		current->next = NULL;
+	}
 	return retval;
 }
 
@@ -119,7 +122,8 @@ int remove_last_rd(RD_PROFILE *head) {
 	/* if there is only one item in the list, remove it */
 	if (head->next == NULL) {
 		retval = 1;
-		free(head);
+		if (head != NULL) free(head);
+		head = NULL;
 		return retval;
 	}
 
@@ -131,8 +135,10 @@ int remove_last_rd(RD_PROFILE *head) {
 
 	/* now current points to the second to last item of the list, so let's remove current->next */
 	retval = 0;
-	free(current->next);
-	current->next = NULL;
+	if (current->next != NULL) {
+		free(current->next);
+		current->next = NULL;
+	}
 	return retval;
 }
 
@@ -140,11 +146,12 @@ int remove_last_vp(VOLUME_PROFILE *head) {
     int retval;
 
     /* if there is only one item in the list, remove it */
-    if (head->next == NULL) {
-        retval = 1;
-        free(head);
-        return retval;
-    }
+	if (head->next == NULL) {
+		retval = 1;
+		if (head != NULL) free(head);
+		head = NULL;
+		return retval;
+	}
 
     /* get to the second to last node in the list */
     struct VOLUME_PROFILE *current = head;
@@ -154,9 +161,29 @@ int remove_last_vp(VOLUME_PROFILE *head) {
 
     /* now current points to the second to last item of the list, so let's remove current->next */
     retval = 0;
-    free(current->next);
-    current->next = NULL;
+	if (current->next != NULL) {
+		free(current->next);
+		current->next = NULL;
+	}
     return retval;
+}
+
+void free_linked_lists(RC_PROFILE *rc_head, RD_PROFILE *rd_head, VOLUME_PROFILE *vp_head) {
+	if (rc_head != NULL) {
+		while (TRUE) {
+			if (remove_last_rc(rc_head) == 1) break;
+		}
+	}
+	if (rd_head != NULL) {
+		while (TRUE) {
+			if (remove_last_rd(rd_head) == 1) break;
+		}
+	}
+	if (vp_head != NULL) {
+		while (TRUE) {
+			if (remove_last_vp(vp_head) == 1) break;
+		}
+	}
 }
 
 int exec_cmdline_arg(int argcin, char *argvin[])
@@ -165,7 +192,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	unsigned long long size = 0;
 	bool json_flag = FALSE;
 	bool header_flag = TRUE;
-	unsigned char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0}, header[NAMELEN] = {0};
+	char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0}, header[NAMELEN] = {0};
 	struct RD_PROFILE *disk = NULL;
 	struct RC_PROFILE *cache = NULL;
 	struct MEM_PROFILE *mem = NULL;
@@ -178,7 +205,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		case 'h':
 			printf("%s", header);
 			online_menu(argvin[0]);
-			return SUCCESS;
+			rc = SUCCESS;
 			break;
 		case 'a':
 			action = ACTION_ATTACH;
@@ -290,8 +317,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	}
 
 	if ((writeback_enabled == FALSE) && (mode == WRITEBACK)) {
-		printf("Please ensure that the dm-writecache module is "
-			   "loaded and retry.\n");
+		printf(ERR_NOWB_MODULE);
 		return -EPERM;
 	}
 
@@ -300,9 +326,11 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	switch(action) {
 	case ACTION_ATTACH:
-		if (size <= 0)
-			goto exec_cmdline_arg_out;
-
+		if (size <= 0) {
+			rc = -EINVAL;
+			printf(ERR_INVALID_ARG);
+			break;
+		}
 		rc = mem_device_attach(disk, size);
 		if (json_flag == TRUE)
 			json_status_return(rc);
@@ -312,11 +340,13 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			if (json_flag == TRUE) {
 				json_status_return(INVALID_VALUE);
 			} else
-				printf("Unable to locate any RapidDisk devices.\n");
+				printf(ERR_NO_DEVICES);
 		} else {
-			if (strlen(device) <= 0)
-				goto exec_cmdline_arg_out;
-
+			if (strlen(device) <= 0) {
+				rc = -EINVAL;
+				printf(ERR_INVALID_ARG);
+				break;
+			}
 			rc = mem_device_detach(disk, cache, device);
 		}
 		if (json_flag == TRUE)
@@ -338,8 +368,11 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		}
 		break;
 	case ACTION_CACHE_MAP:
-		if ((strlen(device) <= 0) || (strlen(backing) <= 0))
-			goto exec_cmdline_arg_out;
+		if ((strlen(device) <= 0) || (strlen(backing) <= 0)) {
+			rc = -EINVAL;
+			printf(ERR_INVALID_ARG);
+			break;
+		}
 
 		rc = cache_device_map(disk, cache, device, backing, mode);
 		if (json_flag == TRUE)
@@ -349,22 +382,27 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		if (disk == NULL) {
 			if (json_flag == TRUE) {
 				json_status_return(INVALID_VALUE);
-			} else
-				printf("Unable to locate any RapidDisk devices.\n");
+			} else {
+				printf(ERR_NO_DEVICES);
+			}
+			rc = -EINVAL;
+			break;
 		} else {
-			if (size <= 0)
-				goto exec_cmdline_arg_out;
-			if (strlen(device) <= 0)
-				goto exec_cmdline_arg_out;
-
+			if (size <= 0 || strlen(device) <= 0) {
+				rc = -EINVAL;
+				printf(ERR_INVALID_ARG);
+				break;
+			}
 			rc = mem_device_resize(disk, device, size);
 		}
 		if (json_flag == TRUE)
 			json_status_return(rc);
 		break;
 	case ACTION_CACHE_STATS:
-		if (strlen(device) <= 0)
-			goto exec_cmdline_arg_out;
+		if (strlen(device) <= 0) {
+			printf(ERR_INVALID_ARG);
+			break;
+		}
 		if (json_flag == TRUE)
 			if (strstr(device, "rc-wb") != NULL)
 				rc = cache_wb_device_stat_json(cache, device);
@@ -383,20 +421,19 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		if (get_memory_usage(mem) != SUCCESS) {
 			if (json_flag == TRUE) {
 				json_status_return(-EIO);
-				return -EIO;
-                        } else {
-				printf("Error. Unable to retrieve memory usage data.\n");
-				return -EIO;
+			} else {
+				printf(ERR_NO_MEMUSAGE);
 			}
+			if (mem) free(mem);
+			rc = -EIO;
+			break;
 		}
 		volumes = (struct VOLUME_PROFILE *)search_volumes_targets();
 		if (json_flag == TRUE)
 			rc = json_resources_list(mem, volumes);
 		else
 			rc =  resources_list(mem, volumes);
-		while (TRUE) {
-			if (remove_last_vp(volumes) == 1) break;
-		}
+		if (mem) free(mem);
 		break;
 	case ACTION_LIST_NVMET_PORTS:
 		rc = nvmet_view_ports(json_flag);
@@ -406,49 +443,67 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		break;
 	case ACTION_ENABLE_NVMET_PORT:
 		if (port == INVALID_VALUE) {
-			printf("Error. Invalid port number.\n");
-			return -EINVAL;
+			rc = -EINVAL;
+			printf(ERR_INVALID_PORT);
+			break;
 		}
 		rc = nvmet_enable_port(host, port, xfer);
 		break;
 	case ACTION_DISABLE_NVMET_PORT:
 		if (port == INVALID_VALUE) {
-			printf("Error. Invalid port number.\n");
-			return -EINVAL;
+			rc = -EINVAL;
+			printf(ERR_INVALID_PORT);
+			break;
 		}
 		rc = nvmet_disable_port(port);
 		break;
 	case ACTION_EXPORT_NVMET:
-		if (strlen(backing) <= 0)
-			goto exec_cmdline_arg_out;
+		if (strlen(backing) <= 0) {
+			rc = -EINVAL;
+			printf(ERR_INVALID_ARG);
+			break;
+		}
 		if ((disk == NULL) && (cache == NULL)) {
-			printf("No RapidDisk devices exist on the system.\n");
-			return SUCCESS;
+			rc =  SUCCESS;
+			printf(ERR_NO_RDEVICES);
+			break;
 		}
 		rc = nvmet_export_volume(disk, cache, backing, host, port);
 		break;
 	case ACTION_UNEXPORT_NVMET:
-		if (strlen(backing) <= 0)
-			goto exec_cmdline_arg_out;
+		if (strlen(backing) <= 0){
+			rc = -EINVAL;
+			printf(ERR_INVALID_ARG);
+			break;
+		}
 		rc = nvmet_unexport_volume(backing, host, port);
 		break;
 	case ACTION_LOCK:
-		if (strlen(device) <= 0)
-			goto exec_cmdline_arg_out;
+		if (strlen(device) <= 0){
+			rc = -EINVAL;
+			printf(ERR_INVALID_ARG);
+			break;
+		}
 		rc = mem_device_lock(disk, device, TRUE);
 		if (json_flag == TRUE)
 			json_status_return(rc);
 		break;
 	case ACTION_UNLOCK:
-		if (strlen(device) <= 0)
-			goto exec_cmdline_arg_out;
+		if (strlen(device) <= 0){
+			rc = -EINVAL;
+			printf(ERR_INVALID_ARG);
+			break;
+		}
 		rc = mem_device_lock(disk, device, FALSE);
 		if (json_flag == TRUE)
 			json_status_return(rc);
 		break;
 	case ACTION_REVALIDATE_NVMET_SIZE:
-		if (strlen(backing) <= 0)
-			goto exec_cmdline_arg_out;
+		if (strlen(backing) <= 0){
+			rc = -EINVAL;
+			printf(ERR_INVALID_ARG);
+			break;
+		}
 		rc = nvmet_revalidate_size(disk, cache, backing);
 		if (json_flag == TRUE)
 			json_status_return(rc);
@@ -461,33 +516,21 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		break;
 	}
 
-	if (mem) free(mem);
-
-	while (TRUE) {
-		if (remove_last_rc(cache) == 1) break;
-	}
-
-	while (TRUE) {
-		if (remove_last_rd(disk) == 1) break;
-	}
-
+	free_linked_lists(cache, disk, volumes);
 	return rc;
 
-exec_cmdline_arg_out:
-	printf("Error. Invalid argument(s) or values entered.\n");
-	return -EINVAL;
 }
 
 int main(int argc, char *argv[])
 {
 	int rc = INVALID_VALUE;
-	FILE *fp;
-	unsigned char string[BUFSZ];
 
-	if (getuid() != 0) {
+#ifndef DEBUG
+	if (geteuid() != 0) {
 		printf("\nYou must be root or contain sudo permissions to initiate this\n\n");
 		return -EACCES;
 	}
+#endif
 
 	writeback_enabled = FALSE;
 	rc = check_loaded_modules();

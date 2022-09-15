@@ -56,7 +56,7 @@ struct NVMET_PORTS *ports_end =   (struct NVMET_PORTS *) NULL;
 struct NVMET_PROFILE *nvmet_scan_subsystem(void)
 {
 	int err, err2, n = 0, i;
-	unsigned char file[NAMELEN * 2] = {0};
+	char file[NAMELEN * 2] = {0};
 	struct NVMET_PROFILE *nvmet;
 	struct dirent **list, **sublist;
 
@@ -75,15 +75,18 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(void)
 			sprintf(file, "%s/%s/namespaces/", SYS_NVMET_TGT, list[n]->d_name);
 			if ((err2 = scandir(file, &sublist, NULL, NULL)) < 0) {
 				printf("%s: scandir: %s\n", __func__, strerror(errno));
+				list = clean_scandir(list, err);
 				return NULL;
 			}
 			for (i = 0; i < err2; i++) {
 				if (strncmp(sublist[i]->d_name, ".", 1) != SUCCESS) {
 					if ((nvmet = (struct NVMET_PROFILE *)calloc(1, sizeof(struct NVMET_PROFILE))) == NULL ) {
 						printf("%s: calloc: %s\n", __func__, strerror(errno));
+						list = clean_scandir(list, err);
+						sublist = clean_scandir(sublist, err2);
 						return NULL;
 					}
-					strcpy(nvmet->nqn, (unsigned char *)list[n]->d_name);
+					strcpy(nvmet->nqn, (char *)list[n]->d_name);
 
 					sprintf(file, "%s/%s/namespaces/%s", SYS_NVMET_TGT, list[n]->d_name, sublist[i]->d_name);
 					if (access(file, F_OK) != INVALID_VALUE) {
@@ -98,10 +101,12 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(void)
 					nvmet_end = nvmet;
 					nvmet->next = NULL;
 				}
-				if (sublist[i] != NULL) free(sublist[i]);
+//				if (sublist[i] != NULL) free(sublist[i]);
 			}
+			sublist = clean_scandir(sublist, err2);
 		}
-		if (list[n] != NULL) free(list[n]);
+		list = clean_scandir(list, err);
+//		if (list[n] != NULL) free(list[n]);
 	}
 	return nvmet_head;
 }
@@ -112,7 +117,7 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(void)
 struct NVMET_PORTS *nvmet_scan_ports(void)
 {
 	int err, err2, n = 0, i;
-	unsigned char file[NAMELEN * 2] = {0};
+	char file[NAMELEN * 2] = {0};
 	struct NVMET_PORTS *nvmet_ports;
 	struct dirent **ports, **exports;
 
@@ -134,12 +139,15 @@ struct NVMET_PORTS *nvmet_scan_ports(void)
 				sprintf(file, "%s/%s/subsystems", SYS_NVMET_PORTS, ports[n]->d_name);
 				if ((err2 = scandir(file, &exports, NULL, NULL)) < 0) {
 					printf("%s: scandir: %s\n", __func__, strerror(errno));
+					ports = clean_scandir(ports, err);
 					return NULL;
 				}
 				for (i = 0; i < err2; i++) {
 					if (strncmp(exports[i]->d_name, ".", 1) != SUCCESS) {
 						if ((nvmet_ports = (struct NVMET_PORTS *)calloc(1, sizeof(struct NVMET_PORTS))) == NULL ) {
 							printf("%s: calloc: %s\n", __func__, strerror(errno));
+							ports = clean_scandir(ports, err);
+							exports = clean_scandir(exports, err2);
 							return NULL;
 						}
 						nvmet_ports->port = atoi(ports[n]->d_name);
@@ -160,12 +168,15 @@ struct NVMET_PORTS *nvmet_scan_ports(void)
 						ports_end = nvmet_ports;
 						nvmet_ports->next = NULL;
 					}
-					if (exports[i] != NULL) free(exports[i]);
+//					if (exports[i] != NULL) free(exports[i]);
 				}
+				exports = clean_scandir(exports, err2);
 			}
 		}
-		if (ports[n] != NULL) free(ports[n]);
+//		if (ports[n] != NULL) free(ports[n]);
+
 	}
+	ports = clean_scandir(ports, err);
 	return ports_head;
 }
 
@@ -175,7 +186,7 @@ struct NVMET_PORTS *nvmet_scan_ports(void)
 struct NVMET_PORTS *nvmet_scan_all_ports(void)
 {
 	int err, n = 0;
-	unsigned char file[NAMELEN * 2] = {0};
+	char file[NAMELEN * 2] = {0};
 	struct NVMET_PORTS *nvmet_ports;
 	struct dirent **ports;
 
@@ -196,6 +207,7 @@ struct NVMET_PORTS *nvmet_scan_all_ports(void)
 			if (access(file, F_OK) != INVALID_VALUE) {
 				if ((nvmet_ports = (struct NVMET_PORTS *)calloc(1, sizeof(struct NVMET_PORTS))) == NULL ) {
 					printf("%s: calloc: %s\n", __func__, strerror(errno));
+					ports = clean_scandir(ports, err);
 					return NULL;
 				}
 				nvmet_ports->port = atoi(ports[n]->d_name);
@@ -213,8 +225,9 @@ struct NVMET_PORTS *nvmet_scan_all_ports(void)
 				nvmet_ports->next = NULL;
 			}
 		}
-		if (ports[n] != NULL) free(ports[n]);
+//		if (ports[n] != NULL) free(ports[n]);
 	}
+	ports = clean_scandir(ports, err);
 	return ports_head;
 }
 
@@ -268,12 +281,12 @@ int nvmet_view_exports(bool json_flag)
 /*
  * description: Export an NVMe Target.
  */
-int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned char *device, unsigned char *host, int port)
+int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *device, char *host, int port)
 {
 	int rc = INVALID_VALUE, n, err;
 	FILE *fp;
 	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
-	unsigned char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, path2[NAMELEN] = {0x0};
+	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, path2[NAMELEN] = {0x0};
 	struct dirent **list;
 
 	/* Check to see if device exists */
@@ -309,7 +322,9 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 			printf("Error. Unable to access %s.\n%s: scandir: %s\n", path, __func__, strerror(errno));
 			return INVALID_VALUE;
 		}
+		/* TODO: check if err is not decreased by clean_scandir() in this scope, if not we can call it */
 		for (n = 0; n < err; n++) if (list[n] != NULL) free(list[n]);    /* clear list */
+		if (list) free(list);
 		if (err > 2) {
 			printf("One or more hosts exist. Please remove existing host or define a new one.\n");
 			return INVALID_VALUE;
@@ -423,8 +438,8 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 					}
 				}
 			}
-			if (list[n] != NULL) free(list[n]);
 		}
+		list = clean_scandir(list, err);
 	}
 
 	sprintf(path, "port %d", port);
@@ -437,11 +452,11 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigne
 /*
  *
  */
-int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsigned char *device)
+int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *device)
 {
 	int rc = INVALID_VALUE, n, err;
 	FILE *fp;
-	unsigned char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0};
+	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0};
 
 	/* Check to see if device exists */
 	while (rd_prof != NULL) {
@@ -497,11 +512,11 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, unsig
 /*
  * description: Unexport an NVMe Target.
  */
-int nvmet_unexport_volume(unsigned char *device, unsigned char *host, int port)
+int nvmet_unexport_volume(char *device, char *host, int port)
 {
 	int rc = INVALID_VALUE, n, err;
 	FILE *fp;
-	unsigned char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, path2[NAMELEN] = {0x0};
+	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, path2[NAMELEN] = {0x0};
 	struct dirent **list, **sublist;
 
 	gethostname(hostname, sizeof(hostname));
@@ -526,6 +541,7 @@ int nvmet_unexport_volume(unsigned char *device, unsigned char *host, int port)
 		return INVALID_VALUE;
 	}
 	for (n = 0; n < err; n++) if (list[n] != NULL) free(list[n]);    /* clear list */
+	free(list);
 	if (err > 3) {
 		printf("An invalid number of namespaces not created by RapidDisk exist.\n");
 		return rc;
@@ -560,13 +576,14 @@ int nvmet_unexport_volume(unsigned char *device, unsigned char *host, int port)
 					rc = unlink(path);
 					if (rc != SUCCESS) {
 						printf("Error. Unable to remove hosts.\n%s: unlink: %s\n", __func__, strerror(errno));
+						list = clean_scandir(list, err);
 						return rc;
 					}
 				}
 			}
-			if (list[n] != NULL) free(list[n]);
 		}
-        	printf("Block device %s has been unmapped from all NVMe Target hosts.\n", device);
+		list = clean_scandir(list, err);
+		printf("Block device %s has been unmapped from all NVMe Target hosts.\n", device);
 	}
 
 host_check_out:
@@ -596,13 +613,14 @@ host_check_out:
 					rc = unlink(path);
 					if (rc != SUCCESS) {
 						printf("Error. Unable to remove NQN from ports.\n%s: unlink: %s\n", __func__, strerror(errno));
+						list = clean_scandir(list, err);
 						return rc;
 					}
 				}
 			}
-			if (list[n] != NULL) free(list[n]);
 		}
-        	printf("Block device %s has been unmapped from all NVMe Target ports.\n", device);
+		list = clean_scandir(list, err);
+		printf("Block device %s has been unmapped from all NVMe Target ports.\n", device);
 	}
 
 port_check_out:
@@ -638,12 +656,12 @@ port_check_out:
 		}
 	}
 
-        printf("Block device %s has been removed from the NVMe Target subsystem.\n", device);
+	printf("Block device %s has been removed from the NVMe Target subsystem.\n", device);
 
 	return SUCCESS;
 }
 
-int number_validate(unsigned char *str)
+int number_validate(char *str)
 {
 	while (*str) {
 		if (!isdigit(*str))
@@ -654,10 +672,10 @@ int number_validate(unsigned char *str)
 	return SUCCESS;
 }
 
-int ip_validate(unsigned char *ip)
+int ip_validate(char *ip)
 {
 	int i, num, dots = 0;
-	unsigned char *ptr, *ip_dup;
+	char *ptr, *ip_dup;
 
 	ip_dup = strdup(ip);
 
@@ -681,14 +699,16 @@ int ip_validate(unsigned char *ip)
 	if (dots != 3)
 		return INVALID_VALUE;
 
+	if (ip_dup) free(ip_dup);
+
 	return SUCCESS;
 }
 
-unsigned char *nvmet_interface_ip_get(unsigned char *interface)
+char *nvmet_interface_ip_get(char *interface)
 {
 	int fd;
 	struct ifreq ifr;
-	static unsigned char ip[0xF] = {0};
+	static char ip[0xF] = {0};
 
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < SUCCESS) {
 		printf("%s: open: %s\n", __func__, strerror(errno));
@@ -703,6 +723,7 @@ unsigned char *nvmet_interface_ip_get(unsigned char *interface)
 
 	if (ioctl(fd, SIOCGIFADDR, &ifr) == INVALID_VALUE) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
+		close(fd);
 		return NULL;
 	}
 	close(fd);
@@ -718,7 +739,7 @@ unsigned char *nvmet_interface_ip_get(unsigned char *interface)
  */
 int nvmet_view_ports(bool json_flag)
 {
-        int i = 1;
+	int i = 1;
 	struct NVMET_PORTS *ports, *tmp_ports;
 
 	ports = (struct NVMET_PORTS *)nvmet_scan_all_ports();
@@ -743,11 +764,11 @@ int nvmet_view_ports(bool json_flag)
 	return SUCCESS;
 }
 
-int nvmet_enable_port(unsigned char *interface, int port, int protocol)
+int nvmet_enable_port(char *interface, int port, int protocol)
 {
-        int rc = INVALID_VALUE;
+	int rc = INVALID_VALUE;
 	FILE *fp;
-        unsigned char path[NAMELEN] = {0x0}, ip[0xF] = {0x0}, proto[0x5] = {0x0};
+	char path[NAMELEN] = {0x0}, ip[0xF] = {0x0}, proto[0x5] = {0x0};
 	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	struct NVMET_PORTS *ports, *tmp_ports;
         
@@ -766,15 +787,15 @@ int nvmet_enable_port(unsigned char *interface, int port, int protocol)
 		return rc;
 	}
 	
-        while (ports != NULL) {
+	while (ports != NULL) {
 		if (strcmp(ports->addr, ip) == SUCCESS) {
 			printf("Error. Interface %s with IP address %s is already in use on port %d.\n", interface, ip, ports->port);
 			return rc;
 		}
-                tmp_ports = ports;
-                ports = ports->next;
-                free(tmp_ports);
-        }
+		tmp_ports = ports;
+		ports = ports->next;
+		free(tmp_ports);
+	}
 
 	if ((rc = mkdir(path, mode)) != SUCCESS) {
 		printf("Error. Unable to create port directory.\n%s: mkdir: %s\n", __func__, strerror(errno));
@@ -825,7 +846,7 @@ int nvmet_enable_port(unsigned char *interface, int port, int protocol)
 int nvmet_disable_port(int port)
 {
 	int rc = INVALID_VALUE, n, err;
-	unsigned char path[NAMELEN] = {0x0};
+	char path[NAMELEN] = {0x0};
 	struct dirent **list;
 
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
@@ -835,16 +856,16 @@ int nvmet_disable_port(int port)
 	}
 
 	/* Make sure that no subsystems are mapped from this port. */
-        sprintf(path, "%s/%d/subsystems/", SYS_NVMET_PORTS, port);
-        if ((err = scandir(path, &list, NULL, NULL)) < 0) {
-                printf("Error. Unable to access %s.\n%s: scandir: %s\n", path, __func__, strerror(errno));
-                return rc;
-        }
-        for (n = 0; n < err; n++) if (list[n] != NULL) free(list[n]);    /* clear list */
-        if (err > 2) {
-                printf("This port is currently in use.\n");
-                return rc;
-        }
+	sprintf(path, "%s/%d/subsystems/", SYS_NVMET_PORTS, port);
+	if ((err = scandir(path, &list, NULL, NULL)) < 0) {
+			printf("Error. Unable to access %s.\n%s: scandir: %s\n", path, __func__, strerror(errno));
+			return rc;
+	}
+	list = clean_scandir(list, err);
+	if (err > 2) {
+		printf("This port is currently in use.\n");
+		return rc;
+	}
 
 	/* Remove the port */
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);

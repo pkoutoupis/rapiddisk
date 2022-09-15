@@ -36,8 +36,8 @@
 
 typedef struct PTHREAD_ARGS {
 	bool verbose;
-	unsigned char port[0xf];
-	unsigned char path[NAMELEN];
+	char port[0xf];
+	char path[NAMELEN];
 } PTHREAD_ARGS;
 
 #define CMD_PING_DAEMON		"/v1/checkServiceStatus"
@@ -56,6 +56,6 @@ typedef struct PTHREAD_ARGS {
 #define CMD_LIST_NVMET_PORTS	"/v1/listAllNVMePorts"
 
 void *mgmt_thread(void *);
-int json_status_check(unsigned char *);
-int json_status_unsupported(unsigned char *);
+int json_status_check(char *);
+int json_status_unsupported(char *);
 #endif

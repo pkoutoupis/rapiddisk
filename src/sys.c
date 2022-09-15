@@ -55,27 +55,27 @@ int get_memory_usage(struct MEM_PROFILE *mem)
 struct VOLUME_PROFILE *search_volumes_targets(void)
 {
 	int rc, n = 0, i;
-        unsigned char file[NAMELEN] = {0}, test[NAMELEN + 32] = {0};
-        struct dirent **list;
-        struct VOLUME_PROFILE *volume = NULL;
+	char file[NAMELEN] = {0}, test[NAMELEN + 32] = {0};
+	struct dirent **list;
+	struct VOLUME_PROFILE *volume = NULL;
 
-        if ((rc = scandir(SYS_BLOCK, &list, NULL, NULL)) < 0) {
-                printf("%s: scandir: %s\n", __func__, strerror(errno));
-                return NULL;
-        }
-        for (;n < rc; n++) {
-                if ((strncmp(list[n]->d_name, "sd", 2) == SUCCESS) || \
-		    (strncmp(list[n]->d_name, "nvme", 4) == SUCCESS) || \
-		    (strncmp(list[n]->d_name, "pmem", 4) == SUCCESS)) {
-                        volume = (struct VOLUME_PROFILE *)calloc(1, sizeof(struct VOLUME_PROFILE));
-                        if (volume == NULL) {
-                                printf("%s: calloc: %s\n", __func__, strerror(errno));
-                                return NULL;
-                        }
-                        strcpy(volume->device, (unsigned char *)list[n]->d_name);
-                        sprintf(file, "%s/%s", SYS_BLOCK, list[n]->d_name);
-                        volume->size = (BYTES_PER_SECTOR * strtoull(read_info(file, "size"), NULL, 10));
-                        sprintf(file, "%s/%s/device", SYS_BLOCK, list[n]->d_name);
+	if ((rc = scandir(SYS_BLOCK, &list, NULL, NULL)) < 0) {
+			printf("%s: scandir: %s\n", __func__, strerror(errno));
+			return NULL;
+	}
+	for (;n < rc; n++) {
+		if ((strncmp(list[n]->d_name, "sd", 2) == SUCCESS) || \
+		(strncmp(list[n]->d_name, "nvme", 4) == SUCCESS) || \
+		(strncmp(list[n]->d_name, "pmem", 4) == SUCCESS)) {
+			volume = (struct VOLUME_PROFILE *)calloc(1, sizeof(struct VOLUME_PROFILE));
+			if (volume == NULL) {
+					printf("%s: calloc: %s\n", __func__, strerror(errno));
+					return NULL;
+			}
+			strcpy(volume->device, (char *)list[n]->d_name);
+			sprintf(file, "%s/%s", SYS_BLOCK, list[n]->d_name);
+			volume->size = (BYTES_PER_SECTOR * strtoull(read_info(file, "size"), NULL, 10));
+			sprintf(file, "%s/%s/device", SYS_BLOCK, list[n]->d_name);
 			sprintf(test, "%s/model", file);
 			if (access(test, F_OK) != INVALID_VALUE)
 				sprintf(volume->model, "%s", read_info(file, "model"));
@@ -97,17 +97,16 @@ struct VOLUME_PROFILE *search_volumes_targets(void)
 					volume->vendor[i] = '\0';
 			}
 
-                        if (volume_head == NULL)
-                                volume_head = volume;
-                        else
-                                volume_end->next = volume;
-                        volume_end = volume;
-                        volume->next = NULL;
-                }
-                if (list[n] != NULL) free(list[n]);
-        }
-        free(list);
-        return volume_head;
+			if (volume_head == NULL)
+					volume_head = volume;
+			else
+					volume_end->next = volume;
+			volume_end = volume;
+			volume->next = NULL;
+		}
+	}
+	list = clean_scandir(list, rc);
+	return volume_head;
 }
 
 int resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volumes)
@@ -166,6 +165,7 @@ int check_loaded_modules(void)
 
 	if (rc != SUCCESS) {
 		printf("Please ensure that the RapidDisk-Cache module is loaded and retry.\n");
+		list = clean_scandir(list, i);
 		return rc;
 	}
 
@@ -174,9 +174,21 @@ int check_loaded_modules(void)
 		if (strcmp(list[n]->d_name, "dm_writecache") == SUCCESS) {
 			rc = 1;
 		}
-		if (list[n] != NULL) free(list[n]);
 	}
-	free(list);
 
+	list = clean_scandir(list, i);
 	return rc;
+}
+
+struct dirent **clean_scandir(struct dirent **scanlist, int num) {
+	if (scanlist != NULL) {
+		while (num--) {
+			if (scanlist[num] != NULL) {
+				free(scanlist[num]);
+				scanlist[num] =  NULL;
+			}
+		}
+		free(scanlist);
+	}
+	return NULL;
 }

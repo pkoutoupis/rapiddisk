@@ -34,7 +34,7 @@
 #include <microhttpd.h>
 
 bool verbose;
-unsigned char path[NAMELEN] = {0};
+char path[NAMELEN] = {0};
 
 /*
  * The responses to our GET requests. Although, we are not SPECIFICALLY checking that they are GETs.
@@ -51,11 +51,11 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 	struct MHD_Response *response;
 	int rc, status = MHD_HTTP_OK;
 	unsigned long long size = 0;
-	unsigned char device[NAMELEN] = {0}, source[NAMELEN] = {0}, command[NAMELEN * 4] = {0};
-	unsigned char *dup = NULL, *token = NULL;
+	char device[NAMELEN] = {0}, source[NAMELEN] = {0}, command[NAMELEN * 4] = {0};
+	char *dup = NULL, *token = NULL;
 	FILE *stream;
 
-	unsigned char *page = (unsigned char *)calloc(1, BUFSZ);
+	char *page = (char *)calloc(1, BUFSZ);
 	if (page == NULL) {
 		printf("%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
 #if MHD_VERSION >= 0x00097100
