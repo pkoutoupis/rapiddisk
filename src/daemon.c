@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 	pid_t pid;
 	int rc = SUCCESS, i;
 	pthread_t mgmt_tid = INVALID_VALUE;
-	unsigned char *path;
+	unsigned char *path = NULL;
 
 	printf("%s %s\n%s\n\n", DAEMON, VERSION_NUM, COPYRIGHT);
 
@@ -181,10 +181,8 @@ int main(int argc, char *argv[])
 	if ((pid = fork()) < SUCCESS) {
 		rc = pid;
 		goto exit_on_failure;
-	} else if (pid != SUCCESS) {
-		if (path) free(path);
+	} else if (pid != SUCCESS) /* Terminate parent */
 		exit(SUCCESS);
-	}
 
 	setsid();
 	chdir("/");
@@ -209,5 +207,6 @@ exit_on_failure:
 
 	syslog(LOG_INFO, "%s: Daemon exiting.\n", DAEMON);
 	if (path) free(path);
+	if (args) free(args);
 	return rc;
 }
