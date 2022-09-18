@@ -22,7 +22,7 @@ ifeq ($(CC),)
 	CC := gcc -Werror
 endif
 
-DBG := -DDEBUG -Og -g -Wl,--export-dynamic -gdwarf
+DEBUG_FLAGS := -DDEBUG -Wl,--export-dynamic -ggdb
 
 CHMOD := chmod
 CP := cp
@@ -50,37 +50,63 @@ uninstall:
 	$(RM) $(DESTDIR)$(DIR)/$(BIN)
 	$(RM) $(DESTDIR)$(DIR)/$(BIN)d
 
-json.o: json.c
+json.o: json.c common.h cli.h
 	$(CC) -c json.c -o json.o
 
-json-server.o: json.c
+json-server.o: json.c common.h
 	$(CC) -c json.c -DSERVER -o json-server.o
 
-net.o: net.c
+net.o: net.c common.h daemon.h
 	$(CC) -c net.c -o net.o
 
-nvmet.o: nvmet.c
+nvmet.o: nvmet.c common.h cli.h
 	$(CC) -c nvmet.c -o nvmet.o
 
-rdsk.o: rdsk.c
+rdsk.o: rdsk.c common.h cli.h
 	$(CC) -c rdsk.c -o rdsk.o
 
-sys.o: sys.c
+sys.o: sys.c common.h cli.h
 	$(CC) -c sys.c -o sys.o
 
-sys-server.o: sys.c
+sys-server.o: sys.c common.h
 	$(CC) -c sys.c -DSERVER -o sys-server.o
 
-$(BIN): main.c json.o rdsk.o nvmet.o sys.o
+$(BIN): main.c json.o rdsk.o nvmet.o sys.o common.h cli.h
 	$(CC) main.c -o $(BIN) json.o nvmet.o rdsk.o sys.o -ljansson
 
-$(BIN)d: daemon.c json-server.o net.o sys-server.o
+$(BIN)d: daemon.c json-server.o net.o sys-server.o common.h daemon.h
 	$(CC) daemon.c -o $(BIN)d json-server.o net.o sys-server.o -lpthread -ljansson -lmicrohttpd
+
+json_d.o: json.c common.h cli.h
+	$(CC) $(DEBUG_FLAGS) -c json.c -o json_d.o
+
+json-server_d.o: json.c common.h
+	$(CC) $(DEBUG_FLAGS) -c json.c -DSERVER -o json-server_d.o
+
+net_d.o: net.c common.h daemon.h
+	$(CC) $(DEBUG_FLAGS) -c net.c -o net_d.o
+
+nvmet_d.o: nvmet.c common.h cli.h
+	$(CC) $(DEBUG_FLAGS) -c nvmet.c -o nvmet_d.o
+
+rdsk_d.o: rdsk.c common.h cli.h
+	$(CC) $(DEBUG_FLAGS) -c rdsk.c -o rdsk_d.o
+
+sys_d.o: sys.c common.h cli.h
+	$(CC) $(DEBUG_FLAGS) -c sys.c -o sys_d.o
+
+sys-server_d.o: sys.c common.h
+	$(CC) $(DEBUG_FLAGS) -c sys.c -DSERVER -o sys-server_d.o
+
+$(BIN)_debug: main.c json_d.o rdsk_d.o nvmet_d.o sys_d.o common.h cli.h
+	$(CC) $(DEBUG_FLAGS) main.c -o $(BIN)_debug json_d.o nvmet_d.o rdsk_d.o sys_d.o -ljansson
+
+$(BIN)d_debug: daemon.c json-server_d.o net_d.o sys-server_d.o common.h daemon.h
+	$(CC) $(DEBUG_FLAGS) daemon.c -o $(BIN)d_debug json-server_d.o net_d.o sys-server_d.o -lpthread -ljansson -lmicrohttpd
 
 .PHONY: clean
 clean:
-	rm -f *.o $(BIN) $(BIN)d
+	rm -f *.o $(BIN) $(BIN)d $(BIN)_debug $(BIN)d_debug
 
 .PHONY: debug
-debug: CC += $(DBG)
-debug: $(BIN) $(BIN)d
+debug: $(BIN)_debug $(BIN)d_debug

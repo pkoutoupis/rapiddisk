@@ -54,6 +54,7 @@ tools-uninstall:
 	$(MAKE) -C conf uninstall
 	$(MAKE) -C doc uninstall
 
+.PHONY: debug
 debug:
 	$(MAKE) -C src $@
-	$(MAKE) -C module $@
+

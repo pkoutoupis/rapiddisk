@@ -359,7 +359,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		break;
 	case ACTION_LIST:
 		if ((disk == NULL) && (json_flag != TRUE))
-			printf("Unable to locate any RapidDisk devices.\n");
+			printf(ERR_NO_DEVICES);
 		else {
 			if (json_flag == TRUE)
 				rc = json_device_list(disk, cache);
@@ -517,6 +517,9 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	}
 
 	free_linked_lists(cache, disk, volumes);
+	cache = NULL;
+	disk = NULL;
+	volumes = NULL;
 	return rc;
 
 }
