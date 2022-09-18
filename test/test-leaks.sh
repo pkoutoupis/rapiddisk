@@ -12,9 +12,9 @@ if [ "$1" == "json" ] ; then
 fi
 
 if which >/dev/null 2>&1 valgrind ; then
-  cmd="valgrind --sim-hints=lax-ioctls --show-leak-kinds=all --leak-check=full --track-origins=yes -s ../src/rapiddisk $json"
+  cmd="valgrind --sim-hints=lax-ioctls --show-leak-kinds=all --leak-check=full --track-origins=yes -s ../src/rapiddisk_debug $json"
 else
-  cmd="../src/rapiddisk $json"
+  cmd="../src/rapiddisk_debug $json"
 fi
 
 function cont() {
@@ -24,8 +24,8 @@ function cont() {
 
 function cleanup()
 {
-	../src/rapiddisk -u rc-wa_loop7 >/dev/null
-	../src/rapiddisk -d ${RD}  >/dev/null
+	../src/rapiddisk_debug -u rc-wa_loop7 >/dev/null
+	../src/rapiddisk_debug -d ${RD}  >/dev/null
 	losetup -d /dev/loop7  >/dev/null
 	rm -f /tmp/test1 >/dev/null
 }

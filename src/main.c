@@ -88,101 +88,80 @@ void online_menu(char *string)
 	       "\trapiddisk -x -b rd3 -P 1 -H nqn.host1\n\n");
 }
 
-int remove_last_rc(RC_PROFILE *head) {
-
-	int retval;
+void clean_rc(RC_PROFILE *head) {
 
 	/* if there is only one item in the list, remove it */
 	if (head->next == NULL) {
-		retval = 1;
 		if (head != NULL) free(head);
 		head = NULL;
-		return retval;
-	}
+	} else {
+		/* get to the second to last node in the list */
+		struct RC_PROFILE *current = head;
+		while (current->next->next != NULL) {
+			current = current->next;
+		}
 
-	/* get to the second to last node in the list */
-	struct RC_PROFILE *current = head;
-	while (current->next->next != NULL) {
-		current = current->next;
+		/* now current points to the second to last item of the list, so let's remove current->next */
+		if (current->next != NULL) {
+			free(current->next);
+			current->next = NULL;
+		}
+		clean_rc(head);
 	}
-
-	/* now current points to the second to last item of the list, so let's remove current->next */
-	retval = 0;
-	if (current->next != NULL) {
-		free(current->next);
-		current->next = NULL;
-	}
-	return retval;
 }
 
-int remove_last_rd(RD_PROFILE *head) {
-
-	int retval;
+void clean_rd(RD_PROFILE *head) {
 
 	/* if there is only one item in the list, remove it */
 	if (head->next == NULL) {
-		retval = 1;
 		if (head != NULL) free(head);
 		head = NULL;
-		return retval;
-	}
+	} else {
+		/* get to the second to last node in the list */
+		struct RD_PROFILE *current = head;
+		while (current->next->next != NULL) {
+			current = current->next;
+		}
 
-	/* get to the second to last node in the list */
-	struct RD_PROFILE *current = head;
-	while (current->next->next != NULL) {
-		current = current->next;
+		/* now current points to the second to last item of the list, so let's remove current->next */
+		if (current->next != NULL) {
+			free(current->next);
+			current->next = NULL;
+		}
+		clean_rd(head);
 	}
-
-	/* now current points to the second to last item of the list, so let's remove current->next */
-	retval = 0;
-	if (current->next != NULL) {
-		free(current->next);
-		current->next = NULL;
-	}
-	return retval;
 }
 
-int remove_last_vp(VOLUME_PROFILE *head) {
-    int retval;
-
-    /* if there is only one item in the list, remove it */
+void clean_vp(VOLUME_PROFILE *head) {
+	/* if there is only one item in the list, remove it */
 	if (head->next == NULL) {
-		retval = 1;
 		if (head != NULL) free(head);
 		head = NULL;
-		return retval;
-	}
+	} else {
+		/* get to the second to last node in the list */
+		struct VOLUME_PROFILE *current = head;
+		while (current->next->next != NULL) {
+			current = current->next;
+		}
 
-    /* get to the second to last node in the list */
-    struct VOLUME_PROFILE *current = head;
-    while (current->next->next != NULL) {
-        current = current->next;
-    }
-
-    /* now current points to the second to last item of the list, so let's remove current->next */
-    retval = 0;
-	if (current->next != NULL) {
-		free(current->next);
-		current->next = NULL;
+		/* now current points to the second to last item of the list, so let's remove current->next */
+		if (current->next != NULL) {
+			free(current->next);
+			current->next = NULL;
+		}
+		clean_vp(head);
 	}
-    return retval;
 }
 
 void free_linked_lists(RC_PROFILE *rc_head, RD_PROFILE *rd_head, VOLUME_PROFILE *vp_head) {
 	if (rc_head != NULL) {
-		while (TRUE) {
-			if (remove_last_rc(rc_head) == 1) break;
-		}
+		clean_rc(rc_head);
 	}
 	if (rd_head != NULL) {
-		while (TRUE) {
-			if (remove_last_rd(rd_head) == 1) break;
-		}
+		clean_rd(rd_head);
 	}
 	if (vp_head != NULL) {
-		while (TRUE) {
-			if (remove_last_vp(vp_head) == 1) break;
-		}
+		clean_vp(vp_head);
 	}
 }
 
@@ -200,12 +179,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	sprintf(header, "%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	while ((i = getopt(argcin, argvin, "a:b:c:d:ef:gH:hi:jL:lm:NnP:p:qRr:s:t:U:u:VvXx")) != INVALID_VALUE) {
+	while ((i = getopt(argcin, argvin, "?:a:b:c:d:ef:gH:hi:jL:lm:NnP:p:qRr:s:t:U:u:VvXx")) != INVALID_VALUE) {
 		switch (i) {
 		case 'h':
 			printf("%s", header);
 			online_menu(argvin[0]);
-			rc = SUCCESS;
+			return SUCCESS;
 			break;
 		case 'a':
 			action = ACTION_ATTACH;
@@ -327,24 +306,35 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	switch(action) {
 	case ACTION_ATTACH:
 		if (size <= 0) {
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_ARG);
+			}
 			rc = -EINVAL;
-			printf(ERR_INVALID_ARG);
-			break;
+		} else {
+			rc = mem_device_attach(disk, size);
+			if (json_flag == TRUE)
+				json_status_return(rc);
 		}
-		rc = mem_device_attach(disk, size);
-		if (json_flag == TRUE)
-			json_status_return(rc);
 		break;
 	case ACTION_DETACH:
 		if (disk == NULL) {
 			if (json_flag == TRUE) {
 				json_status_return(INVALID_VALUE);
-			} else
+			} else {
 				printf(ERR_NO_DEVICES);
+			}
+			rc = -EINVAL;
+			break;
 		} else {
 			if (strlen(device) <= 0) {
+				if (json_flag == TRUE) {
+					json_status_return(INVALID_VALUE);
+				} else {
+					printf(ERR_INVALID_ARG);
+				}
 				rc = -EINVAL;
-				printf(ERR_INVALID_ARG);
 				break;
 			}
 			rc = mem_device_detach(disk, cache, device);
@@ -369,11 +359,14 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		break;
 	case ACTION_CACHE_MAP:
 		if ((strlen(device) <= 0) || (strlen(backing) <= 0)) {
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_ARG);
+			}
 			rc = -EINVAL;
-			printf(ERR_INVALID_ARG);
 			break;
 		}
-
 		rc = cache_device_map(disk, cache, device, backing, mode);
 		if (json_flag == TRUE)
 			json_status_return(rc);
@@ -389,8 +382,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			break;
 		} else {
 			if (size <= 0 || strlen(device) <= 0) {
+				if (json_flag == TRUE) {
+					json_status_return(INVALID_VALUE);
+				} else {
+					printf(ERR_INVALID_ARG);
+				}
 				rc = -EINVAL;
-				printf(ERR_INVALID_ARG);
 				break;
 			}
 			rc = mem_device_resize(disk, device, size);
@@ -400,7 +397,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		break;
 	case ACTION_CACHE_STATS:
 		if (strlen(device) <= 0) {
-			printf(ERR_INVALID_ARG);
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_ARG);
+			}
+			rc = -EINVAL;
 			break;
 		}
 		if (json_flag == TRUE)
@@ -425,6 +427,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				printf(ERR_NO_MEMUSAGE);
 			}
 			if (mem) free(mem);
+			mem = NULL;
 			rc = -EIO;
 			break;
 		}
@@ -434,6 +437,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		else
 			rc =  resources_list(mem, volumes);
 		if (mem) free(mem);
+		mem = NULL;
 		break;
 	case ACTION_LIST_NVMET_PORTS:
 		rc = nvmet_view_ports(json_flag);
@@ -443,45 +447,69 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		break;
 	case ACTION_ENABLE_NVMET_PORT:
 		if (port == INVALID_VALUE) {
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_PORT);
+			}
 			rc = -EINVAL;
-			printf(ERR_INVALID_PORT);
 			break;
 		}
 		rc = nvmet_enable_port(host, port, xfer);
 		break;
 	case ACTION_DISABLE_NVMET_PORT:
 		if (port == INVALID_VALUE) {
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_PORT);
+			}
 			rc = -EINVAL;
-			printf(ERR_INVALID_PORT);
 			break;
 		}
 		rc = nvmet_disable_port(port);
 		break;
 	case ACTION_EXPORT_NVMET:
 		if (strlen(backing) <= 0) {
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_ARG);
+			}
 			rc = -EINVAL;
-			printf(ERR_INVALID_ARG);
 			break;
 		}
 		if ((disk == NULL) && (cache == NULL)) {
+			if (json_flag == TRUE) {
+				json_status_return(SUCCESS);
+			} else {
+				printf(ERR_NO_RDEVICES);
+			}
 			rc =  SUCCESS;
-			printf(ERR_NO_RDEVICES);
 			break;
 		}
 		rc = nvmet_export_volume(disk, cache, backing, host, port);
 		break;
 	case ACTION_UNEXPORT_NVMET:
 		if (strlen(backing) <= 0){
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_ARG);
+			}
 			rc = -EINVAL;
-			printf(ERR_INVALID_ARG);
 			break;
 		}
 		rc = nvmet_unexport_volume(backing, host, port);
 		break;
 	case ACTION_LOCK:
 		if (strlen(device) <= 0){
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_ARG);
+			}
 			rc = -EINVAL;
-			printf(ERR_INVALID_ARG);
 			break;
 		}
 		rc = mem_device_lock(disk, device, TRUE);
@@ -490,8 +518,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		break;
 	case ACTION_UNLOCK:
 		if (strlen(device) <= 0){
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_ARG);
+			}
 			rc = -EINVAL;
-			printf(ERR_INVALID_ARG);
 			break;
 		}
 		rc = mem_device_lock(disk, device, FALSE);
@@ -500,8 +532,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		break;
 	case ACTION_REVALIDATE_NVMET_SIZE:
 		if (strlen(backing) <= 0){
+			if (json_flag == TRUE) {
+				json_status_return(INVALID_VALUE);
+			} else {
+				printf(ERR_INVALID_ARG);
+			}
 			rc = -EINVAL;
-			printf(ERR_INVALID_ARG);
 			break;
 		}
 		rc = nvmet_revalidate_size(disk, cache, backing);
@@ -528,6 +564,7 @@ int main(int argc, char *argv[])
 {
 	int rc = INVALID_VALUE;
 
+	/* This preprocessor if/endif is useful when the debbugger can't run as root */
 #ifndef DEBUG
 	if (geteuid() != 0) {
 		printf("\nYou must be root or contain sudo permissions to initiate this\n\n");

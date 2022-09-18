@@ -100,7 +100,6 @@ struct RD_PROFILE *search_rdsk_targets(void)
 			rdsk_end = prof;
 			prof->next = NULL;
 		}
-//		if (list[n] != NULL) free(list[n]);
 	}
 	list = clean_scandir(list, rc);
 	return rdsk_head;
@@ -161,7 +160,6 @@ struct RC_PROFILE *search_cache_targets(void)
 			cache_end = prof;
 			prof->next = NULL;
 		}
-//		if (list[n] != NULL) free(list[n]);
 	}
 	list = clean_scandir(list, num);
 	nodes = clean_scandir(nodes, num2);
@@ -320,6 +318,7 @@ int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, char *cache)
 	struct WC_STATS *stats = NULL;
 
 	if (rc_prof == NULL) {
+		/* TODO: JSON output needed here */
 		printf("  No RapidDisk-Cache Mappings exist.\n\n");
 		return 1;
 	}
