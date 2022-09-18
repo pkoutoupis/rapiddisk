@@ -33,6 +33,10 @@
 #include <linux/fs.h>
 #include <sys/ioctl.h>
 
+#define BYTES_PER_BLOCK		512
+#define IOCTL_RD_GET_STATS	0x0529
+#define IOCTL_RD_BLKFLSBUF	0x0531
+
 struct RD_PROFILE *rdsk_head =  (struct RD_PROFILE *) NULL;
 struct RD_PROFILE *rdsk_end =   (struct RD_PROFILE *) NULL;
 struct RC_PROFILE *cache_head = (struct RC_PROFILE *) NULL;
@@ -85,7 +89,7 @@ struct RD_PROFILE *search_rdsk_targets(void)
 			}
 			strcpy(prof->device, (char *)list[n]->d_name);
 			sprintf(file, "%s/%s", SYS_BLOCK, list[n]->d_name);
-			prof->size = (BYTES_PER_SECTOR * strtoll(read_info(file, "size"), NULL, 10));
+			prof->size = (BYTES_PER_SECTOR * strtoull(read_info(file, "size"), NULL, 10));
 			prof->lock_status = mem_device_lock_status(prof->device);
 			prof->usage = mem_device_get_usage(prof->device);
 
@@ -391,8 +395,8 @@ abort_stat_collect:
 	rc = json_cache_wb_statistics(stats);
 
 	if (dup) free(dup);
-	if (buf) free(buf);
 	if (stats) free(stats);
+	if (buf) free(buf);
 	return rc;
 }
 
@@ -402,7 +406,7 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size)
 	FILE *fp = NULL;
 	char string[BUFSZ] = {0}, name[16] = {0};
 
-	/* echo "rapiddisk attach 64" > /sys/kernel/rapiddisk/mgmt <- in sectors*/
+	/* echo "rapiddisk attach 65536" > /sys/kernel/rapiddisk/mgmt <- in bytes */
 	for (dsk = 0; prof != NULL; dsk++) {
 		strcat(string, ",");
 		strcat(string, prof->device);
@@ -420,7 +424,8 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size)
 		printf("%s: fopen: %s: %s\n", __func__, SYS_RDSK, strerror(errno));
 		return -ENOENT;
 	}
-	if (fprintf(fp, "rapiddisk attach %d %llu\n", dsk, (size * 1024 * 1024)) < 0) {
+	if (fprintf(fp, "rapiddisk attach %d %llu\n", dsk,
+		(size * 1024 * 1024)) < 0) {
 		printf("%s: fprintf: %s\n", __func__, strerror(errno));
 		fclose(fp);
 		return -EIO;
@@ -499,16 +504,15 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE * rc_prof, char *st
 
 int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long size)
 {
-	int rc = INVALID_VALUE;
+	int rc = INVALID_VALUE, fd;
 	FILE *fp = NULL;
+	char file[NAMELEN] = {0};
+	unsigned long long max_sectors = 0, rd_size = 0;
 
-	/* echo "rapiddisk resize 1 128" > /sys/kernel/rapiddisk/mgmt */
+	/* echo "rapiddisk resize 1 131072 " > /sys/kernel/rapiddisk/mgmt */
 	while (prof != NULL) {
 		if (strcmp(string, prof->device) == SUCCESS) {
-			if ((size * 1024) <= (prof->size / 1024)) {
-				printf("Error. Please specify a size larger than %llu Mbytes\n", size);
-				return -EINVAL;
-			}
+			rd_size = prof->size;
 			rc = SUCCESS;
 		}
 		prof = prof->next;
@@ -516,6 +520,26 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 	if (rc != SUCCESS) {
 		printf("Error. Device %s does not exist.\n", string);
 		return -ENOENT;
+	}
+
+	sprintf(file, "/dev/%s", string);
+
+	if ((fd = open(file, O_WRONLY)) < SUCCESS) {
+		printf("%s: open: %s\n", __func__, strerror(errno));
+		return -ENOENT;
+	}
+
+	if ((ioctl(fd, IOCTL_RD_GET_STATS, &max_sectors)) == INVALID_VALUE) {
+		printf("%s: ioctl: %s\n", __func__, strerror(errno));
+		close(fd);
+		return -EIO;
+	}
+
+	close(fd);
+
+	if ((((size * 1024 * 1024) / BYTES_PER_BLOCK) <= (max_sectors)) || ((size * 1024) == (rd_size / 1024))) {
+		printf("Error. Please specify a size larger than %llu Mbytes\n", (((max_sectors * BYTES_PER_BLOCK) / 1024) / 1024));
+		return -EINVAL;
 	}
 
 	/* This is where we begin to detach the block device */
@@ -762,7 +786,7 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 		return -ENOENT;
 	}
 
-	if (ioctl(fd, BLKFLSBUF, 0) == INVALID_VALUE) {
+	if (ioctl(fd, IOCTL_RD_BLKFLSBUF, 0) == INVALID_VALUE) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
 		close(fd);
 		return -EIO;
@@ -797,7 +821,7 @@ int mem_device_lock(struct RD_PROFILE *rd_prof, char *string, bool lock)
 		return -ENOENT;
 	}
 
-	if((ioctl(fd, BLKROSET, &state)) == INVALID_VALUE){
+	if ((ioctl(fd, BLKROSET, &state)) == INVALID_VALUE) {
 		printf("%s: ioctl: %s\n", __func__, strerror(errno));
 		close(fd);
 		return -EIO;
@@ -829,7 +853,7 @@ int mem_device_lock_status(char *string)
 	return rc;
 }
 
-unsigned long long mem_device_get_usage( char *string)
+unsigned long long mem_device_get_usage(char *string)
 {
 	int fd;
 	unsigned long long rc = INVALID_VALUE;
@@ -840,10 +864,11 @@ unsigned long long mem_device_get_usage( char *string)
 	if ((fd = open(file, O_WRONLY)) < SUCCESS)
 		return -ENOENT;
 
-	if((ioctl(fd, RD_GET_USAGE, &rc)) == INVALID_VALUE) {
+	if ((ioctl(fd, RD_GET_USAGE, &rc)) == INVALID_VALUE) {
 		close(fd);
 		return -EIO;
 	}
+	close(fd);
 
 	return (rc * PAGE_SIZE);
 }

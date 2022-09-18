@@ -58,13 +58,15 @@
 #endif
 
 /* ioctls */
-#define INVALID_CDQUERY_IOCTL	0x5331
-#define INVALID_CDQUERY_IOCTL2	0x5395
-#define RD_GET_STATS		0x0529
-#define RD_GET_USAGE		0x0530
+#define IOCTL_INVALID_CDQUERY	0x5331
+#define IOCTL_INVALID_CDQUERY2	0x5395
+#define IOCTL_RD_GET_STATS	0x0529
+#define IOCTL_RD_GET_USAGE	0x0530
+#define IOCTL_RD_BLKFLSBUF	0x0531
 
 static DEFINE_MUTEX(sysfs_mutex);
 static DEFINE_MUTEX(ioctl_mutex);
+static DEFINE_MUTEX(resize_mutex);
 
 struct rdsk_device {
 	int num;
@@ -303,8 +305,10 @@ static void rdsk_zero_page(struct rdsk_device *rdsk, sector_t sector)
 	struct page *page;
 
 	page = rdsk_lookup_page(rdsk, sector);
-	if (page)
+	if (page) {
 		clear_highpage(page);
+		rdsk->max_page_cnt--;
+	}
 }
 #endif
 
@@ -375,6 +379,7 @@ static void copy_to_rdsk(struct rdsk_device *rdsk, const void *src,
 	page = rdsk_lookup_page(rdsk, sector);
 	BUG_ON(!page);
 
+	mutex_lock(&resize_mutex);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 	dst = kmap_atomic(page);
 #else
@@ -408,6 +413,7 @@ static void copy_to_rdsk(struct rdsk_device *rdsk, const void *src,
 
 	if ((sector + (n / BYTES_PER_SECTOR)) > rdsk->max_blk_alloc)
 		rdsk->max_blk_alloc = (sector + (n / BYTES_PER_SECTOR));
+	mutex_unlock(&resize_mutex);
 }
 
 static void copy_from_rdsk(void *dst, struct rdsk_device *rdsk,
@@ -671,22 +677,11 @@ static inline int bdev_openers(struct block_device *bdev)
 static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		      unsigned int cmd, unsigned long arg)
 {
-	loff_t size;
 	int error = 0;
 	struct rdsk_device *rdsk = bdev->bd_disk->private_data;
 
 	switch (cmd) {
-	case BLKGETSIZE:
-		size = bdev->bd_inode->i_size;
-		if ((size >> 9) > ~0UL)
-			return -EFBIG;
-		return copy_to_user((void __user *)arg, &size,
-				    sizeof(size)) ? -EFAULT : 0;
-	case BLKGETSIZE64:
-		return copy_to_user((void __user *)arg,
-				    &bdev->bd_inode->i_size,
-				    sizeof(bdev->bd_inode->i_size)) ? -EFAULT : 0;
-	case BLKFLSBUF:
+	case IOCTL_RD_BLKFLSBUF:
 		/* We are killing the RAM disk data. */
 		mutex_lock(&ioctl_mutex);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
@@ -718,23 +713,17 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		rdsk->max_page_cnt = 0;
 		mutex_unlock(&ioctl_mutex);
 		return error;
-	case INVALID_CDQUERY_IOCTL:
-	case INVALID_CDQUERY_IOCTL2:
+	case IOCTL_INVALID_CDQUERY:
+	case IOCTL_INVALID_CDQUERY2:
 		return -EINVAL;
-	case RD_GET_STATS:
+	case IOCTL_RD_GET_STATS:
 		return copy_to_user((void __user *)arg,
 			&rdsk->max_blk_alloc,
 			sizeof(rdsk->max_blk_alloc)) ? -EFAULT : 0;
-	case RD_GET_USAGE:
+	case IOCTL_RD_GET_USAGE:
 		return copy_to_user((void __user *)arg,
 			&rdsk->max_page_cnt,
 			sizeof(rdsk->max_page_cnt)) ? -EFAULT : 0;
-	case BLKPBSZGET:
-	case BLKBSZGET:
-	case BLKSSZGET:
-		size = BYTES_PER_SECTOR;
-		return copy_to_user((void __user *)arg, &size,
-			sizeof(size)) ? -EFAULT : 0;
 	}
 
 	pr_warn("%s: 0x%x invalid ioctl.\n", PREFIX, cmd);
@@ -954,22 +943,27 @@ static int resize_device(unsigned long num, unsigned long long size)
 	}
 	sectors = (size / BYTES_PER_SECTOR);
 
+	mutex_lock(&resize_mutex);
 	list_for_each_entry(rdsk, &rdsk_devices, rdsk_list)
 		if (rdsk->num == num) {
 			found = true;
 			break;
 		}
 
-	if (!found)
+	if (!found) {
+		mutex_unlock(&resize_mutex);
 		return GENERIC_ERROR;
+	}
 
-	if (size <= get_capacity(rdsk->rdsk_disk)) {
+	if (size <= (rdsk->max_blk_alloc * BYTES_PER_SECTOR)) {
 		pr_warn("%s: Please specify a larger size for resizing.\n",
 			PREFIX);
+		mutex_unlock(&resize_mutex);
 		return GENERIC_ERROR;
 	}
 	set_capacity(rdsk->rdsk_disk, sectors);
 	rdsk->size = size;
+	mutex_unlock(&resize_mutex);
 	pr_info("%s: Resized rd%lu of %llu bytes in size.\n", PREFIX, num, size);
 	return SUCCESS;
 }
