@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 	pid_t pid;
 	int rc = SUCCESS, i;
 	pthread_t mgmt_tid = INVALID_VALUE;
-	unsigned char path[NAMELEN] = {0};
+	unsigned char *path = NULL;
 
 	printf("%s %s\n%s\n\n", DAEMON, VERSION_NUM, COPYRIGHT);
 
@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 
 	sprintf(args->port, "%s", DEFAULT_MGMT_PORT);
 
-	if (realpath(argv[0], path) == NULL) {
+	if ((path = realpath(argv[0], NULL)) == NULL) {
 		syslog(LOG_ERR, "%s: %s: realpath: %s\n", DAEMON, __func__, strerror(errno));
 		printf("%s: %s: realpath: %s\n", DAEMON, __func__, strerror(errno));
 		return -EIO;
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 	if ((pid = fork()) < SUCCESS) {
 		rc = pid;
 		goto exit_on_failure;
-	} else if (pid != SUCCESS)
+	} else if (pid != SUCCESS) /* Terminate parent */
 		exit(SUCCESS);
 
 	setsid();
@@ -206,5 +206,7 @@ int main(int argc, char *argv[])
 exit_on_failure:
 
 	syslog(LOG_INFO, "%s: Daemon exiting.\n", DAEMON);
+	if (path) free(path);
+	if (args) free(args);
 	return rc;
 }

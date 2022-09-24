@@ -336,6 +336,8 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			return -EINVAL;
 		}
 		rc = nvmet_enable_port(host, port, xfer);
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_DISABLE_NVMET_PORT:
 		if (port == INVALID_VALUE) {
@@ -343,6 +345,8 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			return -EINVAL;
 		}
 		rc = nvmet_disable_port(port);
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_EXPORT_NVMET:
 		if (strlen(backing) <= 0)
@@ -352,11 +356,15 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			return SUCCESS;
 		}
 		rc = nvmet_export_volume(disk, cache, backing, host, port);
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_UNEXPORT_NVMET:
 		if (strlen(backing) <= 0)
 			goto exec_cmdline_arg_out;
 		rc = nvmet_unexport_volume(backing, host, port);
+		if (json_flag == TRUE)
+			json_status_return(rc);
 		break;
 	case ACTION_LOCK:
 		if (strlen(device) <= 0)
