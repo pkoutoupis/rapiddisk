@@ -30,11 +30,11 @@
 #include "common.h"
 #include "daemon.h"
 #include <jansson.h>
-#include <sys/socket.h>
 #include <microhttpd.h>
+#include <signal.h>
 
-bool verbose;
-char path[NAMELEN] = {0};
+struct MHD_Daemon *mydaemon;
+int server_stop_requested = 0;
 
 /*
  * The responses to our GET requests. Although, we are not SPECIFICALLY checking that they are GETs.
@@ -45,19 +45,21 @@ static enum MHD_Result answer_to_connection(void *cls, struct MHD_Connection *co
 #else
 static int answer_to_connection(void *cls, struct MHD_Connection *connection, const char *url,
 #endif
-                                const char *method, const char *version, const char *upload_data,
-                                 size_t *upload_data_size, void **con_cls)
+								const char *method, const char *version, const char *upload_data,
+								size_t *upload_data_size, void **con_cls)
 {
 	struct MHD_Response *response;
 	int rc, status = MHD_HTTP_OK;
-	unsigned long long size = 0;
+	unsigned long long size;
 	char device[NAMELEN] = {0}, source[NAMELEN] = {0}, command[NAMELEN * 4] = {0};
 	char *dup = NULL, *token = NULL;
 	FILE *stream;
+	struct PTHREAD_ARGS *args = (struct PTHREAD_ARGS *) cls;
 
 	char *page = (char *)calloc(1, BUFSZ);
 	if (page == NULL) {
-		printf("%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
+		syslog(LOG_ERR, "%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
+		fprintf(stderr, "%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
 #if MHD_VERSION >= 0x00097100
 		return MHD_NO;
 #else
@@ -69,7 +71,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 		if (strcmp(url, CMD_PING_DAEMON) == SUCCESS) {
 			json_status_check(page);
 		} else if (strcmp(url, CMD_LIST_RESOURCES) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -q -j -g", path);
+			sprintf(command, "%s/rapiddisk -q -j -g", args->path);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -77,7 +79,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if (strcmp(url, CMD_LIST_RD_VOLUMES) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -l -j -g", path);
+			sprintf(command, "%s/rapiddisk -l -j -g", args->path);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -93,7 +95,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -s %s -j -g", path, token);
+			sprintf(command, "%s/rapiddisk -s %s -j -g", args->path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -101,7 +103,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if (strncmp(url, CMD_LIST_NVMET, sizeof(CMD_LIST_NVMET) - 1) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -n -j -g", path);
+			sprintf(command, "%s/rapiddisk -n -j -g", args->path);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -109,7 +111,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if (strncmp(url, CMD_LIST_NVMET_PORTS, sizeof(CMD_LIST_NVMET_PORTS) - 1) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -N -j -g", path);
+			sprintf(command, "%s/rapiddisk -N -j -g", args->path);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -132,7 +134,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				goto answer_to_connection_out;
 			}
 			size = strtoull(token, (char **)NULL, 10);
-			sprintf(command, "%s/rapiddisk -a %llu -j -g", path, size);
+			sprintf(command, "%s/rapiddisk -a %llu -j -g", args->path, size);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -149,7 +151,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -d %s -j -g", path, token);
+			sprintf(command, "%s/rapiddisk -d %s -j -g", args->path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -172,7 +174,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				goto answer_to_connection_out;
 			}
 			size = strtoull(token, (char **)NULL, 10);
-			sprintf(command, "%s/rapiddisk -r %s -c %llu -j -g", path, device, size);
+			sprintf(command, "%s/rapiddisk -r %s -c %llu -j -g", args->path, device, size);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -188,7 +190,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -f %s -j -g", path, token);
+			sprintf(command, "%s/rapiddisk -f %s -j -g", args->path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -217,11 +219,11 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				goto answer_to_connection_out;
 			}
 			if (strcmp(token, "write-through") == SUCCESS) {
-				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wt -j -g", path, device, source);
+				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wt -j -g", args->path, device, source);
 			} else if (strcmp(token, "write-around") == SUCCESS) {
-				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wa -j -g", path, device, source);
+				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wa -j -g", args->path, device, source);
 			} else if (strcmp(token, "writeback") == SUCCESS) {
-				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wb -j -g", path, device, source);
+				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wb -j -g", args->path, device, source);
 			} else {
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
@@ -241,7 +243,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -u %s -j -g", path, token);
+			sprintf(command, "%s/rapiddisk -u %s -j -g", args->path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -257,7 +259,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -L %s -j -g", path, token);
+			sprintf(command, "%s/rapiddisk -L %s -j -g", args->path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -273,7 +275,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				status = MHD_HTTP_BAD_REQUEST;
 				goto answer_to_connection_out;
 			}
-			sprintf(command, "%s/rapiddisk -U %s -j -g", path, token);
+			sprintf(command, "%s/rapiddisk -U %s -j -g", args->path, token);
 			stream = popen(command, "r");
 			if (stream) {
 				while (fgets(page, BUFSZ, stream) != NULL);
@@ -298,25 +300,87 @@ answer_to_connection_out:
 }
 
 /*
- * description: the thread that listens for network or cli requests.
+ * This function nullify the effects of a SIGPIPE signal (needed by libmicrohttpd:
+ * https://www.gnu.org/software/libmicrohttpd/manual/html_node/microhttpd_002dintro.html#SIGPIPE )
  */
-void *mgmt_thread(void *arg)
+static void catcher (__attribute__((unused)) int sig) {
+}
+
+/*
+ * This function is called upon receiving a signal, it sets server_stop_requested so the main loop will exit
+ */
+static void signal_handler(int sig) {
+	server_stop_requested = 1;
+	fprintf(stderr,"%s: signal_handler function, SIGNAL received: %s.\n", DAEMON, strsignal(sig));
+	syslog(LOG_INFO, "%s: signal_handler function, SIGNAL received: %s.\n", DAEMON, strsignal(sig));
+}
+
+/*
+ * Installs the SIGPIPE signal catcher
+ */
+static void ignore_sigpipe () {
+	struct sigaction oldsig;
+	struct sigaction sig;
+
+	sig.sa_handler = &catcher;
+	sigemptyset (&sig.sa_mask);
+	sig.sa_flags = SA_RESTART;
+	if (0 != sigaction (SIGPIPE, &sig, &oldsig)) {
+		syslog(LOG_ERR, "%s: Failed to install SIGPIPE handler: %s, %s\n",
+			   DAEMON, strerror(errno), __func__);
+		fprintf (stderr, "%s: Failed to install SIGPIPE handler: %s, %s\n",
+				 DAEMON, strerror(errno), __func__);
+	}
+}
+
+/*
+ * Catch all the appropriate signals to be able to exit in a clean way
+ */
+static void catch_exit_signals() {
+	struct sigaction sig;
+
+	sig.sa_handler = &signal_handler;
+	sigemptyset (&sig.sa_mask);
+	sig.sa_flags = SA_RESTART;
+	sigaction(SIGHUP, &sig, NULL);
+	sigaction(SIGUSR1, &sig, NULL);
+	sigaction(SIGUSR2, &sig, NULL);
+	sigaction(SIGALRM, &sig, NULL);
+	sigaction(SIGINT, &sig, NULL);
+	sigaction(SIGTERM, &sig, NULL);
+
+}
+
+int mgmt_thread(void *arg)
 {
 	struct PTHREAD_ARGS *args = (struct PTHREAD_ARGS *)arg;
-	verbose = args->verbose;
-	sprintf(path, "%s", args->path);
 
-	struct MHD_Daemon *daemon;
+	ignore_sigpipe();
+	catch_exit_signals();
 
-	daemon = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, atoi(args->port), NULL, NULL,
-				  &answer_to_connection, NULL, MHD_OPTION_END);
-	if (daemon == NULL)
-		goto exit_on_failure;
+	/*
+	 * Now 'args' is passed to the callback function 'answer_to_connection'
+	 */
+	mydaemon = MHD_start_daemon(MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_AUTO, atoi(args->port), NULL, NULL,
+							  &answer_to_connection, args, MHD_OPTION_END);
+	/*
+	 * The `daemon` var was replaced by `mydaemon` cause it clashed with linux/kernel headers var with the same name
+	 */
+	if (mydaemon == NULL) {
+		syslog(LOG_INFO, "%s: Error creating MHD Daemon: %s, %s.\n", DAEMON, strerror(errno), __func__);
+		fprintf(stderr, "%s: Error creating MHD Daemon: %s, %s.\n", DAEMON, strerror(errno), __func__);
+		return INVALID_VALUE;
+	}
 
-	while (1) sleep(1);      /* I need to figure out a better way to keep this thread alive after MHD_start_daemon. */
+	while (!server_stop_requested) {
+		/* On any signal, sleep is always interrupted and this allows to the signal handler function to be invoked */
+		sleep(3600);
+	}
 
-	MHD_stop_daemon(daemon); /* This part is pointless until I figure out the above. */
+	MHD_stop_daemon(mydaemon);
 
-exit_on_failure:
-	syslog(LOG_INFO, "%s: Management thread exiting: %s.\n", DAEMON, __func__);
+	syslog(LOG_INFO, "%s: Daemon loop function exiting: %s.\n", DAEMON, __func__);
+	fprintf(stderr,"%s: Daemon loop function exiting: %s.\n", DAEMON, __func__);
+
+	return SUCCESS;
 }

@@ -55,7 +55,7 @@ typedef struct PTHREAD_ARGS {
 #define CMD_LIST_NVMET		"/v1/listAllNVMeTargets"
 #define CMD_LIST_NVMET_PORTS	"/v1/listAllNVMePorts"
 
-void *mgmt_thread(void *);
+int mgmt_thread(void *);
 int json_status_check(char *);
 int json_status_unsupported(char *);
 #endif
