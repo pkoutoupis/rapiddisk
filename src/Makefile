@@ -22,91 +22,87 @@ ifeq ($(CC),)
 	CC := gcc -Werror
 endif
 
-DEBUG_FLAGS := -DDEBUG -Wl,--export-dynamic -ggdb
-
 CHMOD := chmod
 CP := cp
 RM := rm -f
 MKDIR := mkdir -pv
+STRIP := strip -s
+LDLIBS += -ljansson -ldevmapper -lpcre2-8
+DAEMON_LDLIBS := -lmicrohttpd
+DAEMON_CFLAGS := -DSERVER
+INSTALL := install -D -m 755 -t $(DESTDIR)$(DIR)
+INSTALL_STRIP := install -D -m 755 -s -t $(DESTDIR)$(DIR)
+DEBUG_FLAGS := -DDEBUG -Wl,--export-dynamic -ggdb -gdwarf
+BIN := rapiddisk
+BIN_D := rapiddiskd
+BIN_DEBUG := rapiddisk_debug
+BIN_D_DEBUG := rapiddiskd_debug
+OBJS := main.o utils.o json.o rdsk.o nvmet.o sys.o
+OBJS_D := rapiddiskd.o utils.o json-server.o net.o rdsk-server.o sys-server.o
+OBJS_DEBUG := main_d.o utils_d.o json_d.o nvmet_d.o rdsk_d.o sys_d.o
+OBJS_D_DEBUG := rapiddiskd_d.o utils_d.o json-server_d.o net_d.o rdsk-server_d.o sys-server_d.o
 
-BIN = rapiddisk
 DIR := /sbin
 
 .PHONY: all
-all: $(BIN) $(BIN)d
-	@echo Make has completed.
+all: $(BIN) $(BIN_D)
+	@echo Make all has completed.
+
+.PHONY: debug
+debug: $(BIN_DEBUG) $(BIN_D_DEBUG)
+
+.PHONY: strip
+strip: all
+	$(STRIP) $(BIN)
+	$(STRIP) $(BIN_D)
 
 .PHONY: install
 install: all
-	@echo Installing all $(BIN) binary files.
-	$(MKDIR) $(DESTDIR)$(DIR)
-	$(CP) $(BIN)* $(DESTDIR)$(DIR)
-	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)
-	$(CHMOD) 755 $(DESTDIR)$(DIR)/$(BIN)d
+	@echo Installing all $(BIN) $(BIN_D) binary files.
+	$(INSTALL) $(BIN) $(BIN_D)
+
+.PHONY: install-strip
+install-strip: all
+	@echo Installing stripped $(BIN) $(BIN_D) binary files.
+	$(INSTALL_STRIP) $(BIN) $(BIN_D)
 
 .PHONY: uninstall
 uninstall:
-	@echo Uninstalling $(BIN) binary files.
+	@echo Uninstalling $(BIN) $(BIN_D) binary files.
 	$(RM) $(DESTDIR)$(DIR)/$(BIN)
-	$(RM) $(DESTDIR)$(DIR)/$(BIN)d
+	$(RM) $(DESTDIR)$(DIR)/$(BIN_D)
 
-json.o: json.c common.h cli.h
-	$(CC) -c json.c -o json.o
+%-server_d.o: CFLAGS += $(DAEMON_CFLAGS)
+%-server_d.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-json-server.o: json.c common.h
-	$(CC) -c json.c -DSERVER -o json-server.o
+%-server.o: CFLAGS += $(DAEMON_CFLAGS)
+%-server.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-net.o: net.c common.h daemon.h
-	$(CC) -c net.c -o net.o
+%_d.o: CFLAGS += $(DEBUG_FLAGS)
+%_d.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-nvmet.o: nvmet.c common.h cli.h
-	$(CC) -c nvmet.c -o nvmet.o
+%.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-rdsk.o: rdsk.c common.h cli.h
-	$(CC) -c rdsk.c -o rdsk.o
+$(BIN): $(OBJS)
+	$(CC) $(LDFLAGS) -o $(BIN) $(OBJS) $(LOADLIBES) $(LDLIBS)
 
-sys.o: sys.c common.h cli.h
-	$(CC) -c sys.c -o sys.o
+$(BIN_D): LDLIBS += $(DAEMON_LDLIBS)
+$(BIN_D): $(OBJS_D)
+	$(CC) $(LDFLAGS) -o $(BIN_D) $(OBJS_D) $(LOADLIBES) $(LDLIBS)
 
-sys-server.o: sys.c common.h
-	$(CC) -c sys.c -DSERVER -o sys-server.o
+$(BIN_DEBUG): LDFLAGS += $(DEBUG_FLAGS)
+$(BIN_DEBUG): $(OBJS_DEBUG)
+	$(CC) $(LDFLAGS) -o $(BIN_DEBUG) $(OBJS_DEBUG) $(LOADLIBES) $(LDLIBS)
 
-$(BIN): main.c json.o rdsk.o nvmet.o sys.o common.h cli.h
-	$(CC) main.c -o $(BIN) json.o nvmet.o rdsk.o sys.o -ljansson
-
-$(BIN)d: daemon.c json-server.o net.o sys-server.o common.h daemon.h
-	$(CC) daemon.c -o $(BIN)d json-server.o net.o sys-server.o -lpthread -ljansson -lmicrohttpd
-
-json_d.o: json.c common.h cli.h
-	$(CC) $(DEBUG_FLAGS) -c json.c -o json_d.o
-
-json-server_d.o: json.c common.h
-	$(CC) $(DEBUG_FLAGS) -c json.c -DSERVER -o json-server_d.o
-
-net_d.o: net.c common.h daemon.h
-	$(CC) $(DEBUG_FLAGS) -c net.c -o net_d.o
-
-nvmet_d.o: nvmet.c common.h cli.h
-	$(CC) $(DEBUG_FLAGS) -c nvmet.c -o nvmet_d.o
-
-rdsk_d.o: rdsk.c common.h cli.h
-	$(CC) $(DEBUG_FLAGS) -c rdsk.c -o rdsk_d.o
-
-sys_d.o: sys.c common.h cli.h
-	$(CC) $(DEBUG_FLAGS) -c sys.c -o sys_d.o
-
-sys-server_d.o: sys.c common.h
-	$(CC) $(DEBUG_FLAGS) -c sys.c -DSERVER -o sys-server_d.o
-
-$(BIN)_debug: main.c json_d.o rdsk_d.o nvmet_d.o sys_d.o common.h cli.h
-	$(CC) $(DEBUG_FLAGS) main.c -o $(BIN)_debug json_d.o nvmet_d.o rdsk_d.o sys_d.o -ljansson
-
-$(BIN)d_debug: daemon.c json-server_d.o net_d.o sys-server_d.o common.h daemon.h
-	$(CC) $(DEBUG_FLAGS) daemon.c -o $(BIN)d_debug json-server_d.o net_d.o sys-server_d.o -lpthread -ljansson -lmicrohttpd
+$(BIN_D_DEBUG): LDLIBS += $(DAEMON_LDLIBS)
+$(BIN_D_DEBUG): LDFLAGS += $(DEBUG_FLAGS)
+$(BIN_D_DEBUG): $(OBJS_D_DEBUG)
+	$(CC) $(LDFLAGS) -o $(BIN_D_DEBUG) $(OBJS_D_DEBUG) $(LOADLIBES) $(LDLIBS)
 
 .PHONY: clean
 clean:
-	rm -f *.o $(BIN) $(BIN)d $(BIN)_debug $(BIN)d_debug
-
-.PHONY: debug
-debug: $(BIN)_debug $(BIN)d_debug
+	rm -f *.o $(BIN) $(BIN_D) $(BIN_DEBUG) $(BIN_D_DEBUG)

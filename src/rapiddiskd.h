@@ -27,18 +27,15 @@
  **
  ** @date: 29Jul20, petros@petroskoutoupis.com
  ********************************************************************************/
+/** @file
+* @brief Daemon functions declarations
+*/
 #ifndef DAEMON_H
 #define DAEMON_H
 
 #include <syslog.h>
 
 #define DEFAULT_MGMT_PORT       "9118"
-
-typedef struct PTHREAD_ARGS {
-	bool verbose;
-	char port[0xf];
-	char path[NAMELEN];
-} PTHREAD_ARGS;
 
 #define CMD_PING_DAEMON		"/v1/checkServiceStatus"
 #define CMD_LIST_RESOURCES	"/v1/listAllResources"
@@ -55,7 +52,5 @@ typedef struct PTHREAD_ARGS {
 #define CMD_LIST_NVMET		"/v1/listAllNVMeTargets"
 #define CMD_LIST_NVMET_PORTS	"/v1/listAllNVMePorts"
 
-int mgmt_thread(void *);
-int json_status_check(char *);
-int json_status_unsupported(char *);
+int mgmt_thread(void *arg);
 #endif

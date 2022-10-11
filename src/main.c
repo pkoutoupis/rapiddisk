@@ -27,8 +27,12 @@
  ** @date: 14Oct10, petros@petroskoutoupis.com
  ********************************************************************************/
 
-#include "common.h"
-#include "cli.h"
+#include "main.h"
+#include "utils.h"
+#include "sys.h"
+#include "rdsk.h"
+#include "json.h"
+#include "nvmet.h"
 
 bool writeback_enabled;
 
@@ -88,83 +92,6 @@ void online_menu(char *string)
 	       "\trapiddisk -x -b rd3 -P 1 -H nqn.host1\n\n");
 }
 
-void clean_rc(RC_PROFILE *head) {
-
-	/* if there is only one item in the list, remove it */
-	if (head->next == NULL) {
-		if (head != NULL) free(head);
-		head = NULL;
-	} else {
-		/* get to the second to last node in the list */
-		struct RC_PROFILE *current = head;
-		while (current->next->next != NULL) {
-			current = current->next;
-		}
-
-		/* now current points to the second to last item of the list, so let's remove current->next */
-		if (current->next != NULL) {
-			free(current->next);
-			current->next = NULL;
-		}
-		clean_rc(head);
-	}
-}
-
-void clean_rd(RD_PROFILE *head) {
-
-	/* if there is only one item in the list, remove it */
-	if (head->next == NULL) {
-		if (head != NULL) free(head);
-		head = NULL;
-	} else {
-		/* get to the second to last node in the list */
-		struct RD_PROFILE *current = head;
-		while (current->next->next != NULL) {
-			current = current->next;
-		}
-
-		/* now current points to the second to last item of the list, so let's remove current->next */
-		if (current->next != NULL) {
-			free(current->next);
-			current->next = NULL;
-		}
-		clean_rd(head);
-	}
-}
-
-void clean_vp(VOLUME_PROFILE *head) {
-	/* if there is only one item in the list, remove it */
-	if (head->next == NULL) {
-		if (head != NULL) free(head);
-		head = NULL;
-	} else {
-		/* get to the second to last node in the list */
-		struct VOLUME_PROFILE *current = head;
-		while (current->next->next != NULL) {
-			current = current->next;
-		}
-
-		/* now current points to the second to last item of the list, so let's remove current->next */
-		if (current->next != NULL) {
-			free(current->next);
-			current->next = NULL;
-		}
-		clean_vp(head);
-	}
-}
-
-void free_linked_lists(RC_PROFILE *rc_head, RD_PROFILE *rd_head, VOLUME_PROFILE *vp_head) {
-	if (rc_head != NULL) {
-		clean_rc(rc_head);
-	}
-	if (rd_head != NULL) {
-		clean_rd(rd_head);
-	}
-	if (vp_head != NULL) {
-		clean_vp(vp_head);
-	}
-}
-
 int exec_cmdline_arg(int argcin, char *argvin[])
 {
 	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE, xfer = XFER_MODE_TCP;
@@ -172,6 +99,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	bool json_flag = FALSE;
 	bool header_flag = TRUE;
 	char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0}, header[NAMELEN] = {0};
+	char generic_msg[NAMELEN] = {0};
 	struct RD_PROFILE *disk = NULL;
 	struct RC_PROFILE *cache = NULL;
 	struct MEM_PROFILE *mem = NULL;
@@ -181,114 +109,112 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	while ((i = getopt(argcin, argvin, "?:a:b:c:d:ef:gH:hi:jL:lm:NnP:p:qRr:s:t:U:u:VvXx")) != INVALID_VALUE) {
 		switch (i) {
-		case 'h':
-			printf("%s", header);
-			online_menu(argvin[0]);
-			return SUCCESS;
-			break;
-		case 'a':
-			action = ACTION_ATTACH;
-			size = strtoul(optarg, (char **)NULL, 10);
-			break;
-		case 'b':
-			sprintf(backing, "%s", optarg);
-			break;
-		case 'c':
-			size = strtoul(optarg, (char **)NULL, 10);
-			break;
-		case 'd':
-			action = ACTION_DETACH;
-			sprintf(device, "%s", optarg);
-			break;
-		case 'e':
-			action = ACTION_EXPORT_NVMET;
-			break;
-		case 'f':
-			action = ACTION_FLUSH;
-			sprintf(device, "%s", optarg);
-			break;
-		case 'g':
-			header_flag = FALSE;
-			break;
-		case 'H':
-			sprintf(host, "%s", optarg);
-			break;
-		case 'i':
-			action = ACTION_ENABLE_NVMET_PORT;
-			sprintf(host, "%s", optarg);
-			break;
-		case 'j':
-			json_flag = TRUE;
-			break;
-		case 'L':
-			action = ACTION_LOCK;
-			sprintf(device, "%s", optarg);
-			break;
-		case 'l':
-			action = ACTION_LIST;
-			break;
-		case 'm':
-			action = ACTION_CACHE_MAP;
-			sprintf(device, "%s", optarg);
-			break;
-		case 'N':
-			action = ACTION_LIST_NVMET_PORTS;
-			break;
-		case 'n':
-			action = ACTION_LIST_NVMET;
-			break;
-		case 'P':
-			port = atoi(optarg);
-			break;
-		case 'p':
-			if (strcmp(optarg, "wa") == 0)
-				mode = WRITEAROUND;
-			else if (strcmp(optarg, "wb") == 0) {
-				mode = WRITEBACK;
-			}
-			break;
-		case 'q':
-			action = ACTION_QUERY_RESOURCES;
-			break;
-		case 'R':
-			action = ACTION_REVALIDATE_NVMET_SIZE;
-			break;
-		case 'r':
-			action = ACTION_RESIZE;
-			sprintf(device, "%s", optarg);
-			break;
-		case 's':
-			action = ACTION_CACHE_STATS;
-			sprintf(device, "%s", optarg);
-			break;
-		case 't':
-			if (strcmp(optarg, "rdma") == 0)
-				xfer = XFER_MODE_RDMA;
-			break;
-		case 'U':
-			action = ACTION_UNLOCK;
-			sprintf(device, "%s", optarg);
-			break;
-		case 'u':
-			action = ACTION_CACHE_UNMAP;
-			sprintf(device, "%s", optarg);
-			break;
-		case 'v':
-			printf("%s", header);
-			return SUCCESS;
-			break;
-		case 'X':
-			action = ACTION_DISABLE_NVMET_PORT;
-			break;
-		case 'x':
-			action = ACTION_UNEXPORT_NVMET;
-			break;
-		case '?':
-			printf("%s", header);
-			online_menu(argvin[0]);
-			return INVALID_VALUE;
-			break;
-                }
+			case 'h':
+				printf("%s", header);
+				online_menu(argvin[0]);
+				return SUCCESS;
+			case 'a':
+				action = ACTION_ATTACH;
+				size = strtoul(optarg, (char **)NULL, 10);
+				break;
+			case 'b':
+				sprintf(backing, "%s", optarg);
+				break;
+			case 'c':
+				size = strtoul(optarg, (char **)NULL, 10);
+				break;
+			case 'd':
+				action = ACTION_DETACH;
+				sprintf(device, "%s", optarg);
+				break;
+			case 'e':
+				action = ACTION_EXPORT_NVMET;
+				break;
+			case 'f':
+				action = ACTION_FLUSH;
+				sprintf(device, "%s", optarg);
+				break;
+			case 'g':
+				header_flag = FALSE;
+				break;
+			case 'H':
+				sprintf(host, "%s", optarg);
+				break;
+			case 'i':
+				action = ACTION_ENABLE_NVMET_PORT;
+				sprintf(host, "%s", optarg);
+				break;
+			case 'j':
+				json_flag = TRUE;
+				break;
+			case 'L':
+				action = ACTION_LOCK;
+				sprintf(device, "%s", optarg);
+				break;
+			case 'l':
+				action = ACTION_LIST;
+				break;
+			case 'm':
+				action = ACTION_CACHE_MAP;
+				sprintf(device, "%s", optarg);
+				break;
+			case 'N':
+				action = ACTION_LIST_NVMET_PORTS;
+				break;
+			case 'n':
+				action = ACTION_LIST_NVMET;
+				break;
+			case 'P':
+				port = atoi(optarg);
+				break;
+			case 'p':
+				if (strcmp(optarg, "wa") == 0)
+					mode = WRITEAROUND;
+				else if (strcmp(optarg, "wb") == 0) {
+					mode = WRITEBACK;
+				}
+				break;
+			case 'q':
+				action = ACTION_QUERY_RESOURCES;
+				break;
+			case 'R':
+				action = ACTION_REVALIDATE_NVMET_SIZE;
+				break;
+			case 'r':
+				action = ACTION_RESIZE;
+				sprintf(device, "%s", optarg);
+				break;
+			case 's':
+				action = ACTION_CACHE_STATS;
+				sprintf(device, "%s", optarg);
+				break;
+			case 't':
+				if (strcmp(optarg, "rdma") == 0)
+					xfer = XFER_MODE_RDMA;
+				break;
+			case 'U':
+				action = ACTION_UNLOCK;
+				sprintf(device, "%s", optarg);
+				break;
+			case 'u':
+				action = ACTION_CACHE_UNMAP;
+				sprintf(device, "%s", optarg);
+				break;
+			case 'v':
+				printf("%s", header);
+				return SUCCESS;
+			case 'X':
+				action = ACTION_DISABLE_NVMET_PORT;
+				break;
+			case 'x':
+				action = ACTION_UNEXPORT_NVMET;
+				break;
+			default:
+			case '?':
+				printf("%s", header);
+				online_menu(argvin[0]);
+				return INVALID_VALUE;
+		}
 	}
 
 	if (header_flag == TRUE) {
@@ -296,260 +222,224 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	}
 
 	if ((writeback_enabled == FALSE) && (mode == WRITEBACK)) {
-		printf(ERR_NOWB_MODULE);
+		print_message(-EPERM, ERR_NOWB_MODULE, json_flag);
 		return -EPERM;
 	}
 
-	disk = (struct RD_PROFILE *)search_rdsk_targets();
-	cache = (struct RC_PROFILE *)search_cache_targets();
+	disk = search_rdsk_targets(generic_msg);
+	if ((disk == NULL) && (strlen(generic_msg) != 0)) {
+		print_message(INVALID_VALUE, generic_msg, json_flag);
+		return INVALID_VALUE;
+	}
+	cache = search_cache_targets(generic_msg);
+	if ((cache == NULL) && (strlen(generic_msg) != 0)) {
+		print_message(INVALID_VALUE, generic_msg, json_flag);
+		free_linked_lists(NULL, disk, NULL);
+		return INVALID_VALUE;
+	}
 
 	switch(action) {
-	case ACTION_ATTACH:
-		if (size <= 0) {
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
+		case ACTION_ATTACH:
+			if (size <= 0) {
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
 			} else {
-				printf(ERR_INVALID_ARG);
+				char mem_device_attach_msg[NAMELEN] = {0};
+				rc = mem_device_attach(disk, size, mem_device_attach_msg);
+				print_message(rc, mem_device_attach_msg, json_flag);
 			}
-			rc = -EINVAL;
-		} else {
-			rc = mem_device_attach(disk, size);
-			if (json_flag == TRUE)
-				json_status_return(rc);
-		}
-		break;
-	case ACTION_DETACH:
-		if (disk == NULL) {
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_NO_DEVICES);
-			}
-			rc = -EINVAL;
 			break;
-		} else {
+		case ACTION_DETACH:
+			if (disk == NULL) {
+				rc = -EINVAL;
+				print_message(rc, ERR_NO_DEVICES, json_flag);
+				break;
+			} else {
+				if (strlen(device) <= 0) {
+					rc = -EINVAL;
+					print_message(rc, ERR_INVALID_ARG, json_flag);
+					break;
+				}
+				rc = mem_device_detach(disk, cache, device, generic_msg);
+			}
+			print_message(rc, generic_msg, json_flag);
+			break;
+		case ACTION_FLUSH:
+			rc = mem_device_flush(disk, cache, device, generic_msg);
+			print_message(rc, generic_msg, json_flag);
+			break;
+		case ACTION_LIST:
+			if (disk == NULL) {
+				rc = -ENOENT;
+				print_message(rc, ERR_NO_DEVICES, json_flag);
+			} else {
+				if (json_flag == TRUE)
+					rc = json_device_list(disk, cache, NULL, FALSE);
+				else
+					rc = mem_device_list(disk, cache);
+			}
+			break;
+		case ACTION_CACHE_MAP:
+			if ((strlen(device) <= 0) || (strlen(backing) <= 0)) {
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			rc = cache_device_map(disk, cache, device, backing, mode, generic_msg);
+			print_message(rc, generic_msg, json_flag);
+			break;
+		case ACTION_RESIZE:
+			if (disk == NULL) {
+				rc = -EINVAL;
+				print_message(rc, ERR_NO_DEVICES, json_flag);
+				break;
+			} else {
+				if (size <= 0 || strlen(device) <= 0) {
+					rc = -EINVAL;
+					print_message(rc, ERR_INVALID_ARG, json_flag);
+					break;
+				}
+				rc = mem_device_resize(disk, device, size, generic_msg);
+			}
+			print_message(rc, generic_msg, json_flag);
+			break;
+		case ACTION_CACHE_STATS:
 			if (strlen(device) <= 0) {
-				if (json_flag == TRUE) {
-					json_status_return(INVALID_VALUE);
-				} else {
-					printf(ERR_INVALID_ARG);
-				}
 				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			} else {
+				if (strstr(device, "rc-wb") != NULL) {
+					if (!json_flag)
+						rc = cache_wb_device_stat(cache, device);
+					else {
+						struct WC_STATS *wc_stats = NULL;
+						if (cache_wb_device_stat_json(cache, device, &wc_stats) == SUCCESS) {
+							rc = json_cache_wb_statistics(wc_stats, NULL, FALSE);
+						}
+						if (wc_stats) free(wc_stats);
+					}
+				} else {
+					if (!json_flag)
+						rc = cache_device_stat(cache, device);
+					else {
+						struct RC_STATS *rc_stats = NULL;
+						if (cache_device_stat_json(cache, device, &rc_stats) == SUCCESS) {
+							rc = json_cache_statistics(rc_stats, NULL, FALSE);
+						}
+						if (rc_stats) free(rc_stats);
+					}
+				}
+			}
+			break;
+		case ACTION_CACHE_UNMAP:
+			rc = cache_device_unmap(cache, device, generic_msg);
+//			if (json_flag == TRUE)
+			print_message(rc, generic_msg, json_flag);
+			break;
+		case ACTION_QUERY_RESOURCES:
+			mem = (struct MEM_PROFILE *)calloc(1, sizeof(struct MEM_PROFILE));
+			if (get_memory_usage(mem, generic_msg) != SUCCESS) {
+				if (mem) free(mem);
+				mem = NULL;
+				rc = -EIO;
+				print_message(rc, ERR_NO_MEMUSAGE, json_flag);
 				break;
 			}
-			rc = mem_device_detach(disk, cache, device);
-		}
-		if (json_flag == TRUE)
-			json_status_return(rc);
-		break;
-	case ACTION_FLUSH:
-		rc = mem_device_flush(disk, cache, device);
-		if (json_flag == TRUE)
-			json_status_return(rc);
-		break;
-	case ACTION_LIST:
-		if ((disk == NULL) && (json_flag != TRUE))
-			printf(ERR_NO_DEVICES);
-		else {
+			volumes = search_volumes_targets(generic_msg);
+			if ((volumes == NULL) && (strlen(generic_msg) != 0)) {
+				if (mem) free(mem);
+				mem = NULL;
+				rc = INVALID_VALUE;
+				print_message(rc, generic_msg, json_flag);
+				break;
+			}
 			if (json_flag == TRUE)
-				rc = json_device_list(disk, cache);
+				rc = json_resources_list(mem, volumes, NULL, FALSE);
 			else
-				rc = mem_device_list(disk, cache);
-		}
-		break;
-	case ACTION_CACHE_MAP:
-		if ((strlen(device) <= 0) || (strlen(backing) <= 0)) {
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_INVALID_ARG);
-			}
-			rc = -EINVAL;
-			break;
-		}
-		rc = cache_device_map(disk, cache, device, backing, mode);
-		if (json_flag == TRUE)
-			json_status_return(rc);
-		break;
-	case ACTION_RESIZE:
-		if (disk == NULL) {
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_NO_DEVICES);
-			}
-			rc = -EINVAL;
-			break;
-		} else {
-			if (size <= 0 || strlen(device) <= 0) {
-				if (json_flag == TRUE) {
-					json_status_return(INVALID_VALUE);
-				} else {
-					printf(ERR_INVALID_ARG);
-				}
-				rc = -EINVAL;
-				break;
-			}
-			rc = mem_device_resize(disk, device, size);
-		}
-		if (json_flag == TRUE)
-			json_status_return(rc);
-		break;
-	case ACTION_CACHE_STATS:
-		if (strlen(device) <= 0) {
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_INVALID_ARG);
-			}
-			rc = -EINVAL;
-			break;
-		}
-		if (json_flag == TRUE)
-			if (strstr(device, "rc-wb") != NULL)
-				rc = cache_wb_device_stat_json(cache, device);
-			else
-				rc = cache_device_stat_json(cache, device);
-		else
-			rc = cache_device_stat(cache, device);
-		break;
-	case ACTION_CACHE_UNMAP:
-		rc = cache_device_unmap(cache, device);
-		if (json_flag == TRUE)
-			json_status_return(rc);
-		break;
-	case ACTION_QUERY_RESOURCES:
-		mem = (struct MEM_PROFILE *)calloc(1, sizeof(struct MEM_PROFILE));
-		if (get_memory_usage(mem) != SUCCESS) {
-			if (json_flag == TRUE) {
-				json_status_return(-EIO);
-			} else {
-				printf(ERR_NO_MEMUSAGE);
-			}
+				rc = resources_list(mem, volumes);
 			if (mem) free(mem);
 			mem = NULL;
-			rc = -EIO;
 			break;
-		}
-		volumes = (struct VOLUME_PROFILE *)search_volumes_targets();
-		if (json_flag == TRUE)
-			rc = json_resources_list(mem, volumes);
-		else
-			rc =  resources_list(mem, volumes);
-		if (mem) free(mem);
-		mem = NULL;
-		break;
-	case ACTION_LIST_NVMET_PORTS:
-		rc = nvmet_view_ports(json_flag);
-		break;
-	case ACTION_LIST_NVMET:
-		rc = nvmet_view_exports(json_flag);
-		break;
-	case ACTION_ENABLE_NVMET_PORT:
-		if (port == INVALID_VALUE) {
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_INVALID_PORT);
+		case ACTION_LIST_NVMET_PORTS:
+			rc = nvmet_view_ports(json_flag);
+			break;
+		case ACTION_LIST_NVMET:
+			rc = nvmet_view_exports(json_flag);
+			break;
+		case ACTION_ENABLE_NVMET_PORT:
+			if (port == INVALID_VALUE) {
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_PORT, json_flag);
+				break;
 			}
-			rc = -EINVAL;
+			rc = nvmet_enable_port(host, port, xfer);
 			break;
-		}
-		rc = nvmet_enable_port(host, port, xfer);
-		break;
-	case ACTION_DISABLE_NVMET_PORT:
-		if (port == INVALID_VALUE) {
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_INVALID_PORT);
+		case ACTION_DISABLE_NVMET_PORT:
+			if (port == INVALID_VALUE) {
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_PORT, json_flag);
+				break;
 			}
-			rc = -EINVAL;
+			rc = nvmet_disable_port(port);
 			break;
-		}
-		rc = nvmet_disable_port(port);
-		break;
-	case ACTION_EXPORT_NVMET:
-		if (strlen(backing) <= 0) {
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_INVALID_ARG);
+		case ACTION_EXPORT_NVMET:
+			if (strlen(backing) <= 0) {
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
 			}
-			rc = -EINVAL;
-			break;
-		}
-		if ((disk == NULL) && (cache == NULL)) {
-			if (json_flag == TRUE) {
-				json_status_return(SUCCESS);
-			} else {
-				printf(ERR_NO_RDEVICES);
+			if ((disk == NULL) && (cache == NULL)) {
+				rc =  SUCCESS;
+				print_message(rc, ERR_NO_RDEVICES, json_flag);
+				break;
 			}
-			rc =  SUCCESS;
+			rc = nvmet_export_volume(disk, cache, backing, host, port);
 			break;
-		}
-		rc = nvmet_export_volume(disk, cache, backing, host, port);
-		break;
-	case ACTION_UNEXPORT_NVMET:
-		if (strlen(backing) <= 0){
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_INVALID_ARG);
+		case ACTION_UNEXPORT_NVMET:
+			if (strlen(backing) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
 			}
-			rc = -EINVAL;
+			rc = nvmet_unexport_volume(backing, host, port);
 			break;
-		}
-		rc = nvmet_unexport_volume(backing, host, port);
-		break;
-	case ACTION_LOCK:
-		if (strlen(device) <= 0){
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_INVALID_ARG);
+		case ACTION_LOCK:
+			if (strlen(device) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
 			}
-			rc = -EINVAL;
+			rc = mem_device_lock(disk, device, TRUE, generic_msg);
+			print_message(rc, generic_msg, json_flag);
 			break;
-		}
-		rc = mem_device_lock(disk, device, TRUE);
-		if (json_flag == TRUE)
-			json_status_return(rc);
-		break;
-	case ACTION_UNLOCK:
-		if (strlen(device) <= 0){
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_INVALID_ARG);
+		case ACTION_UNLOCK:
+			if (strlen(device) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
 			}
-			rc = -EINVAL;
+			rc = mem_device_lock(disk, device, FALSE, generic_msg);
+//			if (json_flag == TRUE)
+			print_message(rc, generic_msg, json_flag);
 			break;
-		}
-		rc = mem_device_lock(disk, device, FALSE);
-		if (json_flag == TRUE)
-			json_status_return(rc);
-		break;
-	case ACTION_REVALIDATE_NVMET_SIZE:
-		if (strlen(backing) <= 0){
-			if (json_flag == TRUE) {
-				json_status_return(INVALID_VALUE);
-			} else {
-				printf(ERR_INVALID_ARG);
+		case ACTION_REVALIDATE_NVMET_SIZE:
+			if (strlen(backing) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
 			}
-			rc = -EINVAL;
+			rc = nvmet_revalidate_size(disk, cache, backing);
+			if (json_flag == TRUE)
+				print_message(rc, "", json_flag);
 			break;
-		}
-		rc = nvmet_revalidate_size(disk, cache, backing);
-		if (json_flag == TRUE)
-			json_status_return(rc);
-		break;
-	case ACTION_NONE:
-		if (header_flag == FALSE) {
-			printf("%s", header);
-		}
-		online_menu(argvin[0]);
-		break;
+		default:
+		case ACTION_NONE:
+			if (header_flag == FALSE) {
+				printf("%s", header);
+			}
+			online_menu(argvin[0]);
+			break;
 	}
 
 	free_linked_lists(cache, disk, volumes);
@@ -560,6 +450,15 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 }
 
+/**
+ * It checks if the user is root, then checks if the required kernel modules are loaded, then executes the command line
+ * arguments
+ *
+ * @param argc The number of arguments passed to the program.
+ * @param argv The command line arguments
+ *
+ * @return The return code of the last executed command.
+ */
 int main(int argc, char *argv[])
 {
 	int rc = INVALID_VALUE;

@@ -1,3 +1,8 @@
+/** @file net.c
+ * @brief Daemon functions implementation
+ *
+ * This file contains all the function related to the daemon
+ */
 /*********************************************************************************
  ** Copyright © 2011 - 2022 Petros Koutoupis
  ** All rights reserved.
@@ -27,8 +32,12 @@
  ** @date: 2Aug20, petros@petroskoutoupis.com
  ********************************************************************************/
 
-#include "common.h"
-#include "daemon.h"
+#define SERVER
+#include "rapiddiskd.h"
+#include "utils.h"
+#include "rdsk.h"
+#include "sys.h"
+#include "json.h"
 #include <jansson.h>
 #include <microhttpd.h>
 #include <signal.h>
@@ -36,7 +45,7 @@
 struct MHD_Daemon *mydaemon;
 int server_stop_requested = 0;
 
-/*
+/**
  * The responses to our GET requests. Although, we are not SPECIFICALLY checking that they are GETs.
  * We are just check the URL and the string command.
  */
@@ -51,15 +60,24 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 	struct MHD_Response *response;
 	int rc, status = MHD_HTTP_OK;
 	unsigned long long size;
-	char device[NAMELEN] = {0}, source[NAMELEN] = {0}, command[NAMELEN * 4] = {0};
+	char device[NAMELEN] = {0}, source[NAMELEN] = {0}, command[NAMELEN] = {0};
 	char *dup = NULL, *token = NULL;
 	FILE *stream;
+	char *json_str = NULL;
+	struct RD_PROFILE *disk = NULL;
+	struct RC_PROFILE *cache = NULL;
+	struct VOLUME_PROFILE *volumes = NULL;
+	struct MEM_PROFILE *mem = NULL;
 	struct PTHREAD_ARGS *args = (struct PTHREAD_ARGS *) cls;
+//	char error_message[NAMELEN] = {0};
+	char *error_message = calloc(1, NAMELEN);
+	char *split_arr[64] = {NULL};
 
 	char *page = (char *)calloc(1, BUFSZ);
 	if (page == NULL) {
-		syslog(LOG_ERR, "%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
-		fprintf(stderr, "%s: %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
+		syslog(LOG_ERR, "%s: %s, calloc: %s\n", DAEMON, __func__, strerror(errno));
+		if (args->verbose)
+			fprintf(stderr, "%s: %s, calloc: %s\n", DAEMON, __func__, strerror(errno));
 #if MHD_VERSION >= 0x00097100
 		return MHD_NO;
 #else
@@ -69,39 +87,88 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 
 	if (strcmp(method, "GET") == SUCCESS) {
 		if (strcmp(url, CMD_PING_DAEMON) == SUCCESS) {
-			json_status_check(page);
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_PING_DAEMON);
+			json_status_check(&json_str);
 		} else if (strcmp(url, CMD_LIST_RESOURCES) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -q -j -g", args->path);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_LIST_RESOURCES);
+			volumes = search_volumes_targets(error_message);
+			if ((volumes == NULL) && (strlen(error_message) != 0)) {
+				rc = INVALID_VALUE;
+				syslog(LOG_ERR, "%s: %s.\n", DAEMON, error_message);
+				if (args->verbose)
+					fprintf(stderr, "%s: %s.\n", DAEMON, error_message);
+				json_status_return(rc, error_message, &json_str, TRUE);
+			} else {
+				mem = (struct MEM_PROFILE *) calloc(1, sizeof(struct MEM_PROFILE));
+				if ((rc = get_memory_usage(mem, error_message)) == INVALID_VALUE) {
+					syslog(LOG_ERR, "%s: %s.\n", DAEMON, error_message);
+					if (args->verbose)
+						fprintf(stderr, "%s: %s.\n", DAEMON, error_message);
+					json_status_return(rc, error_message, &json_str, TRUE);
+				} else {
+					json_resources_list(mem, volumes, &json_str, TRUE);
+				}
+				if (mem) free(mem);
+				mem = NULL;
+				free_linked_lists(NULL, NULL, volumes);
+				volumes = NULL;
+			}
 		} else if (strcmp(url, CMD_LIST_RD_VOLUMES) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -l -j -g", args->path);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_LIST_RD_VOLUMES);
+			disk = search_rdsk_targets(error_message);
+			if ((disk == NULL) && (strlen(error_message) != 0)) {
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+				json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+			} else {
+				cache = search_cache_targets(error_message);
+				if ((cache == NULL) && (strlen(error_message) != 0)) {
+					syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+					json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+					free_linked_lists(NULL, disk, NULL);
+					disk = NULL;
+				} else {
+					json_device_list(disk, cache, &json_str, TRUE);
+					free_linked_lists(cache, disk, NULL);
+					cache = NULL;
+					disk = NULL;
+				}
+			}
 		} else if (strncmp(url, CMD_RCACHE_STATS, sizeof(CMD_RCACHE_STATS) - 1) == SUCCESS) {
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_RCACHE_STATS);
 			dup = strdup(url);
-			token = strtok((char *)dup, "/");
-			token = strtok(NULL, "/");    /* skip first "/" delimeter */
-			token = strtok(NULL, "/");    /* and second delimeter     */
+			int last = split(dup, split_arr, "/");
+			token = split_arr[last];
 			if (!token) {
 				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+				json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+			} else {
+				if (strstr(token, "rc-wb") != NULL) {
+					struct WC_STATS *stats = dm_get_status(token, WRITEBACK);
+					if (stats) {
+						json_cache_wb_statistics(stats, &json_str, TRUE);
+						free(stats);
+					} else {
+						status = MHD_HTTP_BAD_REQUEST;
+						syslog(LOG_ERR, "%s: %s\n", DAEMON, "Can't get device status");
+						json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+					}
+				} else {
+					struct RC_STATS *stats = dm_get_status(token, WRITETHROUGH);
+					if (stats) {
+						json_cache_statistics(stats, &json_str, TRUE);
+						free(stats);
+					} else {
+						status = MHD_HTTP_BAD_REQUEST;
+						syslog(LOG_ERR, "%s: %s\n", DAEMON, "Can't get device status");
+						json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+					}
+				}
 			}
-			sprintf(command, "%s/rapiddisk -s %s -j -g", args->path, token);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if (strncmp(url, CMD_LIST_NVMET, sizeof(CMD_LIST_NVMET) - 1) == SUCCESS) {
 			sprintf(command, "%s/rapiddisk -n -j -g", args->path);
 			stream = popen(command, "r");
@@ -119,194 +186,318 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 			} else
 				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else {
-			json_status_unsupported(page);
+//			json_status_unsupported(page);
+			json_status_return(INVALID_VALUE, "Unsupported", &json_str, TRUE);
 			status = MHD_HTTP_BAD_REQUEST;
 		}
 	} else if (strcmp(method, "POST") == SUCCESS) {
 		if ((strncmp(url, CMD_RDSK_CREATE, sizeof(CMD_RDSK_CREATE) - 1) == SUCCESS) && \
 		    (strncmp(url, CMD_RCACHE_CREATE, sizeof(CMD_RCACHE_CREATE) - 1) != SUCCESS)) {
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_RCACHE_CREATE);
 			dup = strdup(url);
-			token = strtok((char *)dup, "/");
-			token = strtok(NULL, "/");    /* skip first "/" delimeter */
-			token = strtok(NULL, "/");    /* and second delimeter     */
+			int last = split(dup, split_arr, "/");
+			token = split_arr[last];
 			if (!token) {
 				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+				json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+			} else {
+				size = strtoull(token, NULL, 10);
+				disk = search_rdsk_targets(error_message);
+				if ((disk == NULL) && (strlen(error_message) != 0)) {
+					syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+					json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+				} else {
+					rc = mem_device_attach(disk, size, error_message);
+					json_status_return(rc, error_message, &json_str, TRUE);
+					int pri = LOG_INFO;
+					if (rc < SUCCESS)
+						rc = LOG_ERR;
+					syslog(pri, "%s: %s\n", DAEMON, error_message);
+					free_linked_lists(NULL, disk, NULL);
+					disk = NULL;
+				}
 			}
-			size = strtoull(token, (char **)NULL, 10);
-			sprintf(command, "%s/rapiddisk -a %llu -j -g", args->path, size);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if ((strncmp(url, CMD_RDSK_REMOVE, sizeof(CMD_RDSK_REMOVE) - 1) == SUCCESS) && \
 			   (strncmp(url, CMD_RCACHE_REMOVE, sizeof(CMD_RCACHE_REMOVE) - 1) != SUCCESS)) {
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_RCACHE_REMOVE);
 			dup = strdup(url);
-			token = strtok((char *)dup, "/");
-			token = strtok(NULL, "/");    /* skip first "/" delimeter */
-			token = strtok(NULL, "/");    /* and second delimeter     */
+			int last = split(dup, split_arr, "/");
+			token = split_arr[last];
 			if (!token) {
 				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
-			}
-			sprintf(command, "%s/rapiddisk -d %s -j -g", args->path, token);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
-		} else if (strncmp(url, CMD_RDSK_RESIZE, sizeof(CMD_RDSK_RESIZE) - 1) == SUCCESS) {
-			dup = strdup(url);
-			token = strtok((char *)dup, "/");
-			token = strtok(NULL, "/");    /* skip first "/" delimeter */
-			token = strtok(NULL, "/");    /* and second delimeter     */
-			if (!token) {
-				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
-			}
-			sprintf(device, "%s", token);
-			token = strtok(NULL, "/");    /* time to get the size     */
-			if (!token) {
-				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
-			}
-			size = strtoull(token, (char **)NULL, 10);
-			sprintf(command, "%s/rapiddisk -r %s -c %llu -j -g", args->path, device, size);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
-		} else if (strncmp(url, CMD_RDSK_FLUSH, sizeof(CMD_RDSK_FLUSH) - 1) == SUCCESS) {
-			dup = strdup(url);
-			token = strtok((char *)dup, "/");
-			token = strtok(NULL, "/");    /* skip first "/" delimeter */
-			token = strtok(NULL, "/");    /* and second delimeter     */
-			if (!token) {
-				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
-			}
-			sprintf(command, "%s/rapiddisk -f %s -j -g", args->path, token);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
-		} else if (strncmp(url, CMD_RCACHE_CREATE, sizeof(CMD_RCACHE_CREATE) - 1) == SUCCESS) {
-			dup = strdup(url);
-			token = strtok((char *)dup, "/");
-			token = strtok(NULL, "/");    /* skip first "/" delimeter */
-			token = strtok(NULL, "/");    /* and second delimeter     */
-			if (!token) {
-				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
-			}
-			sprintf(device, "%s", token);
-			token = strtok(NULL, "/");    /* get the backing store    */
-			if (!token) {
-				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
-			}
-			sprintf(source, "%s", token);
-			token = strtok(NULL, "/");    /* get the caching policy   */
-			if (!token) {
-				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
-			}
-			if (strcmp(token, "write-through") == SUCCESS) {
-				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wt -j -g", args->path, device, source);
-			} else if (strcmp(token, "write-around") == SUCCESS) {
-				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wa -j -g", args->path, device, source);
-			} else if (strcmp(token, "writeback") == SUCCESS) {
-				sprintf(command, "%s/rapiddisk -m %s -b /dev/%s -p wb -j -g", args->path, device, source);
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid device name.");
+				json_status_return(INVALID_VALUE, "Invalid device name.", &json_str, TRUE);
 			} else {
-				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
+				disk = search_rdsk_targets(error_message);
+				if ((disk == NULL) && (strlen(error_message) != 0)) {
+					syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+					json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+				} else {
+					cache = search_cache_targets(error_message);
+					if (cache == NULL && strlen(error_message) != 0) {
+						syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+						json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+						free_linked_lists(NULL, disk, NULL);
+						disk = NULL;
+					} else {
+						rc = mem_device_detach(disk, cache, token, error_message);
+						int pri = LOG_INFO;
+						if (rc < SUCCESS)
+							rc = LOG_ERR;
+						syslog(pri, "%s: %s\n", DAEMON, error_message);
+						json_status_return(rc, error_message, &json_str, TRUE);
+						free_linked_lists(cache, disk, NULL);
+						disk = NULL;
+						cache = NULL;
+					}
+				}
 			}
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+		} else if (strncmp(url, CMD_RDSK_RESIZE, sizeof(CMD_RDSK_RESIZE) - 1) == SUCCESS) {
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_RDSK_RESIZE);
+			dup = strdup(url);
+			int last = split(dup, split_arr, "/");
+			token = split_arr[last - 1];
+			if (!token) {
+				status = MHD_HTTP_BAD_REQUEST;
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+				json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+			} else {
+				sprintf(device, "%s", token);
+				token = split_arr[last];    /* time to get the size     */
+				if (!token) {
+					status = MHD_HTTP_BAD_REQUEST;
+					syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+					json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+				} else {
+					size = strtoull(token, (char **) NULL, 10);
+					if ((disk = search_rdsk_targets(error_message)) == NULL) {
+						syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+						json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+					} else {
+//					rc = mem_device_resize_daemon(disk, device, size, args);
+						rc = mem_device_resize(disk, device, size, error_message);
+						int pri = LOG_INFO;
+						if (rc < SUCCESS)
+							rc = LOG_ERR;
+						syslog(pri, "%s: %s\n", DAEMON, error_message);
+						json_status_return(rc, error_message, &json_str, TRUE);
+						free_linked_lists(NULL, disk, NULL);
+						disk = NULL;
+					}
+				}
+			}
+		} else if (strncmp(url, CMD_RDSK_FLUSH, sizeof(CMD_RDSK_FLUSH) - 1) == SUCCESS) {
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_RDSK_FLUSH);
+			dup = strdup(url);
+			int last = split(dup, split_arr, "/");
+			token = split_arr[last];
+			if (!token) {
+				status = MHD_HTTP_BAD_REQUEST;
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid device name.");
+				json_status_return(INVALID_VALUE, "Invalid device name.", &json_str, TRUE);
+			} else {
+				disk = search_rdsk_targets(error_message);
+				if ((disk == NULL) && (strlen(error_message) != 0)) {
+					syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+					json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+				} else {
+					cache = search_cache_targets(error_message);
+					if (cache == NULL && strlen(error_message) != 0) {
+						syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+						json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+						free_linked_lists(NULL, disk, NULL);
+						disk = NULL;
+					} else {
+						rc = mem_device_flush(disk, cache, token, error_message);
+						int pri = LOG_INFO;
+						if (rc < SUCCESS)
+							rc = LOG_ERR;
+						syslog(pri, "%s: %s\n", DAEMON, error_message);
+						json_status_return(rc, error_message, &json_str, TRUE);
+						free_linked_lists(cache, disk, NULL);
+						disk = NULL;
+						cache = NULL;
+					}
+				}
+			}
+		} else if (strncmp(url, CMD_RCACHE_CREATE, sizeof(CMD_RCACHE_CREATE) - 1) == SUCCESS) {
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_RCACHE_CREATE);
+			int cache_mode;
+			char block_dev[NAMELEN + 5] = {0};
+			dup = strdup(url);
+			int last = split(dup, split_arr, "/");
+			token = split_arr[last - 2];
+			if (!token) {
+				status = MHD_HTTP_BAD_REQUEST;
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+				json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+			} else {
+				sprintf(device, "%s", token);
+				token = split_arr[last - 1];    /* time to get the size     */
+				if (!token) {
+					status = MHD_HTTP_BAD_REQUEST;
+					syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+					json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+				} else {
+					sprintf(source, "%s", token);
+					token = split_arr[last];    /* time to get the size     */
+					if (!token) {
+						status = MHD_HTTP_BAD_REQUEST;
+						syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+						json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+					} else {
+						if (strcmp(token, "write-through") == SUCCESS) {
+							cache_mode = WRITETHROUGH;
+						} else if (strcmp(token, "write-around") == SUCCESS) {
+							cache_mode = WRITEAROUND;
+						} else {
+							cache_mode = WRITEBACK;
+						}
+						disk = search_rdsk_targets(error_message);
+						if ((disk == NULL) && (strlen(error_message) != 0)) {
+							syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+							json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+						} else {
+							cache = search_cache_targets(error_message);
+							if (cache == NULL && strlen(error_message) != 0) {
+								syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+								json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+								free_linked_lists(NULL, disk, NULL);
+								disk = NULL;
+							} else {
+								sprintf(block_dev, "/dev/%s", source);
+								rc = cache_device_map(disk, cache, device, block_dev, cache_mode, error_message);
+								int pri = LOG_INFO;
+								if (rc < SUCCESS)
+									rc = LOG_ERR;
+								syslog(pri, "%s: %s\n", DAEMON, error_message);
+								json_status_return(rc, error_message, &json_str, TRUE);
+								free_linked_lists(cache, disk, NULL);
+								cache = NULL;
+								disk = NULL;
+							}
+						}
+					}
+				}
+			}
 		} else if (strncmp(url, CMD_RCACHE_REMOVE, sizeof(CMD_RCACHE_REMOVE) - 1) == SUCCESS) {
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_RCACHE_REMOVE);
 			dup = strdup(url);
-			token = strtok((char *)dup, "/");
-			token = strtok(NULL, "/");    /* skip first "/" delimeter */
-			token = strtok(NULL, "/");    /* and second delimeter     */
+			int last = split(dup, split_arr, "/");
+			token = split_arr[last];
 			if (!token) {
 				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+				json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+			} else {
+				cache = search_cache_targets(error_message);
+				if (cache == NULL && strlen(error_message) != 0) {
+					syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+					json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+				} else {
+					rc = cache_device_unmap(cache, token, error_message);
+					int pri = LOG_INFO;
+					if (rc < SUCCESS)
+						rc = LOG_ERR;
+					syslog(pri, "%s: %s\n", DAEMON, error_message);
+					json_status_return(rc, error_message, &json_str, TRUE);
+					free_linked_lists(cache, NULL, NULL);
+					cache = NULL;
+				}
 			}
-			sprintf(command, "%s/rapiddisk -u %s -j -g", args->path, token);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if (strncmp(url, CMD_RDSK_LOCK, sizeof(CMD_RDSK_LOCK) - 1) == SUCCESS) {
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_RDSK_LOCK);
 			dup = strdup(url);
-			token = strtok((char *)dup, "/");
-			token = strtok(NULL, "/");    /* skip first "/" delimeter */
-			token = strtok(NULL, "/");    /* and second delimeter     */
+			int last = split(dup, split_arr, "/");
+			token = split_arr[last];
 			if (!token) {
 				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+				json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+			} else {
+				disk = search_rdsk_targets(error_message);
+				if ((disk == NULL) && (strlen(error_message) != 0)) {
+					syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+					json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+				} else {
+					rc = mem_device_lock(disk, token, TRUE, error_message);
+					int pri = LOG_INFO;
+					if (rc < SUCCESS)
+						rc = LOG_ERR;
+					syslog(pri, "%s: %s\n", DAEMON, error_message);
+					json_status_return(rc, error_message, &json_str, TRUE);
+					free_linked_lists(NULL, disk, NULL);
+					disk = NULL;
+				}
 			}
-			sprintf(command, "%s/rapiddisk -L %s -j -g", args->path, token);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else if (strncmp(url, CMD_RDSK_UNLOCK, sizeof(CMD_RDSK_UNLOCK) - 1) == SUCCESS) {
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_RDSK_UNLOCK);
 			dup = strdup(url);
-			token = strtok((char *)dup, "/");
-			token = strtok(NULL, "/");    /* skip first "/" delimeter */
-			token = strtok(NULL, "/");    /* and second delimeter     */
+			int last = split(dup, split_arr, "/");
+			token = split_arr[last];
 			if (!token) {
 				status = MHD_HTTP_BAD_REQUEST;
-				goto answer_to_connection_out;
+				syslog(LOG_ERR, "%s: %s\n", DAEMON, "Invalid url");
+				json_status_return(INVALID_VALUE, NULL, &json_str, TRUE);
+			} else {
+				disk = search_rdsk_targets(error_message);
+				if ((disk == NULL) && (strlen(error_message) != 0)) {
+					syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
+					json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
+				} else {
+					rc = mem_device_lock(disk, token, FALSE, error_message);
+					int pri = LOG_INFO;
+					if (rc < SUCCESS)
+						rc = LOG_ERR;
+					syslog(pri, "%s: %s\n", DAEMON, error_message);
+					json_status_return(rc, error_message, &json_str, TRUE);
+					free_linked_lists(NULL, disk, NULL);
+					disk = NULL;
+				}
 			}
-			sprintf(command, "%s/rapiddisk -U %s -j -g", args->path, token);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
 		} else {
-			json_status_unsupported(page);
+			json_status_return(INVALID_VALUE, "Unsupported", &json_str, TRUE);
+			syslog(LOG_ERR, "%s: %s\n", DAEMON, "Unsupported");
 			status = MHD_HTTP_BAD_REQUEST;
 		}
 	} else
 		status = MHD_HTTP_BAD_REQUEST;
 
-answer_to_connection_out:
-	response = MHD_create_response_from_buffer(strlen(page), (void *)page, MHD_RESPMEM_MUST_COPY);
+	if (json_str != NULL) {
+		response = MHD_create_response_from_buffer(strlen(json_str), (void *) json_str, MHD_RESPMEM_MUST_COPY);
+	} else {
+		response = MHD_create_response_from_buffer(strlen(page), (void *) page, MHD_RESPMEM_MUST_COPY);
+	}
 	rc = MHD_queue_response (connection, status, response);
 	MHD_destroy_response (response);
 	if (page) free(page);
 	if (dup) free(dup);
-
+	if (json_str) free(json_str);
+	if (error_message) free(error_message);
+	page = NULL;
+	dup = NULL;
+	json_str = NULL;
+	error_message = NULL;
 	return rc;
 }
 
-/*
+/**
  * This function nullify the effects of a SIGPIPE signal (needed by libmicrohttpd:
  * https://www.gnu.org/software/libmicrohttpd/manual/html_node/microhttpd_002dintro.html#SIGPIPE )
  */
-static void catcher (__attribute__((unused)) int sig) {
+static void catcher (int sig) {
 }
 
-/*
+/**
  * This function is called upon receiving a signal, it sets server_stop_requested so the main loop will exit
  */
 static void signal_handler(int sig) {
@@ -315,7 +506,7 @@ static void signal_handler(int sig) {
 	syslog(LOG_INFO, "%s: signal_handler function, SIGNAL received: %s.\n", DAEMON, strsignal(sig));
 }
 
-/*
+/**
  * Installs the SIGPIPE signal catcher
  */
 static void ignore_sigpipe () {
@@ -333,7 +524,7 @@ static void ignore_sigpipe () {
 	}
 }
 
-/*
+/**
  * Catch all the appropriate signals to be able to exit in a clean way
  */
 static void catch_exit_signals() {
@@ -351,6 +542,14 @@ static void catch_exit_signals() {
 
 }
 
+/**
+ * It creates a daemon that listens on the specified port and calls the function `answer_to_connection` when a connection
+ * is received
+ *
+ * @param arg a pointer to the arguments passed to the thread function.
+ *
+ * @return The return value of the function is the exit status of the program.
+ */
 int mgmt_thread(void *arg)
 {
 	struct PTHREAD_ARGS *args = (struct PTHREAD_ARGS *)arg;
@@ -368,19 +567,20 @@ int mgmt_thread(void *arg)
 	 */
 	if (mydaemon == NULL) {
 		syslog(LOG_INFO, "%s: Error creating MHD Daemon: %s, %s.\n", DAEMON, strerror(errno), __func__);
-		fprintf(stderr, "%s: Error creating MHD Daemon: %s, %s.\n", DAEMON, strerror(errno), __func__);
+		if (args->verbose)
+			fprintf(stderr, "%s: Error creating MHD Daemon: %s, %s.\n", DAEMON, strerror(errno), __func__);
 		return INVALID_VALUE;
 	}
-
 	while (!server_stop_requested) {
 		/* On any signal, sleep is always interrupted and this allows to the signal handler function to be invoked */
-		sleep(3600);
+		sleep(120 * 4);
 	}
 
 	MHD_stop_daemon(mydaemon);
 
 	syslog(LOG_INFO, "%s: Daemon loop function exiting: %s.\n", DAEMON, __func__);
-	fprintf(stderr,"%s: Daemon loop function exiting: %s.\n", DAEMON, __func__);
+	if (args->verbose)
+		fprintf(stderr,"%s: Daemon loop function exiting: %s.\n", DAEMON, __func__);
 
 	return SUCCESS;
 }

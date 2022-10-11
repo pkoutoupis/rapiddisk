@@ -27,9 +27,9 @@
  ** @date: 29Jul20, petros@petroskoutoupis.com
  ********************************************************************************/
 
-#include "common.h"
-#include "daemon.h"
-#include <pthread.h>
+#define SERVER
+#include "rapiddiskd.h"
+#include "utils.h"
 #include <libgen.h>
 
 /*
@@ -103,6 +103,11 @@ int main(int argc, char *argv[])
 	char port[6] = {0}; // max port is 65535 so 5 chars + 1 (NULL)
 	char *dirnamed_path = NULL;
 
+//	get_status();
+//	char *str = preg_replace("a", "b", "a");
+//	printf("%s\n", str);
+//	if (str) free(str);
+//	exit(0);
 #ifndef DEBUG
 	if (getuid() != 0) {
 		fprintf(stderr, "\nYou must be root or contain sudo permissions to initiate this\n\n");
@@ -138,6 +143,7 @@ int main(int argc, char *argv[])
 		if (verbose)
 			fprintf(stderr, "%s: The needed modules are not loaded...\n", __func__);
 		syslog(LOG_ERR, "%s: %s: The needed modules are not loaded...\n", DAEMON, __func__);
+		syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 		return -EPERM;
 	}
 
@@ -146,6 +152,7 @@ int main(int argc, char *argv[])
 		if (verbose)
 			fprintf(stderr, "%s: The daemon is already running...\n", __func__);
 		syslog(LOG_ERR, "%s: %s: The daemon is already running...\n", DAEMON, __func__);
+		syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 		return INVALID_VALUE;
 	}
 
@@ -156,6 +163,7 @@ int main(int argc, char *argv[])
 	*/
 	if ((path = realpath(argv[0], NULL)) == NULL) {
 		syslog(LOG_ERR, "%s, %s: realpath: %s - %s\n", DAEMON, __func__, strerror(errno), argv[0]);
+		syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 		if (verbose)
 			fprintf(stderr,"%s, %s: realpath: %s\n", DAEMON, __func__, strerror(errno));
 		return -EIO;
@@ -202,35 +210,42 @@ int main(int argc, char *argv[])
 		 */
 		if (close(STDIN_FILENO) < SUCCESS) {
 			syslog(LOG_ERR, "%s: %s: close STDIN: %s\n", DAEMON, __func__, strerror(errno));
+			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 			if (verbose) {
 				fprintf(stderr, "%s, %s: Close STDIN: %s\n", DAEMON, __func__, strerror(errno));
+				fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
 			}
 			if (dirnamed_path) free(dirnamed_path);
 			return INVALID_VALUE;
 		}
 		if (close(STDOUT_FILENO) < SUCCESS) {
 			syslog(LOG_ERR, "%s, %s: Close STDOUT: %s\n", DAEMON, __func__, strerror(errno));
+			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 			if (verbose) {
 				fprintf(stderr, "%s, %s: Close STDOUT: %s\n", DAEMON, __func__, strerror(errno));
+				fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
 			}
 			if (dirnamed_path) free(dirnamed_path);
 			return INVALID_VALUE;
 		}
 		if (close(STDERR_FILENO) < SUCCESS) {
 			syslog(LOG_ERR, "%s, %s: Close STDERR: %s\n", DAEMON, __func__, strerror(errno));
+			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 			if (verbose) {
 				fprintf(stderr, "%s, %s: Close STERR: %s\n", DAEMON, __func__, strerror(errno));
+				fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
 			}
 			if (dirnamed_path) free(dirnamed_path);
 			return INVALID_VALUE;
 		}
 
 		/*
-		 * Reopening STDIN, STDOUT and STDERR, pointing to "/dev/null"/ or to a file in verbose mode.
-		 * File names are arbitrary and can be changed.
+		 * Reopening STDIN, STDOUT and STDERR, pointing to "/dev/null" or to a file in verbose mode.
+		 * File names are arbitrary/temporary and can be changed.
 		 */
 		if ((stdin_f = open("/dev/null", O_RDONLY)) < SUCCESS) {
 			syslog(LOG_ERR, "%s: %s: open STDIN: %s\n", DAEMON, __func__, strerror(errno));
+			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 			/* We can't log to STDERR yet (for verbose mode) */
 			if (dirnamed_path) free(dirnamed_path);
 			return INVALID_VALUE;
@@ -241,9 +256,10 @@ int main(int argc, char *argv[])
 			new_stdout = "/tmp/rapiddiskd.log";
 		}
 		if ((stdout_f = open(new_stdout,
-							 O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH)) < SUCCESS) {
+							 O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH)) < SUCCESS) {
 			syslog(LOG_ERR, "%s, %s: Error opening STDOUT as %s: %s\n", DAEMON, __func__,
 				   new_stdout, strerror(errno));
+			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 			close(stdin_f);
 			/* We can't log to STDERR yet (for verbose mode) */
 			if (dirnamed_path) free(dirnamed_path);
@@ -254,9 +270,10 @@ int main(int argc, char *argv[])
 		if (verbose) {
 			new_stderr = "/tmp/rapiddiskd_err.log";
 		}
-		if ((stderr_f = open(new_stderr, O_WRONLY | O_CREAT,
+		if ((stderr_f = open(new_stderr, O_WRONLY | O_CREAT | O_TRUNC,
 							 S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH)) < SUCCESS) {
 			syslog(LOG_ERR, "%s, %s: Error opening STDERR as %s: %s\n", DAEMON, __func__, new_stderr, strerror(errno));
+			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 			/* We can't log to STDERR yet (for verbose mode) */
 			close(stdin_f);
 			close(stdout_f);
@@ -269,8 +286,11 @@ int main(int argc, char *argv[])
 	args = (struct PTHREAD_ARGS *)calloc(1, sizeof(struct PTHREAD_ARGS));
 	if (args == NULL) {
 		syslog(LOG_ERR, "%s, %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
-		if (verbose)
+		syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+		if (verbose) {
 			fprintf(stderr, "%s, %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
+			fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
+		}
 		if (dirnamed_path) free(dirnamed_path);
 		return -ENOMEM;
 	}
@@ -289,19 +309,20 @@ int main(int argc, char *argv[])
 	if (dirnamed_path) free(dirnamed_path);
 	dirnamed_path = NULL;
 	syslog(LOG_INFO, "%s: Starting daemon...\n", DAEMON);
-	/* We write to stderr without checking for verbose mode, since the messages are printed to /dev/null
-	 * if verbose == false */
-	fprintf(stderr, "%s: Starting daemon...\n", DAEMON);
+	if (args->verbose)
+		fprintf(stderr, "%s: Starting daemon...\n", DAEMON);
 	rc = mgmt_thread((void *)args);
-	free(args);
-	args = NULL;
 	syslog(LOG_INFO, "%s: Daemon exiting.\n", DAEMON);
-	fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
+	if (args->verbose)
+		fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
 	if (fflush(NULL) == EOF) {
 		syslog(LOG_ERR, "%s: Error flushing file descriptors: %s, %s\n", DAEMON, strerror(errno), __func__);
-		fprintf(stderr, "%s: Error flushing file descriptors: %s, %s.\n", DAEMON, strerror(errno), __func__);
+		if (args->verbose)
+			fprintf(stderr, "%s: Error flushing file descriptors: %s, %s.\n", DAEMON, strerror(errno), __func__);
 		return INVALID_VALUE;
 	}
+	free(args);
+	args = NULL;
 	if (stdin_f >= 0) close(stdin_f);
 	if (stdout_f >= 0) close(stdout_f);
 	if (stderr_f >= 0) close(stderr_f);

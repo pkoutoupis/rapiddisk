@@ -27,8 +27,11 @@
  ** @date: 1Jul21, petros@petroskoutoupis.com
  ********************************************************************************/
 
-#include "common.h"
-#include "cli.h"
+#include "nvmet.h"
+#include "utils.h"
+#include "rdsk.h"
+#include "json.h"
+
 #include <net/if.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -44,16 +47,25 @@
 #define SYS_CLASS_NET           "/sys/class/net"
 #define NVME_PORT               "4420"
 
-struct NVMET_PROFILE *nvmet_head =  (struct NVMET_PROFILE *) NULL;
-struct NVMET_PROFILE *nvmet_end =   (struct NVMET_PROFILE *) NULL;
+struct NVMET_PROFILE *nvmet_head = NULL;
+struct NVMET_PROFILE *nvmet_end = NULL;
 
-struct NVMET_PORTS *ports_head =  (struct NVMET_PORTS *) NULL;
-struct NVMET_PORTS *ports_end =   (struct NVMET_PORTS *) NULL;
+struct NVMET_PORTS *ports_head = NULL;
+struct NVMET_PORTS *ports_end = NULL;
 
 /*
  * description: Scan all NVMe Targets NQNs
  */
-struct NVMET_PROFILE *nvmet_scan_subsystem(void)
+
+/**
+ * It scans the NVMe Target subsystem for all the subsystems and namespaces and returns a linked list of the subsystems and
+ * namespaces.
+ *
+ * @param return_message This is a pointer to a string that will be used to return error messages.
+ *
+ * @return A linked list of NVMET_PROFILE structs.
+ */
+struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message)
 {
 	int err, err2, n = 0, i;
 	char file[NAMELEN * 2] = {0};
@@ -61,27 +73,30 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(void)
 	struct dirent **list, **sublist;
 
 	if (access(SYS_NVMET, F_OK) != SUCCESS) {
-		printf("The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp kernel\n"
-		       " modules and ensure that the kernel user configuration filesystem is mounted.\n");
+		char *msg = "The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp kernel modules and ensure that the kernel user configuration filesystem is mounted.";
+		print_error("%s", return_message, msg);
 		return NULL;
 	}
 
 	if ((err = scandir(SYS_NVMET_TGT, &list, NULL, NULL)) < 0) {
-		printf("%s: scandir: %s\n", __func__, strerror(errno));
+		char *msg = "%s: scandir: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
 		return NULL;
 	}
 	for (; n < err; n++) {
 		if (strncmp(list[n]->d_name, ".", 1) != SUCCESS) {
 			sprintf(file, "%s/%s/namespaces/", SYS_NVMET_TGT, list[n]->d_name);
 			if ((err2 = scandir(file, &sublist, NULL, NULL)) < 0) {
-				printf("%s: scandir: %s\n", __func__, strerror(errno));
+				char *msg = "%s: scandir: %s";
+				print_error(msg, return_message, __func__, strerror(errno));
 				list = clean_scandir(list, err);
 				return NULL;
 			}
 			for (i = 0; i < err2; i++) {
 				if (strncmp(sublist[i]->d_name, ".", 1) != SUCCESS) {
 					if ((nvmet = (struct NVMET_PROFILE *)calloc(1, sizeof(struct NVMET_PROFILE))) == NULL ) {
-						printf("%s: calloc: %s\n", __func__, strerror(errno));
+						char *msg = "%s: calloc: %s";
+						print_error(msg, return_message, __func__, strerror(errno));
 						list = clean_scandir(list, err);
 						sublist = clean_scandir(sublist, err2);
 						return NULL;
@@ -90,8 +105,10 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(void)
 
 					sprintf(file, "%s/%s/namespaces/%s", SYS_NVMET_TGT, list[n]->d_name, sublist[i]->d_name);
 					if (access(file, F_OK) != INVALID_VALUE) {
-						sprintf(nvmet->device, "%s", read_info(file, "device_path"));
-						nvmet->enabled = atoi(read_info(file, "enable"));
+						char *info = read_info(file, "device_path", return_message);
+						sprintf(nvmet->device, "%s", info);
+						info = read_info(file, "enable", return_message);
+						nvmet->enabled = atoi(info);
 						nvmet->namespc = atoi(sublist[i]->d_name);
 					}
 					if (nvmet_head == NULL)
@@ -105,16 +122,25 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(void)
 			}
 			sublist = clean_scandir(sublist, err2);
 		}
-		list = clean_scandir(list, err);
+
 //		if (list[n] != NULL) free(list[n]);
 	}
+	list = clean_scandir(list, err);
 	return nvmet_head;
 }
 
 /*
  * description: Scan all exported NVMe Targets ports.
  */
-struct NVMET_PORTS *nvmet_scan_ports(void)
+
+/**
+ * It scans the NVMe Target subsystem for all ports and exports and returns a linked list of all ports and exports
+ *
+ * @param return_message This is a pointer to a string that will be populated with an error message if the function fails.
+ *
+ * @return A pointer to the head of a linked list of structs.
+ */
+struct NVMET_PORTS *nvmet_scan_ports(char *return_message)
 {
 	int err, err2, n = 0, i;
 	char file[NAMELEN * 2] = {0};
@@ -122,13 +148,14 @@ struct NVMET_PORTS *nvmet_scan_ports(void)
 	struct dirent **ports, **exports;
 
 	if (access(SYS_NVMET, F_OK) != SUCCESS) {
-		printf("The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp kernel\n"
-		       " modules and ensure that the kernel user configuration filesystem is mounted.\n");
+		char *msg = "The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp kernel modules and ensure that the kernel user configuration filesystem is mounted.";
+		print_error("%s", return_message, msg);
 		return NULL;
 	}
 
 	if ((err = scandir(SYS_NVMET_PORTS, &ports, NULL, NULL)) < 0) {
-		printf("%s: scandir: %s\n", __func__, strerror(errno));
+		char *msg = "%s: scandir: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
 		return NULL;
 	}
 	for (; n < err; n++) {
@@ -138,24 +165,30 @@ struct NVMET_PORTS *nvmet_scan_ports(void)
 			if (access(file, F_OK) != INVALID_VALUE) {
 				sprintf(file, "%s/%s/subsystems", SYS_NVMET_PORTS, ports[n]->d_name);
 				if ((err2 = scandir(file, &exports, NULL, NULL)) < 0) {
-					printf("%s: scandir: %s\n", __func__, strerror(errno));
+					char *msg = "%s: scandir: %s";
+					print_error(msg, return_message, __func__, strerror(errno));
 					ports = clean_scandir(ports, err);
 					return NULL;
 				}
 				for (i = 0; i < err2; i++) {
 					if (strncmp(exports[i]->d_name, ".", 1) != SUCCESS) {
 						if ((nvmet_ports = (struct NVMET_PORTS *)calloc(1, sizeof(struct NVMET_PORTS))) == NULL ) {
-							printf("%s: calloc: %s\n", __func__, strerror(errno));
+							char *msg = "%s: calloc: %s";
+							print_error(msg, return_message, __func__, strerror(errno));
 							ports = clean_scandir(ports, err);
 							exports = clean_scandir(exports, err2);
 							return NULL;
 						}
 						nvmet_ports->port = atoi(ports[n]->d_name);
 						sprintf(file, "%s/%s", SYS_NVMET_PORTS, ports[n]->d_name);
-						sprintf(nvmet_ports->addr, "%s", read_info(file, "addr_traddr"));
+						// TODO
+						char *info = read_info(file, "addr_traddr", return_message);
+						sprintf(nvmet_ports->addr, "%s", info);
 						if (strlen(nvmet_ports->addr) < 1)
 							sprintf(nvmet_ports->addr, "UNDEFINED");
-						sprintf(nvmet_ports->protocol, "%s", read_info(file, "addr_trtype"));
+						// TODO
+						info = read_info(file, "addr_trtype", return_message);
+						sprintf(nvmet_ports->protocol, "%s", info);
 						if (strlen(nvmet_ports->protocol) < 1)
 							sprintf(nvmet_ports->protocol, "UNDEFINED");
 						sprintf(nvmet_ports->nqn, "%s", exports[i]->d_name);
@@ -183,7 +216,16 @@ struct NVMET_PORTS *nvmet_scan_ports(void)
 /*
  * description: Scan all NVMe Targets ports.
  */
-struct NVMET_PORTS *nvmet_scan_all_ports(void)
+
+/**
+ * > This function scans the /sys/kernel/config/nvmet/ports directory for all NVMe Target ports and returns a linked list
+ * of all ports found
+ *
+ * @param return_message This is a pointer to a string that will be populated with an error message if the function fails.
+ *
+ * @return A pointer to the first element of a linked list of struct NVMET_PORTS.
+ */
+struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message)
 {
 	int err, n = 0;
 	char file[NAMELEN * 2] = {0};
@@ -191,13 +233,14 @@ struct NVMET_PORTS *nvmet_scan_all_ports(void)
 	struct dirent **ports;
 
 	if (access(SYS_NVMET, F_OK) != SUCCESS) {
-		printf("The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp kernel\n"
-		       " modules and ensure that the kernel user configuration filesystem is mounted.\n");
+		char *msg = "The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp kernel modules and ensure that the kernel user configuration filesystem is mounted.";
+		print_error("%s", return_message, msg);
 		return NULL;
 	}
 
 	if ((err = scandir(SYS_NVMET_PORTS, &ports, NULL, NULL)) < 0) {
-		printf("%s: scandir: %s\n", __func__, strerror(errno));
+		char *msg = "%s: scandir: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
 		return NULL;
 	}
 	for (; n < err; n++) {
@@ -206,15 +249,20 @@ struct NVMET_PORTS *nvmet_scan_all_ports(void)
 			sprintf(file, "%s/%s", SYS_NVMET_PORTS, ports[n]->d_name);
 			if (access(file, F_OK) != INVALID_VALUE) {
 				if ((nvmet_ports = (struct NVMET_PORTS *)calloc(1, sizeof(struct NVMET_PORTS))) == NULL ) {
-					printf("%s: calloc: %s\n", __func__, strerror(errno));
+					char *msg = "%s: calloc: %s";
+					print_error(msg, return_message, __func__, strerror(errno));
 					ports = clean_scandir(ports, err);
 					return NULL;
 				}
 				nvmet_ports->port = atoi(ports[n]->d_name);
-				sprintf(nvmet_ports->addr, "%s", read_info(file, "addr_traddr"));
+				// TODO
+				char *info = read_info(file, "addr_traddr", return_message);
+				sprintf(nvmet_ports->addr, "%s", info);
 				if (strlen(nvmet_ports->addr) < 1)
 					sprintf(nvmet_ports->addr, "UNDEFINED");
-				sprintf(nvmet_ports->protocol, "%s", read_info(file, "addr_trtype"));
+				// TODO
+				info = read_info(file, "addr_trtype", return_message);
+				sprintf(nvmet_ports->protocol, "%s", info);
 				if (strlen(nvmet_ports->protocol) < 1)
 					sprintf(nvmet_ports->protocol, "UNDEFINED");
 				if (ports_head == NULL)
@@ -234,17 +282,35 @@ struct NVMET_PORTS *nvmet_scan_all_ports(void)
 /*
  * description: List NVMe Target exports / ports.
  */
+
+/**
+ * It scans the NVMe subsystems and ports and prints them out
+ *
+ * @param json_flag This is a boolean value that indicates whether the output should be in JSON format or not.
+ *
+ * @return the value of the variable "ret".
+ */
 int nvmet_view_exports(bool json_flag)
 {
 	int i = 1;
 	struct NVMET_PROFILE *nvmet, *tmp;
 	struct NVMET_PORTS *ports, *tmp_ports;
+	char error_message[NAMELEN] = {0};
 
-	nvmet = (struct NVMET_PROFILE *)nvmet_scan_subsystem();
-	ports = (struct NVMET_PORTS *)nvmet_scan_ports();
+	nvmet = nvmet_scan_subsystem(error_message);
+	if ((nvmet == NULL) && (strlen(error_message) != 0)) {
+		print_message(INVALID_VALUE, error_message, json_flag);
+		return INVALID_VALUE;
+	}
+
+	ports = nvmet_scan_ports(error_message);
+	if ((ports == NULL) && (strlen(error_message) != 0)) {
+		print_message(INVALID_VALUE, error_message, json_flag);
+		return INVALID_VALUE;
+	}
 
 	if (json_flag == TRUE)
-		return json_nvmet_view_exports(nvmet, ports);
+		return json_nvmet_view_exports(nvmet, ports, NULL, FALSE);
 
 	printf("NVMe Target Exports\n\n");
 	if (nvmet == NULL) {
@@ -281,6 +347,20 @@ int nvmet_view_exports(bool json_flag)
 /*
  * description: Export an NVMe Target.
  */
+
+/**
+ * It creates a directory in /sys/kernel/config/nvmet/ports/\<port\>/subsystems/\<hostname\>-\<device\> and creates a symlink to
+ * /sys/kernel/config/nvmet/subsystems/\<hostname\>-\<device\>/namespaces/1/device_path which points to /dev/\<device\> or
+ * /dev/mapper/\<device\>
+ *
+ * @param rd_prof pointer to the RapidDisk profile list
+ * @param rc_prof pointer to the RC_PROFILE structure list
+ * @param device the name of the device to export
+ * @param host hostname of the client
+ * @param port The port number to export the volume to. If you want to export to all ports, set this to -1.
+ *
+ * @return The return value is the status of the operation.
+ */
 int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *device, char *host, int port)
 {
 	int rc = INVALID_VALUE, n, err;
@@ -301,7 +381,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 		rc_prof = rc_prof->next;
 	}
         if (rc != SUCCESS) {
-                printf("Error. Device %s does not exist.\n", device);
+                printf("Error. Device %s does not exist\n", device);
                 return INVALID_VALUE;
         }
 
@@ -416,7 +496,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 		if (access(path2, F_OK) != SUCCESS) {
 			rc = symlink(path, path2);
 			if (rc != SUCCESS) {
-				printf("Error. Unable to create link of NQN to port.\n%s: symlink: %s\n", __func__, strerror(errno));
+				printf("Error. Unable to create link of NQN to port.\n%s: symlink: %s\n%s -> %s", __func__, strerror(errno), path, path2);
 				return rc;
 			}
 		}
@@ -449,8 +529,14 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	return SUCCESS;
 }
 
-/*
+/**
+ * It writes a 1 to the revalidate_size attribute of the NVMe Target namespace
  *
+ * @param rd_prof A pointer to the RapidDisk profile structure list.
+ * @param rc_prof This is the RC_PROFILE structure list that contains the RapidCache device information.
+ * @param device The device name.
+ *
+ * @return The return value is the status of the operation.
  */
 int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *device)
 {
@@ -470,7 +556,7 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
 		rc_prof = rc_prof->next;
 	}
 	if (rc != SUCCESS) {
-		printf("Error. Device %s does not exist.\n", device);
+		printf("Error. Device %s does not exist\n", device);
 		return INVALID_VALUE;
 	} else
 		rc = INVALID_VALUE;
@@ -479,14 +565,14 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
 	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
 		sprintf(path, "%s%s-%s", NQN_HDR_STR, hostname, device);
-		printf("Error. NQN export: %s does not exist.\n", path);
+		printf("Error. NQN export: %s does not exist\n", path);
 		return rc;
 	}
 
 	/* Check if namespace 1 exists. That is the only namespace we define. */
 	sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
-		printf("%s: A RapidDisk defined namespace does not exist.\n", __func__);
+		printf("%s: A RapidDisk defined namespace does not exist\n", __func__);
 		return rc;
 	}
 
@@ -512,6 +598,16 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
 /*
  * description: Unexport an NVMe Target.
  */
+
+/**
+ * It removes a block device from the NVMe Target subsystem
+ *
+ * @param device The device name of the block device to be exported.
+ * @param host The hostname of the NVMe Target host.
+ * @param port The port number to export the volume to.
+ *
+ * @return The return value is the status of the operation.
+ */
 int nvmet_unexport_volume(char *device, char *host, int port)
 {
 	int rc = INVALID_VALUE, n, err;
@@ -523,14 +619,14 @@ int nvmet_unexport_volume(char *device, char *host, int port)
 	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
 		sprintf(path, "%s%s-%s", NQN_HDR_STR, hostname, device);
-		printf("Error. NQN export: %s does not exist.\n", path);
+		printf("Error. NQN export: %s does not exist\n", path);
 		return rc;
 	}
 
 	/* Check if namespace 1 exists. That is the only namespace we define. */
 	sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
-		printf("%s: A RapidDisk defined namespace does not exist.\n", __func__);
+		printf("%s: A RapidDisk defined namespace does not exist\n", __func__);
 		return rc;
 	}
 
@@ -557,7 +653,7 @@ int nvmet_unexport_volume(char *device, char *host, int port)
 			}
         		printf("Block device %s has been unmapped from NVMe Target host %s.\n", device, host);
 		} else {
-			printf("%s: Host %s does not exist.\n", __func__, host);
+			printf("%s: Host %s does not exist\n", __func__, host);
 			return rc;
 		}
 		/* If a host is defined without any port number, just remove and exit. */
@@ -598,7 +694,7 @@ host_check_out:
 			}
         		printf("Block device %s has been unmapped from NVMe Target port %d.\n", device, port);
 		} else {
-			printf("%s: Port %d and / or export does not exist.\n", __func__, port);
+			printf("%s: Port %d and / or export does not exist\n", __func__, port);
 			return rc;
 		}
 	} else {
@@ -661,6 +757,13 @@ port_check_out:
 	return SUCCESS;
 }
 
+/**
+ * If the string is not a number, return INVALID_VALUE, otherwise return SUCCESS.
+ *
+ * @param str The string to validate.
+ *
+ * @return the value of the variable "number_validate".
+ */
 int number_validate(char *str)
 {
 	while (*str) {
@@ -672,6 +775,13 @@ int number_validate(char *str)
 	return SUCCESS;
 }
 
+/**
+ * It takes a string as input and returns SUCCESS if the string is a valid IP address, else it returns INVALID_VALUE
+ *
+ * @param ip The IP address to validate.
+ *
+ * @return the value of the variable "dots".
+ */
 int ip_validate(char *ip)
 {
 	int i, num, dots = 0;
@@ -704,6 +814,13 @@ int ip_validate(char *ip)
 	return SUCCESS;
 }
 
+/**
+ * It gets the IP address of a given interface
+ *
+ * @param interface The name of the interface you want to get the IP address of.
+ *
+ * @return The IP address of the interface.
+ */
 char *nvmet_interface_ip_get(char *interface)
 {
 	int fd;
@@ -737,12 +854,19 @@ char *nvmet_interface_ip_get(char *interface)
 /*
  * description: List all enabled NVMe Target ports.
  */
+
+/**
+ * It scans the system for all NVMe ports and returns a linked list of all the ports
+ *
+ * @param json_flag If true, the output will be in JSON format.
+ */
 int nvmet_view_ports(bool json_flag)
 {
 	int i = 1;
 	struct NVMET_PORTS *ports, *tmp_ports;
+	char error_message[NAMELEN] = {0};
 
-	ports = (struct NVMET_PORTS *)nvmet_scan_all_ports();
+	ports = nvmet_scan_all_ports(error_message);
 
 	if (json_flag == TRUE)
 		return json_nvmet_view_ports(ports);
@@ -764,6 +888,15 @@ int nvmet_view_ports(bool json_flag)
 	return SUCCESS;
 }
 
+/**
+ * This function creates a new NVMe Target port using the specified interface and port number
+ *
+ * @param interface The name of the interface to use.
+ * @param port The port number to create.
+ * @param protocol 0 = TCP, 1 = RDMA
+ *
+ * @return The return value is the status of the operation.
+ */
 int nvmet_enable_port(char *interface, int port, int protocol)
 {
 	int rc = INVALID_VALUE;
@@ -771,8 +904,9 @@ int nvmet_enable_port(char *interface, int port, int protocol)
 	char path[NAMELEN] = {0x0}, ip[0xF] = {0x0}, proto[0x5] = {0x0};
 	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	struct NVMET_PORTS *ports, *tmp_ports;
-        
-	ports = (struct NVMET_PORTS *)nvmet_scan_all_ports();
+	char error_message[NAMELEN] = {0};
+
+	ports = nvmet_scan_all_ports(error_message);
 
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
 	if (access(path, F_OK) == SUCCESS) {
@@ -843,6 +977,13 @@ int nvmet_enable_port(char *interface, int port, int protocol)
 	return SUCCESS;
 }
 
+/**
+ * This function removes the specified NVMe Target port
+ *
+ * @param port The port number to be disabled.
+ *
+ * @return The return code of the function.
+ */
 int nvmet_disable_port(int port)
 {
 	int rc = INVALID_VALUE, n, err;
@@ -851,7 +992,7 @@ int nvmet_disable_port(int port)
 
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
 	if (access(path, F_OK) != SUCCESS) {
-		printf("Error. NVMe Target Port %d does not exist.\n", port);
+		printf("Error. NVMe Target Port %d does not exist\n", port);
 		return rc;
 	}
 
