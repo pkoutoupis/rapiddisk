@@ -498,7 +498,7 @@ int json_cache_wb_statistics(struct WC_STATS *stats, char **stats_result, bool w
  *
  * @return A JSON string containing the NVMET targets and ports.
  */
-int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *ports, char **stats_result, bool wantresult)
+int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *ports, char **json_result, bool wantresult)
 {
 	json_t *root, *array = json_array(), *nvmet_array = json_array(), *ports_array = json_array();
 	json_t *nvmet_object = json_object(), *ports_object = json_object();
@@ -541,7 +541,7 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
 			free(jdumped);
 			jdumped = NULL;
 		} else { // We want to return the JSON string as a pointer == daemon == must be free()d
-			*stats_result = jdumped;
+			*json_result = jdumped;
 		}
 	} else {
 		res = INVALID_VALUE;
@@ -575,10 +575,11 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
  *
  * @return An @p int representing the result.
  */
-int json_nvmet_view_ports(struct NVMET_PORTS *ports)
+int json_nvmet_view_ports(struct NVMET_PORTS *ports, char **json_result, bool wantresult)
 {
 	json_t *root, *array = json_array(), *ports_array = json_array();
 	json_t *ports_object = json_object();
+	int res = SUCCESS;
 
 	while (ports != NULL) {
 		json_t *object = json_object();
@@ -594,14 +595,20 @@ int json_nvmet_view_ports(struct NVMET_PORTS *ports)
 	root = json_pack("{s:o}", "targets", array);
 	char *jdumped = json_dumps(root, 0);
 	if (jdumped != NULL) {
-		printf("%s\n", jdumped);
-		free(jdumped);
-		jdumped = NULL;
+		if (!wantresult) { // We just need the JSON string to be printed
+			printf("%s\n", jdumped);
+			free(jdumped);
+			jdumped = NULL;
+		} else { // We want to return the JSON string as a pointer == daemon == must be free()d
+			*json_result = jdumped;
+		}
+	} else {
+		res = INVALID_VALUE;
 	}
-
 	json_decref(root);
 
-	return SUCCESS;
+	return res;
+
 }
 
 #ifdef SERVER

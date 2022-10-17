@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 	 * allocated after fork() we use temp buffers ('path' allocated by realpath and 'dirnamed_path' allocated
 	 * with strdup()) until args is available.
 	*/
-	if ((path = realpath(argv[0], NULL)) == NULL) {
+	if ((path = realpath("/proc/self/exe", NULL)) == NULL) {
 		syslog(LOG_ERR, "%s, %s: realpath: %s - %s\n", DAEMON, __func__, strerror(errno), argv[0]);
 		syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
 		if (verbose)

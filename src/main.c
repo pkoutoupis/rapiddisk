@@ -334,7 +334,6 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			break;
 		case ACTION_CACHE_UNMAP:
 			rc = cache_device_unmap(cache, device, generic_msg);
-//			if (json_flag == TRUE)
 			print_message(rc, generic_msg, json_flag);
 			break;
 		case ACTION_QUERY_RESOURCES:
@@ -362,10 +361,16 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			mem = NULL;
 			break;
 		case ACTION_LIST_NVMET_PORTS:
-			rc = nvmet_view_ports(json_flag);
+			rc = nvmet_view_ports(json_flag, generic_msg);
+			if (rc != SUCCESS) {
+				print_message(rc, generic_msg, json_flag);
+			}
 			break;
 		case ACTION_LIST_NVMET:
-			rc = nvmet_view_exports(json_flag);
+			rc = nvmet_view_exports(json_flag, generic_msg);
+			if (rc != SUCCESS) {
+				print_message(rc, generic_msg, json_flag);
+			}
 			break;
 		case ACTION_ENABLE_NVMET_PORT:
 			if (port == INVALID_VALUE) {
@@ -373,7 +378,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				print_message(rc, ERR_INVALID_PORT, json_flag);
 				break;
 			}
-			rc = nvmet_enable_port(host, port, xfer);
+			if (json_flag) {
+				rc = nvmet_enable_port(host, port, xfer, generic_msg);
+				print_message(rc, generic_msg, json_flag);
+			} else {
+				rc = nvmet_enable_port(host, port, xfer, NULL);
+			}
 			break;
 		case ACTION_DISABLE_NVMET_PORT:
 			if (port == INVALID_VALUE) {
@@ -381,7 +391,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				print_message(rc, ERR_INVALID_PORT, json_flag);
 				break;
 			}
-			rc = nvmet_disable_port(port);
+			if (json_flag) {
+				rc = nvmet_disable_port(port, generic_msg);
+				print_message(rc, generic_msg, json_flag);
+			} else {
+				rc = nvmet_disable_port(port, NULL);
+			}
 			break;
 		case ACTION_EXPORT_NVMET:
 			if (strlen(backing) <= 0) {
@@ -394,7 +409,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				print_message(rc, ERR_NO_RDEVICES, json_flag);
 				break;
 			}
-			rc = nvmet_export_volume(disk, cache, backing, host, port);
+			if (json_flag) {
+				rc = nvmet_export_volume(disk, cache, backing, host, port, generic_msg);
+				print_message(rc, generic_msg, json_flag);
+			} else {
+				rc = nvmet_export_volume(disk, cache, backing, host, port, NULL);
+			}
 			break;
 		case ACTION_UNEXPORT_NVMET:
 			if (strlen(backing) <= 0){
@@ -402,7 +422,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				print_message(rc, ERR_INVALID_ARG, json_flag);
 				break;
 			}
-			rc = nvmet_unexport_volume(backing, host, port);
+			if (json_flag) {
+				rc = nvmet_unexport_volume(backing, host, port, generic_msg);
+				print_message(rc, generic_msg, json_flag);
+			} else {
+				rc = nvmet_unexport_volume(backing, host, port, NULL);
+			}
 			break;
 		case ACTION_LOCK:
 			if (strlen(device) <= 0){
@@ -420,7 +445,6 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				break;
 			}
 			rc = mem_device_lock(disk, device, FALSE, generic_msg);
-//			if (json_flag == TRUE)
 			print_message(rc, generic_msg, json_flag);
 			break;
 		case ACTION_REVALIDATE_NVMET_SIZE:
@@ -429,9 +453,12 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				print_message(rc, ERR_INVALID_ARG, json_flag);
 				break;
 			}
-			rc = nvmet_revalidate_size(disk, cache, backing);
-			if (json_flag == TRUE)
-				print_message(rc, "", json_flag);
+			if (json_flag) {
+				rc = nvmet_revalidate_size(disk, cache, backing, generic_msg);
+				print_message(rc, generic_msg, json_flag);
+			} else {
+				rc = nvmet_revalidate_size(disk, cache, backing, NULL);
+			}
 			break;
 		default:
 		case ACTION_NONE:

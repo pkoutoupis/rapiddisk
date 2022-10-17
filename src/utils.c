@@ -2,12 +2,9 @@
 // Created by Matteo Tenca on 03/10/2022.
 //
 
-#include "nvmet.h"
-#include "json.h"
-#include "rdsk.h"
-#include "sys.h"
-#include "main.h"
 #include "utils.h"
+#include "json.h"
+
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
@@ -104,6 +101,57 @@ void free_linked_lists(RC_PROFILE *rc_head, RD_PROFILE *rd_head, VOLUME_PROFILE 
 	}
 	if (vp_head != NULL) {
 		clean_vp(vp_head);
+	}
+}
+
+void clean_ports(NVMET_PORTS *head) {
+	/* if there is only one item in the list, remove it */
+	if (head->next == NULL) {
+		if (head != NULL) free(head);
+		head = NULL;
+	} else {
+		/* get to the second to last node in the list */
+		struct NVMET_PORTS *current = head;
+		while (current->next->next != NULL) {
+			current = current->next;
+		}
+
+		/* now current points to the second to last item of the list, so let's remove current->next */
+		if (current->next != NULL) {
+			free(current->next);
+			current->next = NULL;
+		}
+		clean_ports(head);
+	}
+}
+
+void clean_nvmet(NVMET_PROFILE *head) {
+	/* if there is only one item in the list, remove it */
+	if (head->next == NULL) {
+		if (head != NULL) free(head);
+		head = NULL;
+	} else {
+		/* get to the second to last node in the list */
+		struct NVMET_PROFILE *current = head;
+		while (current->next->next != NULL) {
+			current = current->next;
+		}
+
+		/* now current points to the second to last item of the list, so let's remove current->next */
+		if (current->next != NULL) {
+			free(current->next);
+			current->next = NULL;
+		}
+		clean_nvmet(head);
+	}
+}
+
+void free_nvmet_linked_lists(struct NVMET_PORTS *ports_head, struct NVMET_PROFILE *nvmet_head) {
+	if (ports_head != NULL) {
+		clean_ports(ports_head);
+	}
+	if (nvmet_head != NULL) {
+		clean_nvmet(nvmet_head);
 	}
 }
 

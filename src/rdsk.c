@@ -125,19 +125,21 @@ char *read_info(char *name, char *string, char *return_message)
 	static char obuf[0xFF] = {0};
 	FILE *fp = NULL;
 	size_t r;
+	char *msg;
+
 	memset(&buf, 0, sizeof(buf));
 	memset(&obuf, 0, sizeof(obuf));
 
 	sprintf(file, "%s/%s", name, string);
 	fp = fopen(file, "r");
 	if (fp == NULL) {
-		char *msg = "%s: fopen: %s, %s";
+		msg = "%s: fopen: %s, %s";
 		print_error(msg, return_message, __func__, strerror(errno), file);
 		return NULL;
 	}
 	r = fread(buf, FILEDATA, 1, fp);
 	if ((r != 1) && (feof(fp) == 0) && (ferror(fp) != 0)) {
-		char *msg = "%s: fread: %s, %s";
+		msg = "%s: fread: %s, %s";
 		print_error(msg, return_message, __func__, "could not read file", file);
 		return NULL;
 	}
@@ -177,19 +179,20 @@ struct RD_PROFILE *search_rdsk_targets(char *return_message)
 	char file[NAMELEN] = {0};
 	struct dirent **list;
 	struct RD_PROFILE *prof = NULL;
+	char *msg;
 
 	rdsk_head = NULL;
 	rdsk_end = NULL;
 
 	if ((rc = scandir(SYS_BLOCK, &list, scandir_filter_rd, NULL)) < 0) {
-		char *msg = "%s: scandir: %s";
+		msg = "%s: scandir: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		return NULL;
 	}
 	for (;n < rc; n++) {
 		prof = calloc(1, sizeof(struct RD_PROFILE));
 		if (prof == NULL) {
-			char *msg = "%s: calloc: %s";
+			msg = "%s: calloc: %s";
 			print_error(msg, return_message, __func__, strerror(errno));
 			list = clean_scandir(list, rc);
 			free_linked_lists(NULL, rdsk_head, NULL);
@@ -197,16 +200,15 @@ struct RD_PROFILE *search_rdsk_targets(char *return_message)
 		}
 		strcpy(prof->device, (char *)list[n]->d_name);
 		sprintf(file, "%s/%s", SYS_BLOCK, list[n]->d_name);
-		// TODO: read_info
-		char *info_size = read_info(file, "size", return_message);
-		if (info_size == NULL) {
+		char *info = read_info(file, "size", return_message);
+		if (info == NULL) {
 			free(prof);
 			prof = NULL;
 			list = clean_scandir(list, rc);
 			free_linked_lists(NULL, rdsk_head, NULL);
 			return NULL;
 		}
-		prof->size = (BYTES_PER_SECTOR * strtoull(info_size, NULL, 10));
+		prof->size = (BYTES_PER_SECTOR * strtoull(info, NULL, 10));
 		prof->lock_status = mem_device_lock_status(prof->device);
 		prof->usage = mem_device_get_usage(prof->device);
 
@@ -818,6 +820,7 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 	FILE *fp = NULL;
 	char file[NAMELEN] = {0};
 	unsigned long long max_sectors = 0, rd_size = 0;
+	char *msg;
 
 	/* echo "rapiddisk resize 1 131072 " > /sys/kernel/rapiddisk/mgmt */
 	while (prof != NULL) {
@@ -828,7 +831,7 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 		prof = prof->next;
 	}
 	if (rc != SUCCESS) {
-		char *msg = "Error. Device %s does not exist";
+		msg = "Error. Device %s does not exist";
 		print_error(msg, return_message, string);
 		return -ENOENT;
 	}
@@ -836,13 +839,13 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 	sprintf(file, "/dev/%s", string);
 
 	if ((fd = open(file, O_WRONLY)) < SUCCESS) {
-		char *msg = "%s: open: %s";
+		msg = "%s: open: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		return -ENOENT;
 	}
 
 	if ((ioctl(fd, IOCTL_RD_GET_STATS, &max_sectors)) == INVALID_VALUE) {
-		char *msg = "%s: ioctl: %s";
+		msg = "%s: ioctl: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		close(fd);
 		return -EIO;
@@ -851,20 +854,20 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 	close(fd);
 
 	if ((((size * 1024 * 1024) / BYTES_PER_BLOCK) <= (max_sectors)) || ((size * 1024) == (rd_size / 1024))) {
-		char *msg = "Error. Please specify a size larger than %llu Mbytes";
+		msg = "Error. Please specify a size larger than %llu Mbytes";
 		print_error(msg, return_message, (((max_sectors * BYTES_PER_BLOCK) / 1024) / 1024));
 		return -EINVAL;
 	}
 
 	/* This is where we begin to detach the block device */
 	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
-		char *msg = "%s: fopen: %s: %s";
+		msg = "%s: fopen: %s: %s";
 		print_error(msg, return_message, __func__, SYS_RDSK, strerror(errno));
 		return -ENOENT;
 	}
 
 	if (fprintf(fp, "rapiddisk resize %s %llu\n", string + 2, (size * 1024 * 1024)) < 0) {
-		char *msg = "%s: fprintf: %s";
+		msg = "%s: fprintf: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		fclose(fp);
 		return -EIO;
@@ -888,6 +891,7 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size, char *re
 	int dsk;
 	FILE *fp = NULL;
 	char string[BUFSZ] = {0}, name[16] = {0};
+	char *msg;
 
 	/* echo "rapiddisk attach 65536" > /sys/kernel/rapiddisk/mgmt <- in bytes */
 	for (dsk = 0; prof != NULL; dsk++) {
@@ -904,13 +908,13 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size, char *re
 		dsk--;
 	}
 	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
-		char *msg = "%s: fopen: %s: %s";
+		msg = "%s: fopen: %s: %s";
 		print_error(msg, return_message, __func__, SYS_RDSK, strerror(errno));
 		return -ENOENT;
 	}
 	if (fprintf(fp, "rapiddisk attach %d %llu\n", dsk,
 				(size * 1024 * 1024)) < 0) {
-		char *msg = "%s: fprintf: %s";
+		msg = "%s: fprintf: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		fclose(fp);
 		return -EIO;
@@ -936,6 +940,7 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *str
 	int rc = INVALID_VALUE;
 	FILE *fp = NULL;
 	char *buf = NULL;
+	char *msg;
 
 	/* echo "rapiddisk detach 1" > /sys/kernel/rapiddisk/mgmt */
 	while (rd_prof != NULL) {
@@ -944,14 +949,14 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *str
 		rd_prof = rd_prof->next;
 	}
 	if (rc != SUCCESS) {
-		char *msg = "Error. Device %s does not exist";
+		msg = "Error. Device %s does not exist";
 		print_error(msg, return_message, string);
 		return INVALID_VALUE;
 	}
 	/* Check to make sure RapidDisk device isn't in a mapping */
 	while (rc_prof != NULL) {
 		if (strcmp(string, rc_prof->cache) == SUCCESS) {
-			char *msg = "Error. Unable to remove %s.\nThis RapidDisk device is currently"
+			msg = "Error. Unable to remove %s.\nThis RapidDisk device is currently"
 						" mapped as a cache drive to %s.";
 			print_error(msg, return_message, string, rc_prof->device);
 			return INVALID_VALUE;
@@ -960,14 +965,14 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *str
 	}
 
 	if ((buf = (char *)calloc(1, BUFSZ)) == NULL) {
-		char *msg = "%s: malloc: Unable to allocate memory.";
+		msg = "%s: malloc: Unable to allocate memory.";
 		print_error(msg, return_message, __func__);
 		return INVALID_VALUE;
 	}
 
 	/* Here we are starting to check to see if the device is mounted */
 	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
-		char *msg = "%s: fopen: %s: %s";
+		msg = "%s: fopen: %s: %s";
 		print_error(msg, return_message, __func__, ETC_MTAB, strerror(errno));
 		if (buf) free(buf);
 		return -ENOENT;
@@ -975,7 +980,7 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *str
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, string) != NULL)) {
-		char *msg = "%s is currently mounted. Please \"umount\" and retry.";
+		msg = "%s is currently mounted. Please \"umount\" and retry.";
 		print_error(msg, return_message, string);
 		if (buf) free(buf);
 		return INVALID_VALUE;
@@ -983,14 +988,14 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *str
 
 	/* This is where we begin to detach the block device */
 	if ((fp = fopen(SYS_RDSK, "w")) == NULL) {
-		char *msg = "%s: fopen: %s: %s";
+		msg = "%s: fopen: %s: %s";
 		print_error(msg, return_message, __func__, SYS_RDSK, strerror(errno));
 		if (buf) free(buf);
 		return -ENOENT;
 	}
 
 	if (fprintf(fp, "rapiddisk detach %s\n", string + 2) < 0) {
-		char *msg = "%s: fprintf: %s";
+		msg = "%s: fprintf: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		if (buf) free(buf);
 		fclose(fp);
@@ -1018,6 +1023,7 @@ int mem_device_lock(struct RD_PROFILE *rd_prof, char *string, bool lock, char *r
 {
 	int fd, rc = INVALID_VALUE, state = (unsigned char)lock;
 	char file[NAMELEN] = {0};
+	char *msg;
 
 	while (rd_prof != NULL) {
 		if (strcmp(string, rd_prof->device) == SUCCESS) {
@@ -1027,7 +1033,7 @@ int mem_device_lock(struct RD_PROFILE *rd_prof, char *string, bool lock, char *r
 	}
 
 	if (rc != SUCCESS) {
-		char *msg = "Error. Device %s does not exist";
+		msg = "Error. Device %s does not exist";
 		print_error(msg, return_message, string);
 		return -ENOENT;
 	}
@@ -1035,13 +1041,13 @@ int mem_device_lock(struct RD_PROFILE *rd_prof, char *string, bool lock, char *r
 	sprintf(file, "/dev/%s", string);
 
 	if ((fd = open(file, O_WRONLY)) < SUCCESS) {
-		char *msg = "%s: open: %s";
+		msg = "%s: open: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		return -ENOENT;
 	}
 
 	if ((ioctl(fd, BLKROSET, &state)) == INVALID_VALUE) {
-		char *msg = "%s: ioctl: %s";
+		msg = "%s: ioctl: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		close(fd);
 		return -EIO;
@@ -1111,6 +1117,7 @@ int cache_device_unmap(struct RC_PROFILE *prof, char *string, char *return_messa
 //		if ((rc = system(cmd)) != SUCCESS) {
 			msg = "Unable to flush dirty cache data to %s";
 			print_error(msg, return_message, string);
+			return rc;
 		}
 	}
 
@@ -1140,6 +1147,7 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 	int fd, rc = INVALID_VALUE;
 	char file[NAMELEN] = {0}, *buf = NULL;
 	FILE *fp = NULL;
+	char *msg;
 
 	while (rd_prof != NULL) {
 		if (strcmp(string, rd_prof->device) == SUCCESS)
@@ -1147,14 +1155,14 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 		rd_prof = rd_prof->next;
 	}
 	if (rc != SUCCESS) {
-		char *msg = "Error. Device %s does not exist";
+		msg = "Error. Device %s does not exist";
 		print_error(msg, return_message, string);
 		return -ENOENT;
 	}
 	/* Check to make sure RapidDisk device isn't in a mapping */
 	while (rc_prof != NULL) {
 		if (strcmp(string, rc_prof->cache) == SUCCESS) {
-			char *msg = "Error. Unable to remove %s. This RapidDisk device is currently mapped as a cache drive to %s";
+			msg = "Error. Unable to remove %s. This RapidDisk device is currently mapped as a cache drive to %s";
 			print_error(msg, return_message, string, rc_prof->device);
 			return -EBUSY;
 		}
@@ -1162,14 +1170,14 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 	}
 
 	if ((buf = calloc(1, BUFSZ)) == NULL) {
-		char *msg = "%s: malloc: Unable to allocate memory";
+		msg = "%s: malloc: Unable to allocate memory";
 		print_error(msg, return_message, __func__);
 		return -ENOMEM;
 	}
 
 	/* Here we are starting to check to see if the device is mounted */
 	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
-		char *msg = "%s: fopen: %s: %s";
+		msg = "%s: fopen: %s: %s";
 		print_error(msg, return_message, __func__, ETC_MTAB, strerror(errno));
 		if (buf) free(buf);
 		return -ENOENT;
@@ -1177,7 +1185,7 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, string) != NULL)) {
-		char *msg = "%s is currently mounted. Please \"umount\" and retry";
+		msg = "%s is currently mounted. Please \"umount\" and retry";
 		print_error(msg, return_message, string);
 		if (buf) free(buf);
 		return -EBUSY;
@@ -1186,13 +1194,13 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 	sprintf(file, "/dev/%s", string);
 
 	if ((fd = open(file, O_WRONLY)) < SUCCESS) {
-		char *msg = "%s: open: %s";
+		msg = "%s: open: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		return -ENOENT;
 	}
 
 	if (ioctl(fd, IOCTL_RD_BLKFLSBUF, 0) == INVALID_VALUE) {
-		char *msg = "%s: ioctl: %s";
+		msg = "%s: ioctl: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		close(fd);
 		return -EIO;

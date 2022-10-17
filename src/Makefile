@@ -27,22 +27,21 @@ CP := cp
 RM := rm -f
 MKDIR := mkdir -pv
 STRIP := strip -s
+DIR := /sbin
 LDLIBS += -ljansson -ldevmapper -lpcre2-8
 DAEMON_LDLIBS := -lmicrohttpd
 DAEMON_CFLAGS := -DSERVER
 INSTALL := install -D -m 755 -t $(DESTDIR)$(DIR)
 INSTALL_STRIP := install -D -m 755 -s -t $(DESTDIR)$(DIR)
-DEBUG_FLAGS := -DDEBUG -Wl,--export-dynamic -ggdb -gdwarf
+DEBUG_FLAGS := -DDEBUG -Wl,--export-dynamic -ggdb
 BIN := rapiddisk
 BIN_D := rapiddiskd
 BIN_DEBUG := rapiddisk_debug
 BIN_D_DEBUG := rapiddiskd_debug
-OBJS := main.o utils.o json.o rdsk.o nvmet.o sys.o
-OBJS_D := rapiddiskd.o utils.o json-server.o net.o rdsk-server.o sys-server.o
+OBJS := main_m.o utils_m.o json_m.o rdsk_m.o nvmet_m.o sys_m.o
+OBJS_D := rapiddiskd_m.o utils_m.o json-server_m.o nvmet-server_m.o net_m.o rdsk-server_m.o sys-server_m.o
 OBJS_DEBUG := main_d.o utils_d.o json_d.o nvmet_d.o rdsk_d.o sys_d.o
-OBJS_D_DEBUG := rapiddiskd_d.o utils_d.o json-server_d.o net_d.o rdsk-server_d.o sys-server_d.o
-
-DIR := /sbin
+OBJS_D_DEBUG := rapiddiskd_d.o utils_d.o json-server_d.o nvmet-server_d.o net_d.o rdsk-server_d.o sys-server_d.o
 
 .PHONY: all
 all: $(BIN) $(BIN_D)
@@ -76,15 +75,16 @@ uninstall:
 %-server_d.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-%-server.o: CFLAGS += $(DAEMON_CFLAGS)
-%-server.o: %.c
+%-server_m.o: CFLAGS += $(DAEMON_CFLAGS)
+%-server_m.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 %_d.o: CFLAGS += $(DEBUG_FLAGS)
 %_d.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-%.o: %.c
+%_m.o: CFLAGS += -O2 -fPIC -Wno-unused-result
+%_m.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(BIN): $(OBJS)
@@ -102,6 +102,8 @@ $(BIN_D_DEBUG): LDLIBS += $(DAEMON_LDLIBS)
 $(BIN_D_DEBUG): LDFLAGS += $(DEBUG_FLAGS)
 $(BIN_D_DEBUG): $(OBJS_D_DEBUG)
 	$(CC) $(LDFLAGS) -o $(BIN_D_DEBUG) $(OBJS_D_DEBUG) $(LOADLIBES) $(LDLIBS)
+
+%.c:
 
 .PHONY: clean
 clean:

@@ -38,6 +38,7 @@
 #include "rdsk.h"
 #include "sys.h"
 #include "json.h"
+#include "nvmet.h"
 #include <jansson.h>
 #include <microhttpd.h>
 #include <signal.h>
@@ -60,30 +61,17 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 	struct MHD_Response *response;
 	int rc, status = MHD_HTTP_OK;
 	unsigned long long size;
-	char device[NAMELEN] = {0}, source[NAMELEN] = {0}, command[NAMELEN] = {0};
+	char device[NAMELEN] = {0}, source[NAMELEN] = {0};
 	char *dup = NULL, *token = NULL;
-	FILE *stream;
+//	FILE *stream;
 	char *json_str = NULL;
 	struct RD_PROFILE *disk = NULL;
 	struct RC_PROFILE *cache = NULL;
 	struct VOLUME_PROFILE *volumes = NULL;
 	struct MEM_PROFILE *mem = NULL;
 	struct PTHREAD_ARGS *args = (struct PTHREAD_ARGS *) cls;
-//	char error_message[NAMELEN] = {0};
 	char *error_message = calloc(1, NAMELEN);
 	char *split_arr[64] = {NULL};
-
-	char *page = (char *)calloc(1, BUFSZ);
-	if (page == NULL) {
-		syslog(LOG_ERR, "%s: %s, calloc: %s\n", DAEMON, __func__, strerror(errno));
-		if (args->verbose)
-			fprintf(stderr, "%s: %s, calloc: %s\n", DAEMON, __func__, strerror(errno));
-#if MHD_VERSION >= 0x00097100
-		return MHD_NO;
-#else
-		return INVALID_VALUE;
-#endif
-	}
 
 	if (strcmp(method, "GET") == SUCCESS) {
 		if (strcmp(url, CMD_PING_DAEMON) == SUCCESS) {
@@ -170,23 +158,20 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 				}
 			}
 		} else if (strncmp(url, CMD_LIST_NVMET, sizeof(CMD_LIST_NVMET) - 1) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -n -j -g", args->path);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_LIST_NVMET);
+			rc = nvmet_view_exports_json(error_message, &json_str);
+			if (rc != SUCCESS) {
+				json_status_return(rc, error_message, &json_str, TRUE);
+			}
 		} else if (strncmp(url, CMD_LIST_NVMET_PORTS, sizeof(CMD_LIST_NVMET_PORTS) - 1) == SUCCESS) {
-			sprintf(command, "%s/rapiddisk -N -j -g", args->path);
-			stream = popen(command, "r");
-			if (stream) {
-				while (fgets(page, BUFSZ, stream) != NULL);
-				pclose(stream);
-			} else
-				status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+			if (args->verbose)
+				fprintf(stderr, "%s: Recevied request '%s'.\n", DAEMON, CMD_LIST_NVMET_PORTS);
+			rc = nvmet_view_ports_json(error_message, &json_str);
+			if (rc != SUCCESS) {
+				json_status_return(rc, error_message, &json_str, TRUE);
+			}
 		} else {
-//			json_status_unsupported(page);
 			json_status_return(INVALID_VALUE, "Unsupported", &json_str, TRUE);
 			status = MHD_HTTP_BAD_REQUEST;
 		}
@@ -278,7 +263,6 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 						syslog(LOG_ERR, "%s: %s\n", DAEMON, error_message);
 						json_status_return(INVALID_VALUE, error_message, &json_str, TRUE);
 					} else {
-//					rc = mem_device_resize_daemon(disk, device, size, args);
 						rc = mem_device_resize(disk, device, size, error_message);
 						int pri = LOG_INFO;
 						if (rc < SUCCESS)
@@ -472,18 +456,15 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 	} else
 		status = MHD_HTTP_BAD_REQUEST;
 
-	if (json_str != NULL) {
-		response = MHD_create_response_from_buffer(strlen(json_str), (void *) json_str, MHD_RESPMEM_MUST_COPY);
-	} else {
-		response = MHD_create_response_from_buffer(strlen(page), (void *) page, MHD_RESPMEM_MUST_COPY);
+	if (json_str == NULL) {
+		json_status_return(INVALID_VALUE, "", &json_str, TRUE);
 	}
+	response = MHD_create_response_from_buffer(strlen(json_str), (void *) json_str, MHD_RESPMEM_MUST_COPY);
 	rc = MHD_queue_response (connection, status, response);
 	MHD_destroy_response (response);
-	if (page) free(page);
 	if (dup) free(dup);
 	if (json_str) free(json_str);
 	if (error_message) free(error_message);
-	page = NULL;
 	dup = NULL;
 	json_str = NULL;
 	error_message = NULL;
