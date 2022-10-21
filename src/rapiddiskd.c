@@ -61,7 +61,7 @@ int proc_find(void)
 	FILE *fp = NULL;
 
 	if (!(dir = opendir("/proc"))) {
-		syslog(LOG_ERR, "%s: %s (%d): opendir: %s.\n", DAEMON,
+		syslog(LOG_ERR|LOG_DAEMON, "%s (%d): opendir: %s.",
 		       __func__, __LINE__, strerror(errno));
 		return INVALID_VALUE;
 	}
@@ -74,8 +74,7 @@ int proc_find(void)
 		fp = fopen(buf, "r");
 		if (fp) {
 			if ((fscanf(fp, "%ld (%[^)]) %c", &pid, name, &state)) != 3 ) {
-				syslog(LOG_ERR, "%s: %s (%d): fscanf: %s.\n",
-				       DAEMON, __func__, __LINE__, strerror(errno));
+				syslog(LOG_ERR|LOG_DAEMON, "%s (%d): fscanf: %s.", __func__, __LINE__, strerror(errno));
 				fclose(fp);
 				rc = INVALID_VALUE;
 				goto proc_exit_on_failure;
@@ -142,8 +141,8 @@ int main(int argc, char *argv[])
 	if (check_loaded_modules() < SUCCESS) {
 		if (verbose)
 			fprintf(stderr, "%s: The needed modules are not loaded...\n", __func__);
-		syslog(LOG_ERR, "%s: %s: The needed modules are not loaded...\n", DAEMON, __func__);
-		syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+		syslog(LOG_ERR|LOG_DAEMON, "%s: The needed modules are not loaded...", __func__);
+		syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 		return -EPERM;
 	}
 
@@ -151,8 +150,8 @@ int main(int argc, char *argv[])
 	if (proc_find() != SUCCESS) {
 		if (verbose)
 			fprintf(stderr, "%s: The daemon is already running...\n", __func__);
-		syslog(LOG_ERR, "%s: %s: The daemon is already running...\n", DAEMON, __func__);
-		syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+		syslog(LOG_ERR|LOG_DAEMON, "%s: The daemon is already running...", __func__);
+		syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 		return INVALID_VALUE;
 	}
 
@@ -162,8 +161,8 @@ int main(int argc, char *argv[])
 	 * with strdup()) until args is available.
 	*/
 	if ((path = realpath("/proc/self/exe", NULL)) == NULL) {
-		syslog(LOG_ERR, "%s, %s: realpath: %s - %s\n", DAEMON, __func__, strerror(errno), argv[0]);
-		syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+		syslog(LOG_ERR|LOG_DAEMON, "%s: realpath: %s - %s", __func__, strerror(errno), argv[0]);
+		syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 		if (verbose)
 			fprintf(stderr,"%s, %s: realpath: %s\n", DAEMON, __func__, strerror(errno));
 		return -EIO;
@@ -186,7 +185,7 @@ int main(int argc, char *argv[])
 		 */
 		pid = fork();
 		if (pid > 0) {
-			syslog(LOG_INFO, "%s: Non-Daemon exiting.\n", DAEMON);
+			syslog(LOG_INFO|LOG_DAEMON, "Non-Daemon exiting.");
 			if (verbose)
 				fprintf(stderr, "%s: Non-Daemon exiting.\n", DAEMON);
 			if (dirnamed_path) free(dirnamed_path);
@@ -195,7 +194,7 @@ int main(int argc, char *argv[])
 		setsid();
 		pid = fork();
 		if (pid > 0) {
-			syslog(LOG_INFO, "%s: Second Non-Daemon exiting.\n", DAEMON);
+			syslog(LOG_INFO|LOG_DAEMON, "Second Non-Daemon exiting.");
 			if (verbose)
 				fprintf(stderr, "%s: Second Non-Daemon exiting.\n", DAEMON);
 			if (dirnamed_path) free(dirnamed_path);
@@ -209,8 +208,8 @@ int main(int argc, char *argv[])
 		 * Closing STDIN, STDOUT and STDERR
 		 */
 		if (close(STDIN_FILENO) < SUCCESS) {
-			syslog(LOG_ERR, "%s: %s: close STDIN: %s\n", DAEMON, __func__, strerror(errno));
-			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+			syslog(LOG_ERR|LOG_DAEMON, "%s: close STDIN: %s", __func__, strerror(errno));
+			syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 			if (verbose) {
 				fprintf(stderr, "%s, %s: Close STDIN: %s\n", DAEMON, __func__, strerror(errno));
 				fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
@@ -219,8 +218,8 @@ int main(int argc, char *argv[])
 			return INVALID_VALUE;
 		}
 		if (close(STDOUT_FILENO) < SUCCESS) {
-			syslog(LOG_ERR, "%s, %s: Close STDOUT: %s\n", DAEMON, __func__, strerror(errno));
-			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+			syslog(LOG_ERR|LOG_DAEMON, "%s: Close STDOUT: %s", __func__, strerror(errno));
+			syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 			if (verbose) {
 				fprintf(stderr, "%s, %s: Close STDOUT: %s\n", DAEMON, __func__, strerror(errno));
 				fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
@@ -229,8 +228,8 @@ int main(int argc, char *argv[])
 			return INVALID_VALUE;
 		}
 		if (close(STDERR_FILENO) < SUCCESS) {
-			syslog(LOG_ERR, "%s, %s: Close STDERR: %s\n", DAEMON, __func__, strerror(errno));
-			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+			syslog(LOG_ERR|LOG_DAEMON, "%s: Close STDERR: %s", __func__, strerror(errno));
+			syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 			if (verbose) {
 				fprintf(stderr, "%s, %s: Close STERR: %s\n", DAEMON, __func__, strerror(errno));
 				fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
@@ -244,8 +243,8 @@ int main(int argc, char *argv[])
 		 * File names are arbitrary/temporary and can be changed.
 		 */
 		if ((stdin_f = open("/dev/null", O_RDONLY)) < SUCCESS) {
-			syslog(LOG_ERR, "%s: %s: open STDIN: %s\n", DAEMON, __func__, strerror(errno));
-			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+			syslog(LOG_ERR|LOG_DAEMON, "%s: open STDIN: %s", __func__, strerror(errno));
+			syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 			/* We can't log to STDERR yet (for verbose mode) */
 			if (dirnamed_path) free(dirnamed_path);
 			return INVALID_VALUE;
@@ -257,9 +256,9 @@ int main(int argc, char *argv[])
 		}
 		if ((stdout_f = open(new_stdout,
 							 O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH)) < SUCCESS) {
-			syslog(LOG_ERR, "%s, %s: Error opening STDOUT as %s: %s\n", DAEMON, __func__,
+			syslog(LOG_ERR|LOG_DAEMON, "%s: Error opening STDOUT as %s: %s", __func__,
 				   new_stdout, strerror(errno));
-			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+			syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 			close(stdin_f);
 			/* We can't log to STDERR yet (for verbose mode) */
 			if (dirnamed_path) free(dirnamed_path);
@@ -272,8 +271,8 @@ int main(int argc, char *argv[])
 		}
 		if ((stderr_f = open(new_stderr, O_WRONLY | O_CREAT | O_TRUNC,
 							 S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH)) < SUCCESS) {
-			syslog(LOG_ERR, "%s, %s: Error opening STDERR as %s: %s\n", DAEMON, __func__, new_stderr, strerror(errno));
-			syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+			syslog(LOG_ERR|LOG_DAEMON, "%s: Error opening STDERR as %s: %s", __func__, new_stderr, strerror(errno));
+			syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 			/* We can't log to STDERR yet (for verbose mode) */
 			close(stdin_f);
 			close(stdout_f);
@@ -285,8 +284,8 @@ int main(int argc, char *argv[])
 	/* Allocating the args structure, this was moved after the fork to avoid duplicating/freeing it for every fork() */
 	args = (struct PTHREAD_ARGS *)calloc(1, sizeof(struct PTHREAD_ARGS));
 	if (args == NULL) {
-		syslog(LOG_ERR, "%s, %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
-		syslog(LOG_ERR, "%s: Daemon exiting.\n", DAEMON);
+		syslog(LOG_ERR|LOG_DAEMON, "%s: calloc: %s", __func__, strerror(errno));
+		syslog(LOG_ERR|LOG_DAEMON, "Daemon exiting.");
 		if (verbose) {
 			fprintf(stderr, "%s, %s: calloc: %s\n", DAEMON, __func__, strerror(errno));
 			fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
@@ -308,15 +307,15 @@ int main(int argc, char *argv[])
 	sprintf(args->path, "%s", dirnamed_path);
 	if (dirnamed_path) free(dirnamed_path);
 	dirnamed_path = NULL;
-	syslog(LOG_INFO, "%s: Starting daemon...\n", DAEMON);
+	syslog(LOG_INFO|LOG_DAEMON, "Starting daemon...");
 	if (args->verbose)
 		fprintf(stderr, "%s: Starting daemon...\n", DAEMON);
 	rc = mgmt_thread((void *)args);
-	syslog(LOG_INFO, "%s: Daemon exiting.\n", DAEMON);
+	syslog(LOG_INFO|LOG_DAEMON, "Daemon exiting.");
 	if (args->verbose)
 		fprintf(stderr, "%s: Daemon exiting.\n", DAEMON);
 	if (fflush(NULL) == EOF) {
-		syslog(LOG_ERR, "%s: Error flushing file descriptors: %s, %s\n", DAEMON, strerror(errno), __func__);
+		syslog(LOG_ERR|LOG_DAEMON, "Error flushing file descriptors: %s, %s", strerror(errno), __func__);
 		if (args->verbose)
 			fprintf(stderr, "%s: Error flushing file descriptors: %s, %s.\n", DAEMON, strerror(errno), __func__);
 		return INVALID_VALUE;
