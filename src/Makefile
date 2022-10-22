@@ -45,13 +45,27 @@ OBJS_D_DEBUG := rapiddiskd_d.o utils_d.o json-server_d.o nvmet-server_d.o net_d.
 
 .PHONY: all
 all: $(BIN) $(BIN_D)
-	@echo Make all has completed.
+
+.PHONY: tools
+tools: all
+
+.PHONY: run-test
+run-test: all debug
+
+.PHONY: clean-tools
+clean-tools: clean
+
+.PHONY: tools-install
+tools-install: install
 
 .PHONY: debug
 debug: $(BIN_DEBUG) $(BIN_D_DEBUG)
 
-.PHONY: strip
-strip: all
+.PHONY: tools-debug
+tools-debug: debug
+
+.PHONY: tools-strip
+tools-strip: $(BIN) $(BIN_D)
 	$(STRIP) $(BIN)
 	$(STRIP) $(BIN_D)
 
@@ -61,7 +75,10 @@ install: all
 	$(INSTALL) $(BIN) $(BIN_D)
 
 .PHONY: install-strip
-install-strip: all
+install-strip: tools-install-strip
+
+.PHONY: tools-install-strip
+tools-install-strip: all
 	@echo Installing stripped $(BIN) $(BIN_D) binary files.
 	$(INSTALL_STRIP) $(BIN) $(BIN_D)
 
@@ -70,6 +87,9 @@ uninstall:
 	@echo Uninstalling $(BIN) $(BIN_D) binary files.
 	$(RM) $(DESTDIR)$(DIR)/$(BIN)
 	$(RM) $(DESTDIR)$(DIR)/$(BIN_D)
+
+.PHONY: tools-uninstall
+tools-uninstall: uninstall
 
 %-server_d.o: CFLAGS += $(DAEMON_CFLAGS)
 %-server_d.o: %.c
@@ -108,3 +128,6 @@ $(BIN_D_DEBUG): $(OBJS_D_DEBUG)
 .PHONY: clean
 clean:
 	rm -f *.o $(BIN) $(BIN_D) $(BIN_DEBUG) $(BIN_D_DEBUG)
+
+.PHONY: dkms-uninstall dkms-install
+dkms-uninstall dkms-install:

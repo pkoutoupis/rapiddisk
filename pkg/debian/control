@@ -2,7 +2,7 @@ Source: rapiddisk
 Section: misc
 Priority: optional
 Maintainer: Petros Koutoupis <petros@petroskoutoupis.com>
-Build-Depends: debhelper, dkms, libjansson4, libmicrohttpd12, libjansson-dev, libmicrohttpd-dev
+Build-Depends: debhelper, dkms, libjansson4, libmicrohttpd12, libjansson-dev, libmicrohttpd-dev, libpcre2-8-0, libpcre2-dev, libdevmapper1.02.1, libdevmapper-dev
 Homepage: https://github.com/pkoutoupis/rapiddisk/
 Standards-Version: 4.4.1
 

@@ -1,5 +1,11 @@
 #!/bin/bash
 
+who="$(whoami)"
+if [ "$who" != "root" ] ; then
+  echo "Please run as root!"
+  exit 0
+fi
+
 if [ ! "$BASH_VERSION" ] ; then
 	exec /bin/bash "$0" "$@"
 fi
@@ -7,14 +13,26 @@ fi
 PATH=$PATH:$(pwd)
 RD=rd0
 
+j=tee
+jj=/dev/null
+
 if [ "$1" == "json" ] ; then
-  json=-j
+  json=" -j -g "
+  if which jqa; then
+    j=jq
+    jj=
+  elif which json_pp; then
+    j=json_pp
+    jj=
+  else
+    json=
+  fi
 fi
 
 if which >/dev/null 2>&1 valgrind ; then
-  cmd="valgrind --sim-hints=lax-ioctls --show-leak-kinds=all --leak-check=full --track-origins=yes -s ../src/rapiddisk_debug $json"
+  cmd="valgrind --sim-hints=lax-ioctls --show-leak-kinds=all --leak-check=full --track-origins=yes -s ../src/rapiddisk_debug"
 else
-  cmd="../src/rapiddisk_debug $json"
+  cmd="../src/rapiddisk_debug"
 fi
 
 function cont() {
@@ -26,8 +44,10 @@ function cleanup()
 {
 	../src/rapiddisk_debug -u rc-wa_loop7 >/dev/null
 	../src/rapiddisk_debug -d ${RD}  >/dev/null
-	losetup -d /dev/loop7  >/dev/null
+	[ -f /dev/loop7 ] && losetup -d /dev/loop7  >/dev/null
 	rm -f /tmp/test1 >/dev/null
+	rmmod >/dev/null 2>&1 rapiddisk.ko
+  rmmod >/dev/null 2>&1 rapiddisk-cache.ko
 }
 
 function createLoopbackDevices()
@@ -44,9 +64,13 @@ function removeLoopbackDevices()
 
 function createCacheVolumes()
 {
-	O=$($cmd -a 64 -g)
+	O=$($cmd -g -a 64 $json)
 	RETVAL=$?
-	RD=$(echo "$O"|cut -d' ' -f3)
+	if [ -n "$json" ] ; then
+	  RD=$(echo "$O"|cut -d' ' -f6)
+	else
+	  RD=$(echo "$O"|cut -d' ' -f3)
+  fi
 	echo -e >/dev/stderr "\n$O"
 	if [ ${RETVAL} -ne 0 ]; then
 		cleanup
@@ -57,7 +81,8 @@ function createCacheVolumes()
 
 function mapCacheVolumes() {
   RD="$1"
-  $cmd -m "${RD}" -b /dev/loop7
+  o=$($cmd -m "${RD}" -b /dev/loop7 $json)
+  echo "$o" | $j $jj
   RETVAL=$?
   	if [ ${RETVAL} -ne 0 ]; then
   		cleanup
@@ -67,7 +92,8 @@ function mapCacheVolumes() {
 
 function unampCacheVolumes()
 {
-  $cmd -u rc-wt_loop7
+  o=$($cmd -u rc-wt_loop7 $json)
+  echo "$o" | $j $jj
   RETVAL=$?
   	if [ ${RETVAL} -ne 0 ]; then
   		cleanup
@@ -78,7 +104,8 @@ function unampCacheVolumes()
 
 function removeCacheVolumes()
 {
-	$cmd -d "${RD}"
+	o=$($cmd -d "${RD}" $json)
+  echo "$o" | $j $jj
 	RETVAL=$?
 	if [ ${RETVAL} -ne 0 ]; then
 		cleanup
@@ -88,7 +115,8 @@ function removeCacheVolumes()
 
 function statCacheVolumes()
 {
-	$cmd -s rc-wt_loop7
+	o=$($cmd -s rc-wt_loop7 $json)
+  echo "$o" | $j $jj
 	RETVAL=$?
 	if [ ${RETVAL} -ne 0 ]; then
 		cleanup
@@ -97,12 +125,13 @@ function statCacheVolumes()
 }
 
 function listVolumes() {
-  $cmd -l
+  o=$($cmd -l  $json)
+  echo "$o" | $j $jj
   RETVAL=$?
-  if [ ${RETVAL} -ne 0 ]; then
-    cleanup
-    exit ${RETVAL}
-  fi
+#  if [ ${RETVAL} -ne 0 ]; then
+#    cleanup
+#    exit ${RETVAL}
+#  fi
 }
 
 #
@@ -158,7 +187,5 @@ cont
 echo -e "\nRemove Loopback Devices..."
 removeLoopbackDevices
 
-rmmod >/dev/null 2>&1 rapiddisk.ko
-rmmod >/dev/null 2>&1 rapiddisk-cache.ko
-
+cleanup
 exit 0

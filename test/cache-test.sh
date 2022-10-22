@@ -1,5 +1,11 @@
 #!/bin/bash
 
+who="$(whoami)"
+if [ "$who" != "root" ] ; then
+  echo "Please run as root!"
+  exit 0
+fi
+
 if [ ! "$BASH_VERSION" ] ; then
 	exec /bin/bash "$0" "$@"
 fi

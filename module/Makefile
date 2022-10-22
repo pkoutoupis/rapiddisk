@@ -70,6 +70,8 @@ else
 	$(error rapiddisk version $(VERSION) is not installed for kernel $(KVER))
 endif
 
-.PHONY: debug
-debug:
-	@echo Nothing to do.
+.PHONY: test
+run-test: all
+
+.PHONY: install-strip debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools
+install-strip debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools:
