@@ -43,7 +43,6 @@
 #include <microhttpd.h>
 #include <signal.h>
 
-struct MHD_Daemon *mydaemon;
 int server_stop_requested = 0;
 
 /**
@@ -63,7 +62,6 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 	unsigned long long size;
 	char device[NAMELEN] = {0}, source[NAMELEN] = {0};
 	char *dup = NULL, *token = NULL;
-//	FILE *stream;
 	char *json_str = NULL;
 	struct RD_PROFILE *disk = NULL;
 	struct RC_PROFILE *cache = NULL;
@@ -595,6 +593,7 @@ static void catch_exit_signals() {
 int mgmt_thread(void *arg)
 {
 	struct PTHREAD_ARGS *args = (struct PTHREAD_ARGS *)arg;
+	struct MHD_Daemon *mydaemon = NULL;
 
 	ignore_sigpipe();
 	catch_exit_signals();
