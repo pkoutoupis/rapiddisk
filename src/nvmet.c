@@ -397,7 +397,16 @@ char *nvmet_interface_ip_get(char *interface, char *return_message)
 	int fd;
 	struct ifreq ifr;
 	static char ip[0xF] = {0};
+	char path[NAMELEN] = {0};
 	char *msg;
+	struct in_addr addr;
+
+	sprintf(path, "%s/%s", SYS_CLASS_NET, interface);
+	if (access(path, F_OK) != SUCCESS) {
+		msg = "%s: access: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
+		return NULL;
+	}
 
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < SUCCESS) {
 		msg = "%s: open: %s";
@@ -419,7 +428,9 @@ char *nvmet_interface_ip_get(char *interface, char *return_message)
 	}
 	close(fd);
 
-	sprintf(ip, "%s", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+	/* Some more checks to addr.s_addr may be added here */
+	addr = ( (struct sockaddr_in *) &ifr.ifr_addr)->sin_addr;
+	sprintf(ip, "%s", inet_ntoa(addr));
 
 	return ip;
 }
@@ -445,13 +456,11 @@ int nvmet_view_exports(bool json_flag, char *error_message)
 
 	nvmet = nvmet_scan_subsystem(error_message);
 	if ((nvmet == NULL) && (strlen(error_message) != 0)) {
-//		print_message(INVALID_VALUE, error_message, json_flag);
 		return INVALID_VALUE;
 	}
 
 	ports = nvmet_scan_ports(error_message);
 	if ((ports == NULL) && (strlen(error_message) != 0)) {
-//		print_message(INVALID_VALUE, error_message, json_flag);
 		free_nvmet_linked_lists(ports, NULL);
 		ports = NULL;
 		return INVALID_VALUE;
@@ -1082,7 +1091,6 @@ int nvmet_enable_port(char *interface, int port, int protocol, char *return_mess
 
 	ports = nvmet_scan_ports(error_message);
 	if ((ports == NULL) && (strlen(error_message) != 0)) {
-//		print_message(INVALID_VALUE, error_message, json_flag);
 		msg = "%s";
 		print_error(msg, return_message, error_message);
 		return INVALID_VALUE;
@@ -1095,10 +1103,10 @@ int nvmet_enable_port(char *interface, int port, int protocol, char *return_mess
 		return rc;
 	}
 
-	char *ipaddr = nvmet_interface_ip_get(interface, return_message);
+	char *ipaddr = nvmet_interface_ip_get(interface, error_message);
 	if (ipaddr == NULL) {
-//		msg = "Error. IP address %s is invalid.";
-//		print_error("%s", return_message, return_message);
+		msg = "Cannot find the IP address of interface %s. Error: %s";
+		print_error(msg, return_message, interface, error_message);
 		return INVALID_VALUE;
 	}
 	sprintf(ip, "%s", ipaddr);
@@ -1136,7 +1144,6 @@ int nvmet_enable_port(char *interface, int port, int protocol, char *return_mess
 		return INVALID_VALUE;
 	}
 	fprintf(fp, "4420");
-//	fprintf(fp, "%d", 4420 + port);
 	fclose(fp);
 
 	sprintf(path, "%s/%d/addr_adrfam", SYS_NVMET_PORTS, port);
@@ -1241,13 +1248,11 @@ int nvmet_view_exports_json(char *error_message, char **json_result) {
 
 	nvmet = nvmet_scan_subsystem(error_message);
 	if ((nvmet == NULL) && (strlen(error_message) != 0)) {
-//		print_message(INVALID_VALUE, error_message, json_flag);
 		return INVALID_VALUE;
 	}
 
 	ports = nvmet_scan_ports(error_message);
 	if ((ports == NULL) && (strlen(error_message) != 0)) {
-//		print_message(INVALID_VALUE, error_message, json_flag);
 		free_nvmet_linked_lists(NULL, nvmet);
 		nvmet = NULL;
 		return INVALID_VALUE;
@@ -1272,7 +1277,6 @@ int nvmet_view_ports_json(char *error_message, char **json_result) {
 
 	ports = nvmet_scan_all_ports(error_message);
 	if ((ports == NULL) && (strlen(error_message) != 0)) {
-//		print_message(INVALID_VALUE, error_message, json_flag);
 		return INVALID_VALUE;
 	}
 

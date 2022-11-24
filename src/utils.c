@@ -344,8 +344,6 @@ struct dirent **clean_scandir(struct dirent **scanlist, int num) {
 void print_message(int ret_value, char *message, bool json_flag) {
 	if (json_flag == TRUE) {
 		json_status_return(ret_value, message, NULL, FALSE);
-//		printf("%s\n", json_string);
-//		free(json_string);
 	} else {
 		printf("%s\n", message);
 	}

@@ -342,7 +342,6 @@ int main(int argc, char *argv[])
 
 	 /** Put some config values into args */
 	args->verbose = verbose;
-//	args->debug = debug;
 
 	if (strlen(port) == 0) {
 		sprintf(args->port, "%s", DEFAULT_MGMT_PORT);

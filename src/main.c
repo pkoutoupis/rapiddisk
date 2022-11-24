@@ -406,7 +406,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			}
 			if ((disk == NULL) && (cache == NULL)) {
 				rc =  SUCCESS;
-				print_message(rc, ERR_NO_RDEVICES, json_flag);
+				print_message(rc, ERR_NO_DEVICES, json_flag);
 				break;
 			}
 			if (json_flag) {

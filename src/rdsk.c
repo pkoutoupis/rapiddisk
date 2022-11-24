@@ -406,29 +406,21 @@ int dm_flush_device(char *device) {
 	char *command = "flush";
 
 	if (!(dmt = dm_task_create(cmdno))) {
-//		printf("%s\n", "dm_task_create error");
-//		free(command);
 		return INVALID_VALUE;
 	}
 	if (!dm_task_set_name(dmt, device)) {
-//		printf("%s\n", "dm_task_set_name error");
-//		free(command);
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
 	if (!dm_task_set_sector(dmt, sector)) {
-//		free(command);
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
 	if (!dm_task_set_message(dmt, command)) {
-//		free(command);
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
 	if (!dm_task_run(dmt)) {
-//		printf("%s\n", "dm_task_run error");
-//		free(command);
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
@@ -451,11 +443,9 @@ int dm_remove_mapping(char *device) {
 	uint16_t udev_flags = 0;
 
 	if (!(dmt = dm_task_create(cmdno))) {
-//		printf("%s\n", "dm_task_create error");
 		return INVALID_VALUE;
 	}
 	if (!dm_task_set_name(dmt, device)) {
-//		printf("%s\n", "dm_task_set_name error");
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
@@ -468,7 +458,6 @@ int dm_remove_mapping(char *device) {
 		return INVALID_VALUE;
 	}
 	if (!dm_task_run(dmt)) {
-//		printf("%s\n", "dm_task_run error");
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
@@ -500,26 +489,21 @@ void *dm_get_status(char* device, enum CACHE_TYPE cache_type) {
 	struct dm_info info;
 
 	if (!(dmt = dm_task_create(cmdno))) {
-//		printf("%s\n", "dm_task_create error");
 		return NULL;
 	}
 	if (!dm_task_set_name(dmt, device)) {
-//		printf("%s\n", "dm_task_set_name error");
 		dm_task_destroy(dmt);
 		return NULL;
 	}
 	if (!dm_task_run(dmt)) {
-//		printf("%s\n", "dm_task_run error");
 		dm_task_destroy(dmt);
 		return NULL;
 	}
 	if (!dm_task_get_info(dmt, &info)) {
-//		printf("%s\n", "dm_task_get_info error");
 		dm_task_destroy(dmt);
 		return NULL;
 	}
 	if (!info.exists) {
-//		printf("%s\n", "Device does not exist.");
 		dm_task_destroy(dmt);
 		return NULL;
 	}
@@ -530,13 +514,11 @@ void *dm_get_status(char* device, enum CACHE_TYPE cache_type) {
 		size_t result_size = strlen(params) * 2;
 		char *result = calloc(1, result_size);
 		if (preg_replace("[^\\d ]", "", params, result, result_size) < SUCCESS) {
-//			printf("%s\n", result);
 			if (result) free(result);
 			dm_task_destroy(dmt);
 			return NULL;
 		}
 		if (preg_replace("  ", " ", result, result, result_size) < SUCCESS) {
-//			printf("%s\n", result);
 			if (result) free(result);
 			dm_task_destroy(dmt);
 			return NULL;
@@ -592,11 +574,9 @@ int dm_create_mapping(char* final_map_name, char *table) {
 	/*	table example: "0 452591616 rapiddisk-cache /dev/sdb1 /dev/rd2 20480 0" */
 
 	if (!(dmt = dm_task_create(cmdno))) {
-//		printf("%s\n", "dm_task_create error");
 		return INVALID_VALUE;
 	}
 	if (!dm_task_set_name(dmt, final_map_name)) {
-//		printf("%s\n", "dm_task_set_name error");
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
@@ -625,7 +605,6 @@ int dm_create_mapping(char* final_map_name, char *table) {
 	}
 
 	if (!dm_task_run(dmt)) {
-//		printf("%s\n", "dm_task_run error");
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
@@ -633,13 +612,11 @@ int dm_create_mapping(char* final_map_name, char *table) {
 	dm_udev_wait(cookie);
 
 	if (!dm_task_get_info(dmt, &info)) {
-//		printf("%s\n", "dm_task_get_info error");
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
 
 	if (!info.exists) {
-//		printf("%s\n", "Device does not exist.");
 		dm_task_destroy(dmt);
 		return INVALID_VALUE;
 	}
@@ -776,17 +753,9 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof, cha
 
 	memset(table, 0x0, BUFSZ);
 	if (cache_mode == WRITEBACK)    /* very dangerous mode */
-//		sprintf(string, "echo 0 %llu writecache s %s /dev/%s 4096 0|dmsetup create %s\n",
-//				block_dev_sz, block_dev, ramdisk, name);
 		sprintf(table, "0 %llu writecache s %s /dev/%s 4096 0",
 				block_dev_sz, block_dev, ramdisk);
 	else {
-		/* echo 0 4194303 rapiddisk-ramdisk /dev/sdb /dev/rd0 0 196608|dmsetup create rc-wt_sdb    */
-		/* Param after echo 0 & 1: starting and ending offsets of block_dev device                  *
-		 * Param 3: always rapiddisk-ramdisk; Param 4 & 5: path to block_dev device and RapidDisk dev *
-		 * Param 6: is the size of the ramdisk  */
-//		sprintf(string, "echo 0 %llu rapiddisk-ramdisk %s /dev/%s %llu %d|dmsetup create %s\n",
-//			block_dev_sz, block_dev, ramdisk, ramdisk_sz, mode, name);
 		sprintf(table, "0 %llu rapiddisk-cache %s /dev/%s %llu %d",
 				block_dev_sz, block_dev, ramdisk, ramdisk_sz, cache_mode);
 	}
@@ -1110,19 +1079,15 @@ int cache_device_unmap(struct RC_PROFILE *prof, char *string, char *return_messa
 	}
 	if (buf) free(buf);
 
-	//* if the mapping is a write-back one, flush before remove*/
+	/* if the mapping is a write-back one, flush before remove */
 	if (strstr(string, "rc-wb") != NULL) {
 		if ((rc = dm_flush_device(string) != SUCCESS)) {
-//		sprintf(cmd, "dmsetup message %s 0 flush\n", string);
-//		if ((rc = system(cmd)) != SUCCESS) {
 			msg = "Unable to flush dirty cache data to %s";
 			print_error(msg, return_message, string);
 			return rc;
 		}
 	}
 
-//	sprintf(cmd, "dmsetup remove %s\n", string);
-//	if ((rc = system(cmd)) == SUCCESS) {
 	if ((rc = dm_remove_mapping(string)) == SUCCESS) {
 		msg = "Command to unmap %s has been sent.";
 	} else {
@@ -1285,7 +1250,6 @@ int cache_wb_device_stat(struct RC_PROFILE *rc_prof, char *cache)
 	if (rc_prof == NULL) {
 		msg = "No RapidDisk-Cache Mappings exist.";
 		print_error("%s", NULL, msg);
-//		printf("  No RapidDisk-Cache Mappings exist.\n\n");
 		return rc;
 	}
 	while (rc_prof != NULL) {
@@ -1327,7 +1291,6 @@ int cache_device_stat(struct RC_PROFILE *rc_prof, char *cache)
 	if (rc_prof == NULL) {
 		msg = "No RapidDisk-Cache Mappings exist.";
 		print_error("%s", NULL, msg);
-//		printf("  No RapidDisk-Cache Mappings exist.\n\n");
 		return rc;
 	}
 	while (rc_prof != NULL) {
@@ -1372,7 +1335,6 @@ int cache_device_stat_json(struct RC_PROFILE *rc_prof, char *cache, RC_STATS **r
 	if (rc_prof == NULL) {
 		msg = "No RapidDisk-Cache Mappings exist.";
 		print_message(rc, msg, TRUE);
-//		printf("  No RapidDisk-Cache Mappings exist.\n\n");
 		return rc;
 	}
 	while (rc_prof != NULL) {
@@ -1387,7 +1349,7 @@ int cache_device_stat_json(struct RC_PROFILE *rc_prof, char *cache, RC_STATS **r
 		return -ENOENT;
 	}
 	*rc_stats = dm_get_status(cache, WRITETHROUGH);
-//	free(rc_stats);
+
 	return SUCCESS;
 }
 
@@ -1410,7 +1372,6 @@ int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, char *cache, WC_STATS 
 	if (rc_prof == NULL) {
 		msg = "No RapidDisk-Cache Mappings exist.";
 		print_message(rc, msg, TRUE);
-//		printf("  No RapidDisk-Cache Mappings exist.\n\n");
 		return rc;
 	}
 	while (rc_prof != NULL) {

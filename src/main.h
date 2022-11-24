@@ -58,6 +58,5 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #define ERR_NO_DEVICES		"Unable to locate any RapidDisk devices."
 #define ERR_NO_MEMUSAGE		"Error. Unable to retrieve memory usage data."
 #define ERR_INVALID_PORT	"Error. Invalid port number."
-#define ERR_NO_RDEVICES		"No RapidDisk devices exist on the system."
 
 #endif
