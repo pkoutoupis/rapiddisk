@@ -1,36 +1,33 @@
-/*********************************************************************************
- ** Copyright © 2011 - 2022 Petros Koutoupis
- ** All rights reserved.
- **
- ** This file is part of RapidDisk.
- **
- ** RapidDisk is free software: you can redistribute it and/or modify
- ** it under the terms of the GNU General Public License as published by
- ** the Free Software Foundation, either version 2 of the License, or
- ** (at your option) any later version.
- **
- ** RapidDisk is distributed in the hope that it will be useful,
- ** but WITHOUT ANY WARRANTY; without even the implied warranty of
- ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- ** GNU General Public License for more details.
- **
- ** You should have received a copy of the GNU General Public License
- ** along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
- **
- ** SPDX-License-Identifier: GPL-2.0-or-later
- **
- ** @project: rapiddisk
- **
- ** @filename: json.c
- ** @description: This file contains the function to build and handle JSON objects.
- **
- ** @date: 15Oct10, petros@petroskoutoupis.com
- ********************************************************************************/
+/**
+ * @copyright @verbatim
+Copyright © 2011 - 2022 Petros Koutoupis
+
+All rights reserved.
+
+This file is part of RapidDisk.
+
+RapidDisk is free software: you can redistribute it and/or modify@n
+		it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+RapidDisk is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
+
+SPDX-License-Identifier: GPL-2.0-or-later
+@endverbatim
+* @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
+* @author Matteo Tenca \<matteo.tenca\@gmail.com\>
+* @version 8.2.0
+* @date 26 September 2022
+*/
 
 #include "common.h"
-//#ifdef SERVER
-//#include "rapiddiskd.h"
-//#endif
 #include <jansson.h>
 
 /*
@@ -46,7 +43,7 @@
  * This function is intended to provide a simple way to create a JSON string which contains
  * a status ("Success" or "Failed") derived from an integer, and an optional message.
  *
- * \param return_value if @p return_value is != @p 'SUCCESS', the JSON result will
+ * @param return_value if @p return_value is != @p 'SUCCESS', the JSON result will
  *                     contain:
  *                     @code{.json}
  *                     {
@@ -67,8 +64,8 @@
  *                       }
  *                       @endcode
  * @param json_result if @p wantresult is @p TRUE, the JSON string pointer is copied into @p *json_result, which
- *                    \b must be @p free()d later. Otherwise, the JSON string is printed to stdout.
- * @param wantresult see json_result paramater
+ *                    @b must be @p free()d later. Otherwise, the JSON string is printed to stdout.
+ * @param wantresult see @p json_result paramater
  * @return An @p int representing the result of the operation.
  */
 int json_status_return(int return_value, char *optional_message, char **json_result, bool wantresult)
@@ -492,7 +489,7 @@ int json_cache_wb_statistics(struct WC_STATS *stats, char **stats_result, bool w
  *
  * @param nvmet A pointer to the first element of the linked list of NVMET_PROFILE structures.
  * @param ports A pointer to the first element of the linked list of NVMET_PORTS structures.
- * @param stats_result This is a pointer to a pointer to a char.  It's used to return the JSON string to the caller.
+ * @param json_result This is a pointer to a pointer to a char.  It's used to return the JSON string to the caller.
  * @param wantresult If TRUE, the function will place the pointer to the JSON string into *stats_result (must be free()d later).
  * If FALSE, the JSON string will be printed to stdout.
  *
@@ -530,11 +527,6 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
 
 	root = json_pack("{s:o}", "targets", array);
 	char *jdumped = json_dumps(root, 0);
-//	if (jdumped != NULL) {
-//		printf("%s\n", jdumped);
-//		free(jdumped);
-//		jdumped = NULL;
-//	}
 	if (jdumped != NULL) {
 		if (!wantresult) { // We just need the JSON string to be printed
 			printf("%s\n", jdumped);
@@ -569,11 +561,14 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
  */
 
 /**
- * It takes a linked list of NVMET_PORTS structs and converts it to a JSON object and print it out.
+ * It takes a linked list of NVMET ports and returns a JSON string
  *
- * @param ports A pointer to the NVMET_PORTS structure.
+ * @param ports A pointer to the first element of a linked list of NVMET_PORTS structures.
+ * @param json_result This is a pointer to a char pointer. If you want to return the JSON string, you must set this to the
+ * address of a char pointer. If you don't want to return the JSON string, you must set this to NULL.
+ * @param wantresult If true, the JSON string is returned as a pointer. If false, the JSON string is printed to stdout.
  *
- * @return An @p int representing the result.
+ * @return The function status result.
  */
 int json_nvmet_view_ports(struct NVMET_PORTS *ports, char **json_result, bool wantresult)
 {
@@ -642,9 +637,6 @@ int json_status_check(char **json_str)
 			*json_str = jdumped;
 			rc = SUCCESS;
 		}
-//		sprintf(message, "%s\n", jdumped);
-//		free(jdumped);
-//		jdumped = NULL;
 	}
 
 	json_decref(root);

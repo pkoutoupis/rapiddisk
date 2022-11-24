@@ -1,31 +1,31 @@
-/*********************************************************************************
- ** Copyright © 2011 - 2022 Petros Koutoupis
- ** All rights reserved.
- **
- ** This file is part of RapidDisk.
- **
- ** RapidDisk is free software: you can redistribute it and/or modify
- ** it under the terms of the GNU General Public License as published by
- ** the Free Software Foundation, either version 2 of the License, or
- ** (at your option) any later version.
- **
- ** RapidDisk is distributed in the hope that it will be useful,
- ** but WITHOUT ANY WARRANTY; without even the implied warranty of
- ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- ** GNU General Public License for more details.
- **
- ** You should have received a copy of the GNU General Public License
- ** along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
- **
- ** SPDX-License-Identifier: GPL-2.0-or-later
- **
- ** @project: rapiddisk
- **
- ** @filename: rdsk.c
- ** @description: This file contains the core routines of rapiddisk.
- **
- ** @date: 15Oct10, petros@petroskoutoupis.com
- ********************************************************************************/
+/**
+ * @copyright @verbatim
+Copyright © 2011 - 2022 Petros Koutoupis
+
+All rights reserved.
+
+This file is part of RapidDisk.
+
+RapidDisk is free software: you can redistribute it and/or modify@n
+		it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+RapidDisk is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
+
+SPDX-License-Identifier: GPL-2.0-or-later
+@endverbatim
+* @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
+* @author Matteo Tenca \<matteo.tenca\@gmail.com\>
+* @version 8.2.0
+* @date 26 September 2022
+*/
 
 #include "rdsk.h"
 #include "utils.h"
@@ -1425,7 +1425,7 @@ int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, char *cache, WC_STATS 
 		return -ENOENT;
 	}
 	*wc_stats = dm_get_status(cache, WRITEBACK);
-//	free(rc_stats);
+
 	return SUCCESS;
 }
 #endif

@@ -1,34 +1,33 @@
-/*********************************************************************************
- ** Copyright © 2011 - 2022 Petros Koutoupis
- ** All rights reserved.
- **
- ** This file is part of RapidDisk.
- **
- ** RapidDisk is free software: you can redistribute it and/or modify
- ** it under the terms of the GNU General Public License as published by
- ** the Free Software Foundation, either version 2 of the License, or
- ** (at your option) any later version.
- **
- ** RapidDisk is distributed in the hope that it will be useful,
- ** but WITHOUT ANY WARRANTY; without even the implied warranty of
- ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- ** GNU General Public License for more details.
- **
- ** You should have received a copy of the GNU General Public License
- ** along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
- **
- ** SPDX-License-Identifier: GPL-2.0-or-later
- **
- ** @project: rapiddisk
- **
- ** @filename: common.h
- ** @description: A header file containing all commonly used variables
- **	 and such.
- **
- ** @date: 14Oct10, petros@petroskoutoupis.com
- ********************************************************************************/
-/** @file
+/**
+ * @file
  * @brief Common structure and value definitions
+ * @details This header file defines constants and structures shared by the rapiddisk and the rapiddiskd source
+ * @copyright @verbatim
+Copyright © 2011 - 2022 Petros Koutoupis
+
+All rights reserved.
+
+This file is part of RapidDisk.
+
+RapidDisk is free software: you can redistribute it and/or modify@n
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+RapidDisk is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
+
+SPDX-License-Identifier: GPL-2.0-or-later
+@endverbatim
+ * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
+ * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
+ * @version 8.2.0
+ * @date 26 September 2022
  */
 #ifndef COMMON_H
 #define COMMON_H
@@ -56,9 +55,6 @@
 #define NAMELEN			0x200
 #define BUFSZ			0x10000
 #define PAYLOADSZ		0x80000 /* 512K: this is our max read limit for libcurl */
-//#define WRITETHROUGH		0
-//#define WRITEAROUND		1
-//#define WRITEBACK		2
 
 /** Internal bool like type */
 typedef char bool;
