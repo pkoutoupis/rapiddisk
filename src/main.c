@@ -111,7 +111,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 		switch (i) {
 			case 'h':
 				printf("%s", header);
-				online_menu(argvin[0]);
+				online_menu(PROCESS);
 				return SUCCESS;
 			case 'a':
 				action = ACTION_ATTACH;
@@ -212,7 +212,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			default:
 			case '?':
 				printf("%s", header);
-				online_menu(argvin[0]);
+				online_menu(PROCESS);
 				return INVALID_VALUE;
 		}
 	}
@@ -465,7 +465,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			if (header_flag == FALSE) {
 				printf("%s", header);
 			}
-			online_menu(argvin[0]);
+			online_menu(PROCESS);
 			break;
 	}
 
