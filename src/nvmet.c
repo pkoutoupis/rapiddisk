@@ -98,7 +98,7 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message)
 			for (i = 0; i < err2; i++) {
 				if (strncmp(sublist[i]->d_name, ".", 1) != SUCCESS) {
 					if ((nvmet = (struct NVMET_PROFILE *)calloc(1, sizeof(struct NVMET_PROFILE))) == NULL ) {
-						msg = "%s: calloc: %s";
+						msg = ERR_CALLOC;
 						print_error(msg, return_message, __func__, strerror(errno));
 						list = clean_scandir(list, err);
 						sublist = clean_scandir(sublist, err2);
@@ -194,7 +194,7 @@ struct NVMET_PORTS *nvmet_scan_ports(char *return_message)
 				for (i = 0; i < err2; i++) {
 					if (strncmp(exports[i]->d_name, ".", 1) != SUCCESS) {
 						if ((nvmet_ports = (struct NVMET_PORTS *)calloc(1, sizeof(struct NVMET_PORTS))) == NULL ) {
-							msg = "%s: calloc: %s";
+							msg = ERR_CALLOC;
 							print_error(msg, return_message, __func__, strerror(errno));
 							ports = clean_scandir(ports, err);
 							exports = clean_scandir(exports, err2);
@@ -284,7 +284,7 @@ struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message)
 			sprintf(file, "%s/%s", SYS_NVMET_PORTS, ports[n]->d_name);
 			if (access(file, F_OK) != INVALID_VALUE) {
 				if ((nvmet_ports = (struct NVMET_PORTS *)calloc(1, sizeof(struct NVMET_PORTS))) == NULL ) {
-					msg = "%s: calloc: %s";
+					msg = ERR_CALLOC;
 					print_error(msg, return_message, __func__, strerror(errno));
 					ports = clean_scandir(ports, err);
 					return NULL;
