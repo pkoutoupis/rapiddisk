@@ -213,6 +213,21 @@ int preg_replace(const char *re, char *replacement, char *subject, char *result,
 }
 
 /**
+ * It takes a string and a message, and returns a string that contains the message prefixed with the string
+ *
+ * @param dest The destination string.
+ * @param msg The message to be displayed.
+ *
+ * @return A pointer to the destination string.
+ */
+char *verbose_msg(char *dest, char *msg) {
+	strcpy(dest, "%s: ");
+	strcat(dest, msg);
+	strcat(dest, "\n");
+	return dest;
+}
+
+/**
  * Splits a string using the delimiter and put pieces in array.
  * @param input_string string to split
  * @param output_arr array of pointer to string parts
@@ -249,13 +264,13 @@ int check_loaded_modules(void)
 	struct dirent **list;
 
 	if (access(SYS_RDSK, F_OK) == INVALID_VALUE) {
-		printf("Please ensure that the RapidDisk module is loaded and retry.\n");
+		fprintf(stderr, "Please ensure that the RapidDisk module is loaded and retry.\n");
 		return -EPERM;
 	}
 
 	/* Check for rapiddisk */
 	if ((i = scandir(SYS_MODULE, &list, NULL, NULL)) < 0) {
-		printf("%s: scandir: %s\n", __func__, strerror(errno));
+		fprintf(stderr, "%s: scandir: %s\n", __func__, strerror(errno));
 		return -ENOENT;
 	}
 
@@ -268,7 +283,7 @@ int check_loaded_modules(void)
 	}
 
 	if (rc != SUCCESS) {
-		printf("Please ensure that the RapidDisk-Cache module is loaded and retry.\n");
+		fprintf(stderr, "Please ensure that the RapidDisk-Cache module is loaded and retry.\n");
 		list = clean_scandir(list, i);
 		return rc;
 	}
