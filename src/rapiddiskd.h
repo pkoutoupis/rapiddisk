@@ -52,5 +52,14 @@
 #define CMD_LIST_NVMET		"/v1/listAllNVMeTargets"
 #define CMD_LIST_NVMET_PORTS	"/v1/listAllNVMePorts"
 
+#define PID_FILE			"/run/rapiddiskd.pid"
+#define D_STDERR_LOG		"/tmp/rapiddiskd_err.log"
+#define D_STDOUT_LOG		"/tmp/rapiddiskd_out.log"
+#define D_EXITING			"Daemon exiting."
+#define D_STARTING			"Starting daemon..."
+#define D_RECV_REQ			"Recevied request '%s'."
+#define D_LOOP_EXITING		"Daemon loop function exiting: %s."
+#define D_SIGNAL_RECEIVED	"Signal_handler function, SIGNAL received: %s."
+
 int mgmt_thread(void *arg);
 #endif
