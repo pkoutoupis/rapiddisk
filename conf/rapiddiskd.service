@@ -3,11 +3,13 @@ Description=A rapiddisk network management daemon
 After=network.target
 
 [Service]
-ExecStartPre=sh -c 'lsmod | grep -q rapiddisk || { modprobe rapiddisk ; modprobe rapiddisk-cache ; }'
+ExecStartPre=/usr/bin/sh -c 'lsmod | grep -q rapiddisk || { modprobe rapiddisk ; modprobe rapiddisk-cache ; }'
 ExecStart=/sbin/rapiddiskd
 Type=forking
 Restart=always
 RestartPreventExitStatus=255
+RestartSec=10
+PIDFile=/run/rapiddiskd.pid
 StandardError=journal
 StandardOutput=journal
 StandardInput=null

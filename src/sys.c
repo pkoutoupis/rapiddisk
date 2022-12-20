@@ -82,12 +82,13 @@ struct VOLUME_PROFILE *search_volumes_targets(char *return_message)
 	char file[NAMELEN] = {0}, test[NAMELEN + 32] = {0};
 	struct dirent **list;
 	struct VOLUME_PROFILE *volume = NULL;
+	char *msg = NULL;
 
 	volume_head = NULL;
 	volume_end = NULL;
 
 	if ((rc = scandir(SYS_BLOCK, &list, NULL, NULL)) < 0) {
-		char *msg = "%s: scandir: %s";
+		msg = "%s: scandir: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		return NULL;
 	}
@@ -97,7 +98,7 @@ struct VOLUME_PROFILE *search_volumes_targets(char *return_message)
 		(strncmp(list[n]->d_name, "pmem", 4) == SUCCESS)) {
 			volume = (struct VOLUME_PROFILE *)calloc(1, sizeof(struct VOLUME_PROFILE));
 			if (volume == NULL) {
-				char *msg = "%s: calloc: %s";
+				msg = ERR_CALLOC;
 				print_error(msg, return_message, __func__, strerror(errno));
 				list = clean_scandir(list, rc);
 				free_linked_lists(NULL, NULL, volume_head);

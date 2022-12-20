@@ -41,5 +41,6 @@ void free_nvmet_linked_lists(struct NVMET_PORTS *ports_head, struct NVMET_PROFIL
 struct dirent **clean_scandir(struct dirent **scanlist, int num);
 int check_loaded_modules(void);
 void print_message(int ret_value, char *message, bool json_flag);
+char *verbose_msg(char *dest, char *msg);
 
 #endif //UTILS_H

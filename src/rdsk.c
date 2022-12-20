@@ -133,13 +133,13 @@ char *read_info(char *name, char *string, char *return_message)
 	sprintf(file, "%s/%s", name, string);
 	fp = fopen(file, "r");
 	if (fp == NULL) {
-		msg = "%s: fopen: %s, %s";
+		msg = ERR_FOPEN;
 		print_error(msg, return_message, __func__, strerror(errno), file);
 		return NULL;
 	}
 	r = fread(buf, FILEDATA, 1, fp);
 	if ((r != 1) && (feof(fp) == 0) && (ferror(fp) != 0)) {
-		msg = "%s: fread: %s, %s";
+		msg = ERR_FREAD;
 		print_error(msg, return_message, __func__, "could not read file", file);
 		return NULL;
 	}
@@ -185,14 +185,14 @@ struct RD_PROFILE *search_rdsk_targets(char *return_message)
 	rdsk_end = NULL;
 
 	if ((rc = scandir(SYS_BLOCK, &list, scandir_filter_rd, NULL)) < 0) {
-		msg = "%s: scandir: %s";
+		msg = ERR_SCANDIR;
 		print_error(msg, return_message, __func__, strerror(errno));
 		return NULL;
 	}
 	for (;n < rc; n++) {
 		prof = calloc(1, sizeof(struct RD_PROFILE));
 		if (prof == NULL) {
-			msg = "%s: calloc: %s";
+			msg = ERR_CALLOC;
 			print_error(msg, return_message, __func__, strerror(errno));
 			list = clean_scandir(list, rc);
 			free_linked_lists(NULL, rdsk_head, NULL);
@@ -273,12 +273,12 @@ struct RC_PROFILE *search_cache_targets(char *return_message)
 	cache_end = NULL;
 
 	if ((num = scandir(DEV_MAPPER, &list, scandir_filter_rc, NULL)) < 0) {
-		msg = "%s: scandir: %s";
+		msg = ERR_SCANDIR;
 		print_error(msg, return_message, __func__, strerror(errno));
 		return NULL;
 	}
 	if ((num2 = scandir(SYS_BLOCK, &nodes, scandir_filter_dm, NULL)) < 0) {
-		msg = "%s: scandir: %s";
+		msg = ERR_SCANDIR;
 		print_error(msg, return_message, __func__, strerror(errno));
 		list = clean_scandir(list, num);
 		return NULL;
@@ -287,7 +287,7 @@ struct RC_PROFILE *search_cache_targets(char *return_message)
 	for (;n < num; n++) {
 		prof = calloc(1, sizeof(struct RC_PROFILE));
 		if (prof == NULL) {
-			msg = "%s: calloc: %s";
+			msg = ERR_CALLOC;
 			print_error(msg, return_message, __func__, strerror(errno));
 			list = clean_scandir(list, num);
 			nodes = clean_scandir(nodes, num2);
@@ -308,7 +308,7 @@ struct RC_PROFILE *search_cache_targets(char *return_message)
 			if (strncmp(info_size, prof->device, sizeof(prof->device)) == 0) {
 				sprintf(file, "%s/%s/slaves", SYS_BLOCK, nodes[i]->d_name);
 				if ((num3 = scandir(file, &maps, NULL, NULL)) < 0) {
-					msg = "%s: scandir: %s";
+					msg = ERR_SCANDIR;
 					print_error(msg, return_message, __func__, strerror(errno));
 					list = clean_scandir(list, num);
 					nodes = clean_scandir(nodes, num2);
@@ -685,7 +685,7 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof, cha
 	}
 
 	if ((fp = fopen(ETC_MTAB, "r")) == NULL) {
-		msg = "%s: fopen: %s: %s";
+		msg = ERR_FOPEN;
 		print_error(msg, return_message, __func__, ETC_MTAB, strerror(errno));
 		if (buf) free(buf);
 		return INVALID_VALUE;
@@ -813,6 +813,9 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 		return -ENOENT;
 	}
 
+	/**
+	 * TODO: check why max_sectors is 0 in some cases
+	 */
 	if ((ioctl(fd, IOCTL_RD_GET_STATS, &max_sectors)) == INVALID_VALUE) {
 		msg = "%s: ioctl: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
@@ -925,7 +928,7 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *str
 	/* Check to make sure RapidDisk device isn't in a mapping */
 	while (rc_prof != NULL) {
 		if (strcmp(string, rc_prof->cache) == SUCCESS) {
-			msg = "Error. Unable to remove %s.\nThis RapidDisk device is currently"
+			msg = "Error. Unable to remove %s. This RapidDisk device is currently"
 						" mapped as a cache drive to %s.";
 			print_error(msg, return_message, string, rc_prof->device);
 			return INVALID_VALUE;
