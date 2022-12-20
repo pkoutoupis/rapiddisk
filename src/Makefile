@@ -22,29 +22,63 @@ ifeq ($(CC),)
 	CC := gcc -Werror
 endif
 
-CHMOD := chmod
-CP := cp
 RM := rm -f
-MKDIR := mkdir -pv
-STRIP := strip -s
+STRIP_CMD := strip -s
 DIR := /sbin
-LDLIBS += -ljansson -ldevmapper -lpcre2-8
-DAEMON_LDLIBS := -lmicrohttpd
 DAEMON_CFLAGS := -DSERVER
 INSTALL := install -D -m 755 -t $(DESTDIR)$(DIR)
 INSTALL_STRIP := install -D -m 755 -s -t $(DESTDIR)$(DIR)
-DEBUG_FLAGS := -DDEBUG -Wl,--export-dynamic -ggdb
-BIN := rapiddisk
-BIN_D := rapiddiskd
-BIN_DEBUG := rapiddisk_debug
-BIN_D_DEBUG := rapiddiskd_debug
-OBJS := main_m.o utils_m.o json_m.o rdsk_m.o nvmet_m.o sys_m.o
-OBJS_D := rapiddiskd_m.o utils_m.o json-server_m.o nvmet-server_m.o net_m.o rdsk-server_m.o sys-server_m.o
-OBJS_DEBUG := main_d.o utils_d.o json_d.o nvmet_d.o rdsk_d.o sys_d.o
-OBJS_D_DEBUG := rapiddiskd_d.o utils_d.o json-server_d.o nvmet-server_d.o net_d.o rdsk-server_d.o sys-server_d.o
+DEBUG_FLAGS := -DDEBUG -Wl,--export-dynamic -g $(CFLAGS)
+DEBUG_LDFLAGS := -DDEBUG -Wl,--export-dynamic -g $(LDFLAGS)
+ifndef CFLAGS
+NDEBUG_CFLAGS := -O2 -Wno-unused-result -flto=auto -ffat-lto-objects -fstack-protector-strong
+else
+NDEBUG_CFLAGS := -O2 -Wno-unused-result -flto=auto -ffat-lto-objects -fstack-protector-strong $(CFLAGS)
+endif
+ifndef LDLIBS
+COMMON_LDLIBS := -ljansson -ldevmapper -lpcre2-8
+DAEMON_LDLIBS := -ljansson -ldevmapper -lpcre2-8 -lmicrohttpd
+else
+COMMON_LDLIBS := $(LDLIBS)
+DAEMON_LDLIBS := $(LDLIBS)
+endif
+ifndef LDFLAGS
+NDEBUG_LDFLAGS := -Wl,-Bsymbolic-functions -flto=auto -ffat-lto-objects -flto=auto -Wl,-z,relro
+else
+NDEBUG_LDFLAGS := -Wl,-Bsymbolic-functions -flto=auto -ffat-lto-objects -flto=auto -Wl,-z,relro $(LDFLAGS)
+endif
+ifndef CPPFLAGS
+NDEBUG_CPPFLAGS := -Wdate-time
+else
+NDEBUG_CPPFLAGS := -Wdate-time $(CPPFLAGS)
+endif
+BIN_TOOL_NDEBUG := rapiddisk
+BIN_DAEMON_NDEBUG := rapiddiskd
+BIN_TOOL_DEBUG := rapiddisk_debug
+BIN_DAEMON_DEBUG := rapiddiskd_debug
+OBJS_TOOL_NDEBUG := main_ndebug.o utils_ndebug.o json_ndebug.o rdsk_ndebug.o nvmet_ndebug.o sys_ndebug.o
+OBJS_DAEMON_NDEBUG := rapiddiskd_ndebug.o utils_ndebug.o json-server_ndebug.o nvmet-server_ndebug.o net_ndebug.o rdsk-server_ndebug.o sys-server_ndebug.o
+OBJS_TOOL_DEBUG := main_debug.o utils_debug.o json_debug.o nvmet_debug.o rdsk_debug.o sys_debug.o
+OBJS_DAEMON_DEBUG := rapiddiskd_debug.o utils_debug.o json-server_debug.o nvmet-server_debug.o net_debug.o rdsk-server_debug.o sys-server_debug.o
+SRC := json.c main.c net.c nvmet.c rapiddiskd.c rdsk.c sys.c utils.c
 
 .PHONY: all
-all: $(BIN) $(BIN_D)
+all: $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG)
+
+# This checks avoid creating/including the .h dependencies Makefiles
+# Disables parallelization if "clean" is present in the goal list
+ifneq (,$(filter clean,$(MAKECMDGOALS)))
+ifneq (1, $(words $(MAKECMDGOALS)))
+.NOTPARALLEL:
+endif
+else
+include $(SRC:.c=.d)
+endif
+
+.PHONY: clean
+clean:
+	rm -f *.d $(OBJS_TOOL_NDEBUG) $(OBJS_DAEMON_NDEBUG) $(OBJS_TOOL_DEBUG) $(OBJS_DAEMON_DEBUG) $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG) $(BIN_TOOL_DEBUG) $(BIN_DAEMON_DEBUG)
+    MAKECMDGOALS:=$(filter-out clean,$(MAKECMDGOALS)))
 
 .PHONY: tools
 tools: all
@@ -59,75 +93,92 @@ clean-tools: clean
 tools-install: install
 
 .PHONY: debug
-debug: $(BIN_DEBUG) $(BIN_D_DEBUG)
+debug: $(BIN_TOOL_DEBUG) $(BIN_DAEMON_DEBUG)
 
 .PHONY: tools-debug
 tools-debug: debug
 
+.PHONY: strip
+strip: tools-strip
+
 .PHONY: tools-strip
-tools-strip: $(BIN) $(BIN_D)
-	$(STRIP) $(BIN)
-	$(STRIP) $(BIN_D)
+tools-strip: all
+	$(STRIP_CMD) $(BIN_TOOL_NDEBUG)
+	$(STRIP_CMD) $(BIN_DAEMON_NDEBUG)
 
 .PHONY: install
 install: all
-	@echo Installing all $(BIN) $(BIN_D) binary files.
-	$(INSTALL) $(BIN) $(BIN_D)
+	@echo Installing all $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG) binary files.
+	$(INSTALL) $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG)
 
 .PHONY: install-strip
 install-strip: tools-install-strip
 
 .PHONY: tools-install-strip
 tools-install-strip: all
-	@echo Installing stripped $(BIN) $(BIN_D) binary files.
-	$(INSTALL_STRIP) $(BIN) $(BIN_D)
+	@echo Installing stripped $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG) binary files.
+	$(INSTALL_STRIP) $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG)
 
 .PHONY: uninstall
 uninstall:
-	@echo Uninstalling $(BIN) $(BIN_D) binary files.
-	$(RM) $(DESTDIR)$(DIR)/$(BIN)
-	$(RM) $(DESTDIR)$(DIR)/$(BIN_D)
+	@echo Uninstalling $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG) binary files.
+	$(RM) $(DESTDIR)$(DIR)/$(BIN_TOOL_NDEBUG)
+	$(RM) $(DESTDIR)$(DIR)/$(BIN_DAEMON_NDEBUG)
 
 .PHONY: tools-uninstall
 tools-uninstall: uninstall
 
-%-server_d.o: CFLAGS += $(DAEMON_CFLAGS)
-%-server_d.o: %.c
+%_debug.o: override CFLAGS += $(DEBUG_FLAGS)
+%_debug.o: %.c %.d
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-%-server_m.o: CFLAGS += $(DAEMON_CFLAGS)
-%-server_m.o: %.c
+%-server_debug.o: %.c %.d
+	$(CC) $(CPPFLAGS) $(DAEMON_CFLAGS) $(CFLAGS) -c $< -o $@
+
+%_ndebug.o: CFLAGS = $(NDEBUG_CFLAGS)
+%_ndebug.o: CPPFLAGS = $(NDEBUG_CPPFLAGS)
+%_ndebug.o : %.c %.d
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-%_d.o: CFLAGS += $(DEBUG_FLAGS)
-%_d.o: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+%-server_ndebug.o: %.c %.d
+	$(CC) $(CPPFLAGS) $(DAEMON_CFLAGS) $(CFLAGS) -c $< -o $@
 
-%_m.o: CFLAGS += -O2 -fPIC -Wno-unused-result
-%_m.o: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+$(BIN_TOOL_NDEBUG): LDLIBS = $(COMMON_LDLIBS)
+$(BIN_TOOL_NDEBUG): LDFLAGS = $(NDEBUG_LDFLAGS)
+$(BIN_TOOL_NDEBUG): $(OBJS_TOOL_NDEBUG)
+	$(CC) $(LDFLAGS) -o $(BIN_TOOL_NDEBUG) $(OBJS_TOOL_NDEBUG) $(LOADLIBES) $(LDLIBS)
 
-$(BIN): $(OBJS)
-	$(CC) $(LDFLAGS) -o $(BIN) $(OBJS) $(LOADLIBES) $(LDLIBS)
+$(BIN_DAEMON_NDEBUG): LDLIBS = $(DAEMON_LDLIBS)
+$(BIN_DAEMON_NDEBUG): LDFLAGS = $(NDEBUG_LDFLAGS)
+$(BIN_DAEMON_NDEBUG): $(OBJS_DAEMON_NDEBUG)
+	$(CC) $(LDFLAGS) -o $(BIN_DAEMON_NDEBUG) $(OBJS_DAEMON_NDEBUG) $(LOADLIBES) $(LDLIBS)
 
-$(BIN_D): LDLIBS += $(DAEMON_LDLIBS)
-$(BIN_D): $(OBJS_D)
-	$(CC) $(LDFLAGS) -o $(BIN_D) $(OBJS_D) $(LOADLIBES) $(LDLIBS)
+$(BIN_TOOL_DEBUG): override LDFLAGS += $(DEBUG_LDFLAGS)
+$(BIN_TOOL_DEBUG): override LDLIBS += $(COMMON_LDLIBS)
+$(BIN_TOOL_DEBUG): $(OBJS_TOOL_DEBUG)
+	$(CC) $(LDFLAGS) -o $(BIN_TOOL_DEBUG) $(OBJS_TOOL_DEBUG) $(LOADLIBES) $(LDLIBS)
 
-$(BIN_DEBUG): LDFLAGS += $(DEBUG_FLAGS)
-$(BIN_DEBUG): $(OBJS_DEBUG)
-	$(CC) $(LDFLAGS) -o $(BIN_DEBUG) $(OBJS_DEBUG) $(LOADLIBES) $(LDLIBS)
+$(BIN_DAEMON_DEBUG): override LDFLAGS = $(DEBUG_LDFLAGS)
+$(BIN_DAEMON_DEBUG): override LDLIBS = $(DAEMON_LDLIBS)
+$(BIN_DAEMON_DEBUG): $(OBJS_DAEMON_DEBUG)
+	$(CC) $(LDFLAGS) -o $(BIN_DAEMON_DEBUG) $(OBJS_DAEMON_DEBUG) $(LOADLIBES) $(LDLIBS)
 
-$(BIN_D_DEBUG): LDLIBS += $(DAEMON_LDLIBS)
-$(BIN_D_DEBUG): LDFLAGS += $(DEBUG_FLAGS)
-$(BIN_D_DEBUG): $(OBJS_D_DEBUG)
-	$(CC) $(LDFLAGS) -o $(BIN_D_DEBUG) $(OBJS_D_DEBUG) $(LOADLIBES) $(LDLIBS)
-
-%.c:
-
-.PHONY: clean
-clean:
-	rm -f *.o $(BIN) $(BIN_D) $(BIN_DEBUG) $(BIN_D_DEBUG)
+.PHONY: tools-clean
+tools-clean: clean
 
 .PHONY: dkms-uninstall dkms-install
 dkms-uninstall dkms-install:
+
+%.d: %.c
+    ifeq (,$(filter clean,$(MAKECMDGOALS)))
+	@echo Creating Makefile $@
+	@set -e; rm -f $@; \
+	$(CC) -MM $(CPPFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1_ndebug.o \1_debug.o \1\.d : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$; \
+	$(CC) -MM $(DAEMON_CFLAGS) $(CPPFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1-server_ndebug\.o \1-server_debug\.o \1\.d : ,g' < $@.$$$$ >> $@; \
+	rm -f $@.$$$$
+    endif
+
+%.c:
