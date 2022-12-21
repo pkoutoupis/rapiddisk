@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 	openlog(DAEMON, LOG_PID, LOG_DAEMON);
 	if (check_loaded_modules() < SUCCESS) {
 		if (verbose) {
-			fprintf(stderr, verbose_msg(msg, ERR_MODULES), __func__);
+			fprintf(stderr, verbose_msg(msg, ERR_MODULES), DAEMON, __func__);
 			fprintf(stderr, verbose_msg(msg, D_EXITING), DAEMON);
 		}
 		syslog(LOG_ERR|LOG_DAEMON, ERR_MODULES, __func__);

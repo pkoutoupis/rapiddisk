@@ -294,13 +294,17 @@ int check_loaded_modules(void)
 	struct dirent **list;
 
 	if (access(SYS_RDSK, F_OK) == INVALID_VALUE) {
+#ifndef SERVER
 		fprintf(stderr, "Please ensure that the RapidDisk module is loaded and retry.\n");
+#endif
 		return -EPERM;
 	}
 
 	/* Check for rapiddisk */
 	if ((i = scandir(SYS_MODULE, &list, NULL, NULL)) < 0) {
+#ifndef SERVER
 		fprintf(stderr, "%s: scandir: %s\n", __func__, strerror(errno));
+#endif
 		return -ENOENT;
 	}
 
@@ -313,7 +317,9 @@ int check_loaded_modules(void)
 	}
 
 	if (rc != SUCCESS) {
+#ifndef SERVER
 		fprintf(stderr, "Please ensure that the RapidDisk-Cache module is loaded and retry.\n");
+#endif
 		list = clean_scandir(list, i);
 		return rc;
 	}

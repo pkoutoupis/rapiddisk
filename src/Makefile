@@ -57,9 +57,9 @@ BIN_DAEMON_NDEBUG := rapiddiskd
 BIN_TOOL_DEBUG := rapiddisk_debug
 BIN_DAEMON_DEBUG := rapiddiskd_debug
 OBJS_TOOL_NDEBUG := main_ndebug.o utils_ndebug.o json_ndebug.o rdsk_ndebug.o nvmet_ndebug.o sys_ndebug.o
-OBJS_DAEMON_NDEBUG := rapiddiskd_ndebug.o utils_ndebug.o json-server_ndebug.o nvmet-server_ndebug.o net_ndebug.o rdsk-server_ndebug.o sys-server_ndebug.o
+OBJS_DAEMON_NDEBUG := rapiddiskd_ndebug.o utils-server_ndebug.o json-server_ndebug.o nvmet-server_ndebug.o net_ndebug.o rdsk-server_ndebug.o sys-server_ndebug.o
 OBJS_TOOL_DEBUG := main_debug.o utils_debug.o json_debug.o nvmet_debug.o rdsk_debug.o sys_debug.o
-OBJS_DAEMON_DEBUG := rapiddiskd_debug.o utils_debug.o json-server_debug.o nvmet-server_debug.o net_debug.o rdsk-server_debug.o sys-server_debug.o
+OBJS_DAEMON_DEBUG := rapiddiskd_debug.o utils-server_debug.o json-server_debug.o nvmet-server_debug.o net_debug.o rdsk-server_debug.o sys-server_debug.o
 SRC := json.c main.c net.c nvmet.c rapiddiskd.c rdsk.c sys.c utils.c
 
 .PHONY: all
