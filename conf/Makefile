@@ -23,6 +23,7 @@ SERVICE = rapiddisk
 CFG_DIR := /etc/$(SERVICE)/
 SYSD_DIR := /etc/systemd/system
 CHMOD := chmod
+INSTALL := install -D -m 755 -t
 
 .PHONY: all
 all: 
@@ -31,12 +32,9 @@ all:
 .PHONY: install
 install: all
 	@echo Installing rapiddisk high availability and rapiddiskd daemon files.
-	$(MKDIR) $(DESTDIR)$(CFG_DIR)
-	$(CP) $(SERVICE).* $(DESTDIR)$(CFG_DIR)
-	$(CHMOD) -R 755 $(DESTDIR)$(CFG_DIR)
-	$(MKDIR) $(DESTDIR)$(SYSD_DIR)
-	$(CP) $(SERVICE)d.* $(DESTDIR)$(SYSD_DIR)
-	$(CHMOD) -R 755 $(DESTDIR)$(SYSD_DIR)
+	$(INSTALL) $(DESTDIR)$(CFG_DIR) $(SERVICE).*
+	$(INSTALL) $(DESTDIR)$(SYSD_DIR) $(SERVICE)d.*
+
 
 .PHONY: uninstall
 uninstall: 
@@ -44,6 +42,5 @@ uninstall:
 	$(RM) $(DESTDIR)$(CFG_DIR)
 	$(RM) $(DESTDIR)$(SYSD_DIR)/$(SERVICE)d.*
 
-.PHONY: clean
-clean:
-	@echo Nothing to do.
+.PHONY: clean install-strip debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools dkms-uninstall dkms-install
+clean install-strip debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools dkms-uninstall dkms-install:

@@ -6,8 +6,8 @@ License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: gcc,make,kernel-headers,kernel-devel,dkms,jansson,libmicrohttpd12
-BuildRequires: kernel-headers,kernel-devel,gcc,make,jansson-devel,libmicrohttpd-devel
+Requires: gcc,make,kernel-headers,kernel-devel,dkms
+BuildRequires: kernel-headers,kernel-devel,gcc,make
 
 %description
 The RapidDisk software defined advanced RAM drive and storage
@@ -19,6 +19,8 @@ locally or across an NVMe Target network.
 %package utils
 Summary: The RapidDisk administration utilities.
 Group: Applications/System
+Requires: rapiddisk,jansson,libmicrohttpd,pcre2-utf16,pcre2-utf32,device-mapper-libs
+BuildRequires: gcc,make,jansson-devel,libmicrohttpd-devel,pcre2-devel,device-mapper-devel,systemd
 
 %description utils
 The RapidDisk software defined advanced RAM drive and storage
@@ -28,56 +30,79 @@ RapidDisk enabled storage volumes and accessing them either
 locally or across an NVMe Target network.
 
 %prep
-%setup -T -D -n rapiddisk
+%setup -q
 
 %build
-make
+# invokes `make` into selected subdirs only
+make -j -C src strip
 
 %install
 rm -rf %{buildroot}
-cd src
-make DESTDIR=%{buildroot}/ install
+# no `make install` nor `make` needed here, since the modules will be compiled and
+# put in place into the `post` section by `dkms`
+#
+# prepare the source directory for `dkms` with the proper files
+mkdir -pv %{buildroot}/usr/src/rapiddisk-%{version}
+cd module
+cp -v dkms.conf %{buildroot}/usr/src/rapiddisk-%{version}
+cp -v {rapiddisk,rapiddisk-cache}.c  %{buildroot}/usr/src/rapiddisk-%{version}
+cp -v Makefile %{buildroot}/usr/src/rapiddisk-%{version}
+
+# invokes `make install` into selected subdirs only
+cd ../src
+make -j DESTDIR=%{buildroot} install
 cd ../doc
-make DESTDIR=%{buildroot}/ install
+make -j DESTDIR=%{buildroot} install
 cd ../conf
-make DESTDIR=%{buildroot}/ install
-cd ../module
-mkdir -pv %{buildroot}/usr/src/rapiddisk-%{version}/
-cp -v dkms.conf  %{buildroot}/usr/src/rapiddisk-%{version}/
-cp -v {rapiddisk,rapiddisk-cache}.c  %{buildroot}/usr/src/rapiddisk-%{version}/
-cp -v Makefile  %{buildroot}/usr/src/rapiddisk-%{version}/
+install -D -m 755 -t %{buildroot}/etc/rapiddisk rapiddisk.sh.pacemaker rapiddisk.sh.rgmanager
+install -D -m 644 -t %{buildroot}%{_unitdir} rapiddiskd.service
+# creates the `etc/sysconfig/modules/rapiddisk.modules` file which loads the rapiddisk's modules on boot
+mkdir -pv  %{buildroot}/etc/sysconfig/modules
+echo -ne "#!/bin/sh\nmodprobe rapiddisk max_sectors=2048 nr_requests=1024 2>&1 >/dev/null" >  %{buildroot}/etc/sysconfig/modules/rapiddisk.modules
+echo -e "\nmodprobe rapiddisk-cache 2>&1 >/dev/null" >>  %{buildroot}/etc/sysconfig/modules/rapiddisk.modules
+chmod +x  %{buildroot}/etc/sysconfig/modules/rapiddisk.modules
+mkdir -pv %{buildroot}/usr/lib/systemd/system-preset
+echo "enable rapiddiskd.service" >%{buildroot}/usr/lib/systemd/system-preset/30-rapiddiskd.preset
 
 %post
-dkms add -m rapiddisk -v %{version}
-dkms build -m rapiddisk -v %{version}
+# invokes dkms to add the source files installed in the `install` section. Note the `--rpm_safe_upgrade` option
+dkms --rpm_safe_upgrade add -m rapiddisk -v %{version}
+# invokes dkms to build and install the modules for the current kernel
 dkms install -m rapiddisk -v %{version}
-echo -ne "#!/bin/sh\nmodprobe rapiddisk max_sectors=2048 nr_requests=1024 2>&1 >/dev/null" > /etc/sysconfig/modules/rapiddisk.modules
-echo -ne "\nmodprobe rapiddisk-cache 2>&1 >/dev/null" >> /etc/sysconfig/modules/rapiddisk.modules
-chmod +x /etc/sysconfig/modules/rapiddisk.modules
+# loads the modules
 sh /etc/sysconfig/modules/rapiddisk.modules
 
+%post utils
+%systemd_post rapiddiskd.service
+
 %preun
-dkms remove -m rapiddisk -v %{version} --all|test 0
+# note the `--rpm_safe_upgrade` option
+dkms --rpm_safe_upgrade remove -m rapiddisk -v %{version} --all
+
+%preun utils
+%systemd_preun rapiddiskd.service
 
 %postun
-rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rapiddisk,rapiddisk-cache}.ko
-rm -f /etc/sysconfig/modules/rapiddisk.modules
+
+%postun utils
+%systemd_postun_with_restart rapiddiskd.service
 
 %clean
 rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root)
-/etc/*
-/sbin/*
 /usr/src/rapiddisk-*
+%attr(0755,root,root) /etc/sysconfig/modules/rapiddisk.modules
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %files utils
 %defattr(-,root,root)
-/etc/*
-/sbin/*
-%doc %attr(0444,root,root) /usr/share/man/man1/*
+%attr(0644,root,root) %{_unitdir}/rapiddiskd.service
+%attr(0755,root,root) /etc/rapiddisk
+%attr(0755,root,root) /sbin/rapiddisk
+%attr(0755,root,root) /sbin/rapiddiskd
+%attr(0644,root,root) /usr/lib/systemd/system-preset/30-rapiddiskd.preset
 
 %changelog
 * Sat Jun 11 2022 Petros Koutoupis <petros@petroskoutoupis.com>
@@ -130,7 +155,7 @@ rm -rf %{buildroot}
 - utility: Restructured userspace CLI
 - test: Restructured and improved test framework
 - misc: Code / documentation cleanup
-* Thu May 26 2020 Petros Koutoupis <petros@petroskoutoupis.com>
+* Tue May 26 2020 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: added support for 5.7 kernel
 - utility: fixed GCC compilation warnings
 - utility: code style cleanup

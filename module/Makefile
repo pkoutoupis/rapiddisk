@@ -49,7 +49,7 @@ uninstall:
 
 clean:
 	rm -rf *.o *.ko *.symvers *.mod.c .*.cmd Module.markers modules.order *.o.* built-in*
-	rm -rf .tmp_versions .rapiddisk.o.d *.unsigned *.sdtinfo.c .ctf/ .cache.mk *.mod
+	rm -rf .tmp_versions .rapiddisk.o.d .rapiddisk-cache.o.d *.unsigned *.sdtinfo.c .ctf/ .cache.mk *.mod
 
 dkms-install: clean uninstall
 ifeq ($(shell which dkms >/dev/null 2>/dev/null; echo $$?),1)
@@ -69,3 +69,9 @@ else ifeq ($(shell dkms status rapiddisk/$(VERSION) -k $(KVER) | grep '$(KVER)' 
 else
 	$(error rapiddisk version $(VERSION) is not installed for kernel $(KVER))
 endif
+
+.PHONY: test
+run-test: all
+
+.PHONY: install-strip debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools
+install-strip debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools:

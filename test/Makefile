@@ -24,28 +24,15 @@ BIN = rxflush rxio rxioctl rxro
 
 .PHONY: all
 all: $(BIN)
-	@echo Make has completed.
 
-.PHONY: install
-install: all
-	@echo Nothing to do.
-
-.PHONY: uninstall
-uninstall:
-	@echo Nothing to do.
-
-rxflush: rxflush.c
-	$(CC) rxflush.c -o rxflush
-
-rxio: rxio.c
-	$(CC) rxio.c -o rxio
-
-rxro: rxro.c
-	$(CC) rxro.c -o rxro
-
-rxioctl: rxioctl.c
-	$(CC) rxioctl.c -o rxioctl
+.PHONY: run-test
+run-test: all
+	./test-leaks.sh
+	./cache-test.sh
 
 .PHONY: clean
 clean:
 	rm -f $(BIN)
+
+.PHONY: install install-strip uninstall debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools dkms-uninstall dkms-install
+install install-strip uninstall debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools dkms-uninstall dkms-install:

@@ -1,57 +1,92 @@
-/*********************************************************************************
- ** Copyright © 2011 - 2022 Petros Koutoupis
- ** All rights reserved.
- **
- ** This file is part of RapidDisk.
- **
- ** RapidDisk is free software: you can redistribute it and/or modify
- ** it under the terms of the GNU General Public License as published by
- ** the Free Software Foundation, either version 2 of the License, or
- ** (at your option) any later version.
- **
- ** RapidDisk is distributed in the hope that it will be useful,
- ** but WITHOUT ANY WARRANTY; without even the implied warranty of
- ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- ** GNU General Public License for more details.
- **
- ** You should have received a copy of the GNU General Public License
- ** along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
- **
- ** SPDX-License-Identifier: GPL-2.0-or-later
- **
- ** @project: rapiddisk
- **
- ** @filename: json.c
- ** @description: This file contains the function to build and handle JSON objects.
- **
- ** @date: 15Oct10, petros@petroskoutoupis.com
- ********************************************************************************/
+/**
+ * @copyright @verbatim
+Copyright © 2011 - 2022 Petros Koutoupis
+
+All rights reserved.
+
+This file is part of RapidDisk.
+
+RapidDisk is free software: you can redistribute it and/or modify@n
+		it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+RapidDisk is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with RapidDisk.  If not, see <http://www.gnu.org/licenses/>.
+
+SPDX-License-Identifier: GPL-2.0-or-later
+@endverbatim
+* @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
+* @author Matteo Tenca \<matteo.tenca\@gmail.com\>
+* @version 8.2.0
+* @date 26 September 2022
+*/
 
 #include "common.h"
 #include <jansson.h>
 
-#if !defined SERVER
-
-#include "cli.h"
-
 /*
  * JSON output format:
  * {
+ *    "message": "Optional message",
  *    "status": "Success"
  * }
  */
 
-int json_status_return(int status)
+/**
+ *
+ * This function is intended to provide a simple way to create a JSON string which contains
+ * a status ("Success" or "Failed") derived from an integer, and an optional message.
+ *
+ * @param return_value if @p return_value is != @p 'SUCCESS', the JSON result will
+ *                     contain:
+ *                     @code{.json}
+ *                     {
+ *                         "status": "Failed"
+ *                     }
+ *                     @endcode
+ *                     else
+ *                     @code{.json}
+ *                     {
+ *                         "status": "Success"
+ *                     }
+ *                     @endcode
+ * @param optional_message if <tt>!= NULL</tt>, the JSON result string will contain
+ *                       an additional field called @p message:
+ *                       @code{.json}
+ *                       {
+ *                          "message": result_message
+ *                       }
+ *                       @endcode
+ * @param json_result if @p wantresult is @p TRUE, the JSON string pointer is copied into @p *json_result, which
+ *                    @b must be @p free()d later. Otherwise, the JSON string is printed to stdout.
+ * @param wantresult see @p json_result paramater
+ * @return An @p int representing the result of the operation.
+ */
+int json_status_return(int return_value, char *optional_message, char **json_result, bool wantresult)
 {
 	json_t *root = json_object();
 
-	json_object_set_new(root, "status", json_string((status == SUCCESS) ? "Success" : "Failed"));
-
-	printf("%s\n", json_dumps(root, 0));
-
+	json_object_set_new(root, "status", json_string((return_value == SUCCESS) ? "Success" : "Failed"));
+	if (optional_message && (strlen(optional_message) > 0))
+		json_object_set_new(root, "message", json_string(optional_message));
+	char *jdumped = json_dumps(root, 0);
 	json_decref(root);
-
-	return SUCCESS;
+	if (jdumped != NULL) {
+		if (wantresult) {
+			*json_result = jdumped;
+		} else {
+			printf("%s\n", jdumped);
+			if (jdumped != NULL) free(jdumped);
+		}
+		return SUCCESS;
+	}
+	return INVALID_VALUE;
 }
 
 /*
@@ -88,12 +123,25 @@ int json_status_return(int status)
  * }
  */
 
-int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
+/**
+ * It takes a linked list of RD_PROFILE and RC_PROFILE structures, and returns or print a JSON string
+ *
+ * @param rd A pointer to the first element of the linked list of RD_PROFILE structures.
+ * @param rc The RC_PROFILE pointer to the first element of the linked list of RC_PROFILEs.
+ * @param list_result This is the pointer to the pointer to the JSON string that will be valued if needed.
+ * @param wantresult If TRUE, the function will place the pointer to the JSON string into *list_result (must be free()d later).
+ * If FALSE, the function will print the JSON string to stdout.
+ *
+ * @return An @p int representing the result.
+ */
+int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc, char **list_result, bool wantresult)
 {
 	json_t *root, *array = json_array();
 	json_t *rd_array = json_array(), *rc_array = json_array();
-        json_t *rd_object = json_object(), *rc_object = json_object() ;
-	unsigned char mode[0x20] = {0x0};
+	json_t *rd_object = json_object(), *rc_object = json_object() ;
+	char mode[0x20] = {0x0};
+	char *jdumped = NULL;
+	int res = SUCCESS;
 
 	while (rd != NULL) {
 		json_t *object = json_object();
@@ -121,14 +169,14 @@ int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
 		json_object_set_new(object, "cache", json_string(rc->cache));
 		json_object_set_new(object, "source", json_string(rc->source));
 		memset(mode, 0x0, sizeof(mode));
-                if (strncmp(rc->device, "rc-wt_", 5) == 0) {
-                        sprintf(mode, "write-through");
-                } else if (strncmp(rc->device, "rc-wb_", 5) == 0) {
-                        sprintf(mode, "writeback");
-                } else {
-                        sprintf(mode, "write-around");
-                }
-                json_object_set_new(object, "mode", json_string(mode));
+		if (strncmp(rc->device, "rc-wt_", 5) == 0) {
+			sprintf(mode, "write-through");
+		} else if (strncmp(rc->device, "rc-wb_", 5) == 0) {
+			sprintf(mode, "writeback");
+		} else {
+			sprintf(mode, "write-around");
+		}
+		json_object_set_new(object, "mode", json_string(mode));
 		json_array_append_new(rc_array, object);
 		rc = rc->next;
 	}
@@ -137,15 +185,23 @@ int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
 
 	root = json_pack("{s:o}", "volumes", array);
 
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(rd_array);
-	json_decref(rc_array);
-	json_decref(array);
+	jdumped = json_dumps(root, 0);
 	json_decref(root);
+	if (jdumped != NULL) {
+		if (!wantresult) { // We just need the JSON string to be printed
+			printf("%s\n", jdumped);
+			free(jdumped);
+			jdumped = NULL;
+		} else { // We want to return the JSON string as a pointer == daemon == must be free()d
+			*list_result = jdumped;
+		}
+	} else {
+		res = INVALID_VALUE;
+	}
 
-	return SUCCESS;
+	return res;
 }
+
 
 /*
  * JSON output format:
@@ -173,10 +229,24 @@ int json_device_list(struct RD_PROFILE *rd, struct RC_PROFILE *rc)
  * }
  */
 
-int json_resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volume)
+/**
+ * It takes a pointer to a memory profile and a pointer to a volume profile, and returns or print a JSON string containing the
+ * memory and volume profiles
+ *
+ * @param mem a pointer to a struct MEM_PROFILE
+ * @param volume A pointer to the first element of the linked list of VOLUME_PROFILE structures.
+ * @param list_result This is the pointer to the pointer to the JSON string that will be valued if needed.
+ * @param wantresult If TRUE, the function will place the pointer to the JSON string into *list_result (must be free()d later).
+ * If FALSE, the function will print the JSON string to stdout.
+ *
+ * @return An @p int representing the result.
+ */
+int json_resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volume, char **list_result, bool wantresult)
 {
 	json_t *root, *array = json_array(), *mem_array = json_array(), *vol_array = json_array();
 	json_t *mem_object = json_object(), *vol_object = json_object() ;
+	char *jdumped = NULL;
+	int res = SUCCESS;
 
 	if (mem != NULL) {
 		json_t *object = json_object();
@@ -187,28 +257,34 @@ int json_resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volume)
 	json_object_set_new(mem_object, "memory", mem_array);
 	json_array_append_new(array, mem_object);
 
-        while (volume != NULL) {
-                json_t *object = json_object();
-                json_object_set_new(object, "device", json_string(volume->device));
-                json_object_set_new(object, "size", json_integer(volume->size));
-                json_object_set_new(object, "vendor", json_string(volume->vendor));
-                json_object_set_new(object, "model", json_string(volume->model));
-                json_array_append_new(vol_array, object);
-                volume = volume->next;
-        }
+	while (volume != NULL) {
+		json_t *object = json_object();
+		json_object_set_new(object, "device", json_string(volume->device));
+		json_object_set_new(object, "size", json_integer(volume->size));
+		json_object_set_new(object, "vendor", json_string(volume->vendor));
+		json_object_set_new(object, "model", json_string(volume->model));
+		json_array_append_new(vol_array, object);
+		volume = volume->next;
+	}
 	json_object_set_new(vol_object, "volumes", vol_array);
 	json_array_append_new(array, vol_object);
 
 	root = json_pack("{s:o}", "resources", array);
-
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(mem_array);
-	json_decref(vol_array);
-	json_decref(array);
+	jdumped = json_dumps(root, 0);
 	json_decref(root);
+	if (jdumped != NULL) {
+		if (!wantresult) { // We just need the JSON string to be printed
+			printf("%s\n", jdumped);
+			free(jdumped);
+			jdumped = NULL;
+		} else { // We want to return the JSON string as a pointer == daemon == must be free()d
+			*list_result = jdumped;
+		}
+	} else {
+		res = INVALID_VALUE;
+	}
 
-	return SUCCESS;
+	return res;
 }
 
 /*
@@ -239,9 +315,21 @@ int json_resources_list(struct MEM_PROFILE *mem, struct VOLUME_PROFILE *volume)
  *  }
  */
 
-int json_cache_statistics(struct RC_STATS *stats)
+/**
+ * It takes a pointer to a struct RC_STATS, a pointer to a pointer to a char, and a bool, and returns an int
+ *
+ * @param stats A pointer to a struct RC_STATS. If this is NULL, then the function will return an empty JSON object.
+ * @param stats_result A pointer to a char pointer. This is where the pointer to the JSON string will be stored.
+ * @param wantresult If TRUE, the function will place the pointer to the JSON string into *stats_result (must be free()d later).
+ * If FALSE, the JSON string will be printed to stdout.
+ *
+ * @return An @p int representing the result.
+ */
+int json_cache_statistics(struct RC_STATS *stats, char **stats_result, bool wantresult)
 {
 	json_t *root, *array = json_array(), *stats_array = json_array(), *stats_object = json_object();
+	char *jdumped = NULL;
+	int res = SUCCESS;
 
 	if (stats != NULL) {
 		json_t *object = json_object();
@@ -265,13 +353,21 @@ int json_cache_statistics(struct RC_STATS *stats)
 	json_array_append_new(array, stats_object);
 
 	root = json_pack("{s:o}", "statistics", array);
-
-	printf("%s\n", json_dumps(root, 0));
-
-        json_decref(stats_array);
+	jdumped = json_dumps(root, 0);
 	json_decref(root);
+	if (jdumped != NULL) {
+		if (!wantresult) { // We just need the JSON string to be printed
+			printf("%s\n", jdumped);
+			free(jdumped);
+			jdumped = NULL;
+		} else { // We want to return the JSON string as a pointer == daemon == must be free()d
+			*stats_result = jdumped;
+		}
+	} else {
+		res = INVALID_VALUE;
+	}
 
-	return SUCCESS;
+	return res;
 }
 
 /*
@@ -293,9 +389,22 @@ int json_cache_statistics(struct RC_STATS *stats)
  *  }
  */
 
-int json_cache_wb_statistics(struct WC_STATS *stats)
+/**
+ * It takes a pointer to a struct WC_STATS, and returns a JSON string containing the statistics
+ *
+ * @param stats A pointer to a struct WC_STATS. If NULL, the function will return an empty JSON object.
+ * @param stats_result This is a pointer to a pointer to a char.  It's a pointer to a pointer because we want to return the
+ * JSON string to the caller.  The caller will need to free() the JSON string.
+ * @param wantresult If TRUE, the function will place the pointer to the JSON string into *stats_result (must be free()d later).
+ * If FALSE, the JSON string will be printed to stdout.
+ *
+ * @return An @p int representing the result.
+ */
+int json_cache_wb_statistics(struct WC_STATS *stats, char **stats_result, bool wantresult)
 {
-        json_t *root, *array = json_array(), *stats_array = json_array(), *stats_object = json_object();
+	json_t *root, *array = json_array(), *stats_array = json_array(), *stats_object = json_object();
+	char *jdumped = NULL;
+	int res = SUCCESS;
 
 	if (stats != NULL) {
 		json_t *object = json_object();
@@ -322,14 +431,24 @@ int json_cache_wb_statistics(struct WC_STATS *stats)
 	json_array_append_new(array, stats_object);
 
 	root = json_pack("{s:o}", "statistics", array);
-
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(stats_array);
+	jdumped = json_dumps(root, 0);
 	json_decref(root);
+	if (jdumped != NULL) {
+		if (!wantresult) { // We just need the JSON string to be printed
+			printf("%s\n", jdumped);
+			free(jdumped);
+			jdumped = NULL;
+		} else { // We want to return the JSON string as a pointer == daemon == must be free()d
+			*stats_result = jdumped;
+		}
+	} else {
+		res = INVALID_VALUE;
+	}
 
-	return SUCCESS;
+	return res;
 }
+
+
 
 /*
  * JSON output format:
@@ -365,10 +484,22 @@ int json_cache_wb_statistics(struct WC_STATS *stats)
  * }
  */
 
-int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *ports)
+/**
+ * It takes a linked list of NVMET_PROFILE and NVMET_PORTS structures and converts them to JSON
+ *
+ * @param nvmet A pointer to the first element of the linked list of NVMET_PROFILE structures.
+ * @param ports A pointer to the first element of the linked list of NVMET_PORTS structures.
+ * @param json_result This is a pointer to a pointer to a char.  It's used to return the JSON string to the caller.
+ * @param wantresult If TRUE, the function will place the pointer to the JSON string into *stats_result (must be free()d later).
+ * If FALSE, the JSON string will be printed to stdout.
+ *
+ * @return A JSON string containing the NVMET targets and ports.
+ */
+int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *ports, char **json_result, bool wantresult)
 {
 	json_t *root, *array = json_array(), *nvmet_array = json_array(), *ports_array = json_array();
 	json_t *nvmet_object = json_object(), *ports_object = json_object();
+	int res = SUCCESS;
 
 	while (nvmet != NULL) {
 		json_t *object = json_object();
@@ -395,15 +526,21 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
 	json_array_append_new(array, ports_object);
 
 	root = json_pack("{s:o}", "targets", array);
-
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(nvmet_array);
-	json_decref(ports_array);
-	json_decref(array);
+	char *jdumped = json_dumps(root, 0);
+	if (jdumped != NULL) {
+		if (!wantresult) { // We just need the JSON string to be printed
+			printf("%s\n", jdumped);
+			free(jdumped);
+			jdumped = NULL;
+		} else { // We want to return the JSON string as a pointer == daemon == must be free()d
+			*json_result = jdumped;
+		}
+	} else {
+		res = INVALID_VALUE;
+	}
 	json_decref(root);
 
-	return SUCCESS;
+	return res;
 }
 
 /*
@@ -422,10 +559,22 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
  *   ]
  * }
  */
-int json_nvmet_view_ports(struct NVMET_PORTS *ports)
+
+/**
+ * It takes a linked list of NVMET ports and returns a JSON string
+ *
+ * @param ports A pointer to the first element of a linked list of NVMET_PORTS structures.
+ * @param json_result This is a pointer to a char pointer. If you want to return the JSON string, you must set this to the
+ * address of a char pointer. If you don't want to return the JSON string, you must set this to NULL.
+ * @param wantresult If true, the JSON string is returned as a pointer. If false, the JSON string is printed to stdout.
+ *
+ * @return The function status result.
+ */
+int json_nvmet_view_ports(struct NVMET_PORTS *ports, char **json_result, bool wantresult)
 {
 	json_t *root, *array = json_array(), *ports_array = json_array();
 	json_t *ports_object = json_object();
+	int res = SUCCESS;
 
 	while (ports != NULL) {
 		json_t *object = json_object();
@@ -439,17 +588,25 @@ int json_nvmet_view_ports(struct NVMET_PORTS *ports)
 	json_array_append_new(array, ports_object);
 
 	root = json_pack("{s:o}", "targets", array);
-
-	printf("%s\n", json_dumps(root, 0));
-
-	json_decref(ports_array);
-	json_decref(array);
+	char *jdumped = json_dumps(root, 0);
+	if (jdumped != NULL) {
+		if (!wantresult) { // We just need the JSON string to be printed
+			printf("%s\n", jdumped);
+			free(jdumped);
+			jdumped = NULL;
+		} else { // We want to return the JSON string as a pointer == daemon == must be free()d
+			*json_result = jdumped;
+		}
+	} else {
+		res = INVALID_VALUE;
+	}
 	json_decref(root);
 
-	return SUCCESS;
+	return res;
+
 }
 
-#else
+#ifdef SERVER
 
 /*
  * JSON output format:
@@ -459,38 +616,32 @@ int json_nvmet_view_ports(struct NVMET_PORTS *ports)
  * }
  */
 
-int json_status_check(unsigned char *message)
+/**
+ * It creates a JSON object with two key/value pairs, "status" and "version", and returns the JSON object as a string
+ *
+ * @param json_str This is a pointer to a pointer to a char.  It's used to return the JSON string to the caller.
+ *
+ * @return An @p int representing the result.
+ */
+int json_status_check(char **json_str)
 {
+	int rc = INVALID_VALUE;
 	json_t *root = json_object();
 
 	json_object_set_new(root, "status", json_string("OK"));
 	json_object_set_new(root, "version", json_string(VERSION_NUM));
 
-	sprintf(message, "%s\n", json_dumps(root, 0));
+	char *jdumped = json_dumps(root, 0);
+	if (jdumped != NULL) {
+		if (json_str != NULL) {
+			*json_str = jdumped;
+			rc = SUCCESS;
+		}
+	}
 
 	json_decref(root);
 
-	return SUCCESS;
-}
-
-/*
- * JSON output format:
- * {
- *    "status": "Unsupported"
- * }
- */
-
-int json_status_unsupported(unsigned char *message)
-{
-	json_t *root = json_object();
-
-	json_object_set_new(root, "status", json_string("Unsupported"));
-
-	sprintf(message, "%s\n", json_dumps(root, 0));
-
-	json_decref(root);
-
-	return SUCCESS;
+	return rc;
 }
 
 #endif

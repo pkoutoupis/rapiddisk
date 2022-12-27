@@ -37,6 +37,5 @@ uninstall:
 	$(RM) $(DESTDIR)$(MAN_DIR)/rapiddisk.1
 	$(RM) $(DESTDIR)$(MAN_DIR)/rapiddiskd.1
 
-.PHONY: clean
-clean:
-	@echo Nothing to do.
+.PHONY: clean install-strip debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools dkms-uninstall dkms-install
+clean install-strip debug tools-strip tools-debug tools-uninstall tools-install-strip tools-install clean-tools tools dkms-uninstall dkms-install:
