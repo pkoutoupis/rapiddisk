@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (C) 2015 - 2022 Petros Koutoupis. All rights reserved.
+# Copyright (C) 2015 - 2023 Petros Koutoupis. All rights reserved.
 #
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin

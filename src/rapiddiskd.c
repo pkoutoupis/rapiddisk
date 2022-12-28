@@ -1,6 +1,6 @@
 /**
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -23,7 +23,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 8.2.0
+* @version 9.0.0
 * @date 26 September 2022
 */
 
@@ -40,11 +40,11 @@ void online_menu(void)
 	printf("%s is a daemon intended to listen for API requests.\n\n"
 		   "Usage: %s [ -h | -v ] [ options ]\n\n", DAEMON, DAEMON);
 	printf("Functions:\n"
+		   "\t-d\tRemain in the foreground (implies -V).\n"
 		   "\t-h\tPrint this exact help menu.\n"
 		   "\t-p\tChange port to listen on (default: 9118).\n"
 		   "\t-V\tEnable debug messages to stderr (this is ugly).\n"
-		   "\t-v\tPrint out version information.\n\n"
-		   "\t-d\tRemain in foreground - implies -V.\n\n");
+		   "\t-v\tPrint out version information.\n\n");
 }
 
 /*
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	pid_t pid;
 	int rc = SUCCESS, i;
 	int stdin_f = -1, stdout_f = -1, stderr_f = -1;
-	struct PTHREAD_ARGS *args = NULL;
+	struct DAEMON_ARGS *args = NULL;
 	bool verbose = FALSE, debug = FALSE;
 	char port[6] = {0}; // max port is 65535 so 5 chars + 1 (NULL)
 	char msg[NAMELEN] = {0};
@@ -320,7 +320,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Allocating the args structure, this was moved after the fork to avoid duplicating/freeing it for every fork() */
-	args = (struct PTHREAD_ARGS *)calloc(1, sizeof(struct PTHREAD_ARGS));
+	args = (struct DAEMON_ARGS *)calloc(1, sizeof(struct DAEMON_ARGS));
 	if (args == NULL) {
 		syslog(LOG_ERR|LOG_DAEMON, ERR_CALLOC, __func__, strerror(errno));
 		syslog(LOG_ERR|LOG_DAEMON, D_EXITING);

@@ -1,6 +1,9 @@
 /**
+ * @file util.c
+ * @brief Utility function definitions
+ * @details This file contains all the utility functions
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -23,7 +26,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 8.2.0
+* @version 9.0.0
 * @date 26 September 2022
 */
 #include "utils.h"

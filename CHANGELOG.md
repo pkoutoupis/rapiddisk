@@ -1,3 +1,27 @@
+### Release 9.0.0 ###
+- module: Added code to capture page count metrics.
+- module: Updated ioctl support.
+- module: Fixed page alloc usage decrement on discard.
+- module: Added shrink volume support.
+- module: Added support for 5.19 Linux kernels (thank you Andrea Righi).
+- module: Added support for 6.0 Linux kernels.
+- utility: Added code to lock/unlock RAM device.
+- utility: Added flag to suppress header in stdout (thank you Matteo Tenca).
+- utility: Added support for RapidDisk "model" branding and support for revalidate size in NVMe Target logic.
+- utility: Traced, found and fixed all discovered memory leaks (a huge undertaking, thank you Matteo Tenca!!!).
+- utility: Rewrite daemon to execute commands from a shared library instead of popen to utility (another huge undertaking, thank you Matteo Tenca!!!).
+- utility: Added checks in URL parsing logic for REST API (thank you Matteo Tenca).
+- utility: Fix forking logic in daemon and remove need for realpath() usage (thank you Matteo Tenca).
+- utility: Define and standardize error messaging for consistency and improve verbose mode (thank you Matteo Tenca).
+- scripts: Fixed error checking in NVMe Target hostnqn script file.
+- scripts: Added fio execution script file examples.
+- scripts: Added valgrind test script to check for memory leaks (thank you Matteo Tenca).
+- build: Update Makefiles and add support for CPPFLAGS, CFLAGS, LDFLAGS, etc. (thank you Matteo Tenca).
+- build: Update Debian and RPM packaging with updated depends (thank you Matteo Tenca).
+- documentation: Added dm-writecache stats notes.
+- documentation: Added contrib file and cleaned up README and man pages.
+- documentation: Added doxygen documentation support (thank you Matteo Tenca).
+
 ### Release 8.2.0 ###
 - module: Fixed support for 5.14.
 - documentation: Updated README files.

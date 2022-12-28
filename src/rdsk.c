@@ -1,6 +1,9 @@
 /**
+ * @file rdsk.c
+ * @brief RapidDisk function definitions
+ * @details This file defines some RapidDisk related functions
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -23,7 +26,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 8.2.0
+* @version 9.0.0
 * @date 26 September 2022
 */
 
@@ -145,7 +148,7 @@ char *read_info(char *name, char *string, char *return_message)
 	}
 	fclose(fp);
 	len = strlen(buf);
-	strncpy(obuf, buf, (len - 1));
+	strncpy(obuf, buf, (len - 1));   /* Do not copy tailing escape character */
 	sprintf(obuf, "%s", obuf);
 
 	return obuf;

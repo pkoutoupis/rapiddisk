@@ -3,7 +3,7 @@
  * @brief Disk functions and constants
  * @details This header file defines constants and functions related to disk access
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -26,7 +26,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 8.2.0
+ * @version 9.0.0
  * @date 26 September 2022
  */
 
@@ -36,11 +36,11 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #include "common.h"
 
 #define BYTES_PER_SECTOR	0x200
-#define SYS_BLOCK			"/sys/block"
-#define ETC_MTAB			"/etc/mtab"
-#define DEV_MAPPER			"/dev/mapper"
+#define SYS_BLOCK		"/sys/block"
+#define ETC_MTAB		"/etc/mtab"
+#define DEV_MAPPER		"/dev/mapper"
 #define RD_GET_USAGE		0x0530
-#define PAGE_SIZE			0x1000
+#define PAGE_SIZE		0x1000
 
 void print_error(char *format_string, char *return_message, ...);
 char *read_info(char *name, char *string, char *return_message);

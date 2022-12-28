@@ -4,15 +4,15 @@ Upstream-Contact: Petros Koutoupis <petros@petroskoutoupis.com>
 Source: https://github.com/pkoutoupis/rapiddisk/
 
 Files: *
-Copyright: 2015-2022 Petros Koutoupis <petros@petroskoutoupis.com>
+Copyright: 2015-2023 Petros Koutoupis <petros@petroskoutoupis.com>
 License: GPL-2.0+
 
 Files: pkg/debian/*
-Copyright: 2022 Matteo Tenca <matteo.tenca@gmail.com>
+Copyright: 2022-2023 Matteo Tenca <matteo.tenca@gmail.com>
 License: GPL-2.0+
 
 Files: scripts/rapiddisk-rootdev/*
-Copyright: 2022 Matteo Tenca <matteo.tenca@gmail.com>
+Copyright: 2022-2023 Matteo Tenca <matteo.tenca@gmail.com>
 License: GPL-2.0+
 
 License: GPL-2.0+

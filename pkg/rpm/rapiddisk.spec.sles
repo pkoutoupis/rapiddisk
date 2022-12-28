@@ -1,13 +1,13 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 8.2.0
+Version: 9.0.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
-Requires: gcc,make,kernel-headers,kernel-devel,dkms,libjansson4,libmicrohttpd12
-BuildRequires: kernel-headers,kernel-devel,gcc,make,libjansson-devel,libmicrohttpd-devel
+Requires: gcc,make,kernel-headers,kernel-devel,dkms
+BuildRequires: kernel-headers,kernel-devel,gcc,make
 
 %description
 The RapidDisk software defined advanced RAM drive and storage
@@ -19,6 +19,8 @@ locally or across an NVMe Target network.
 %package utils
 Summary: The RapidDisk administration utilities.
 Group: Applications/System
+Requires: rapiddisk,libjansson4,libmicrohttpd12,libpcre2-16-0,libpcre2-32-0,device-mapper
+BuildRequires: gcc,make,libjansson-devel,libmicrohttpd-devel,pcre2-devel,device-mapper-devel,systemd
 
 %description utils
 The RapidDisk software defined advanced RAM drive and storage
@@ -27,60 +29,107 @@ configuration files, and command line utilities for managing
 RapidDisk enabled storage volumes and accessing them either
 locally or across an NVMe Target network.
 
+%global debug_package %{nil}
+
 %prep
-%setup -T -D -n rapiddisk
+%setup -q
 
 %build
-make
+# invokes `make` into selected subdirs only
+make -j -C src strip
 
 %install
 rm -rf %{buildroot}
-cd src
-make DESTDIR=%{buildroot}/ install
+# no `make install` nor `make` needed here, since the modules will be compiled and
+# put in place into the `post` section by `dkms`
+#
+# prepare the source directory for `dkms` with the proper files
+mkdir -pv %{buildroot}/usr/src/rapiddisk-%{version}
+cd module
+cp -v dkms.conf %{buildroot}/usr/src/rapiddisk-%{version}
+cp -v {rapiddisk,rapiddisk-cache}.c  %{buildroot}/usr/src/rapiddisk-%{version}
+cp -v Makefile %{buildroot}/usr/src/rapiddisk-%{version}
+
+# invokes `make install` into selected subdirs only
+cd ../src
+make -j DESTDIR=%{buildroot} install
 cd ../doc
-make DESTDIR=%{buildroot}/ install
+make -j DESTDIR=%{buildroot} install
 cd ../conf
-make DESTDIR=%{buildroot}/ install
-cd ../module
-mkdir -pv %{buildroot}/usr/src/rapiddisk-%{version}/
-cp -v dkms.conf  %{buildroot}/usr/src/rapiddisk-%{version}/
-cp -v {rapiddisk,rapiddisk-cache}.c  %{buildroot}/usr/src/rapiddisk-%{version}/
-cp -v Makefile  %{buildroot}/usr/src/rapiddisk-%{version}/
+install -D -m 755 -t %{buildroot}/etc/rapiddisk rapiddisk.sh.pacemaker rapiddisk.sh.rgmanager
+install -D -m 644 -t %{buildroot}%{_unitdir} rapiddiskd.service
+# creates the `etc/sysconfig/modules/rapiddisk.modules` file which loads the rapiddisk's modules on boot
+mkdir -pv  %{buildroot}/etc/sysconfig/modules
+echo -ne "#!/bin/sh\nmodprobe rapiddisk max_sectors=2048 nr_requests=1024 2>&1 >/dev/null" >  %{buildroot}/etc/sysconfig/modules/rapiddisk.modules
+echo -e "\nmodprobe rapiddisk-cache 2>&1 >/dev/null" >>  %{buildroot}/etc/sysconfig/modules/rapiddisk.modules
+chmod +x  %{buildroot}/etc/sysconfig/modules/rapiddisk.modules
+mkdir -pv %{buildroot}/usr/lib/systemd/system-preset
+echo "enable rapiddiskd.service" >%{buildroot}/usr/lib/systemd/system-preset/30-rapiddiskd.preset
 
 %post
-dkms add -m rapiddisk -v %{version}
-dkms build -m rapiddisk -v %{version}
+# invokes dkms to add the source files installed in the `install` section. Note the `--rpm_safe_upgrade` option
+dkms --rpm_safe_upgrade add -m rapiddisk -v %{version}
+# invokes dkms to build and install the modules for the current kernel
 dkms install -m rapiddisk -v %{version}
-echo rapiddisk > /etc/modules-load.d/rapiddisk.conf
-echo rapiddisk-cache >> /etc/modules-load.d/rapiddisk.conf
-chmod 755 /etc/modules-load.d/rapiddisk.conf
-modprobe rapiddisk 
-modprobe rapiddisk-cache
+# loads the modules
+sh /etc/sysconfig/modules/rapiddisk.modules
+
+%post utils
+%systemd_post rapiddiskd.service
 
 %preun
-dkms remove -m rapiddisk -v %{version} --all
+# note the `--rpm_safe_upgrade` option
+dkms --rpm_safe_upgrade remove -m rapiddisk -v %{version} --all
+
+%preun utils
+%systemd_preun rapiddiskd.service
 
 %postun
-rm -f /lib/modules/$(uname -r)/{extra,updates,weak-updates}/{rapiddisk,rapiddisk-cache}.ko
-rm -f /etc/modules-load.d/rapiddisk.conf
+
+%postun utils
+%systemd_postun_with_restart rapiddiskd.service
 
 %clean
 rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root)
-/etc/*
-/sbin/*
 /usr/src/rapiddisk-*
+%attr(0755,root,root) /etc/sysconfig/modules/rapiddisk.modules
 %doc %attr(0444,root,root) /usr/share/man/man1/*
 
 %files utils
 %defattr(-,root,root)
-/etc/*
-/sbin/*
-%doc %attr(0444,root,root) /usr/share/man/man1/*
+%attr(0644,root,root) %{_unitdir}/rapiddiskd.service
+%attr(0755,root,root) /etc/rapiddisk
+%attr(0755,root,root) /sbin/rapiddisk
+%attr(0755,root,root) /sbin/rapiddiskd
+%attr(0644,root,root) /usr/lib/systemd/system-preset/30-rapiddiskd.preset
 
 %changelog
+* Wed Dec 28 2022 Petros Koutoupis <petros@petroskoutoupis.com>
+- module: Added code to capture page count metrics.
+- module: Updated ioctl support.
+- module: Fixed page alloc usage decrement on discard.
+- module: Added shrink volume support.
+- module: Added support for 5.19 Linux kernels (thank you Andrea Righi).
+- module: Added support for 6.0 Linux kernels.
+- utility: Added code to lock/unlock RAM device.
+- utility: Added flag to suppress header in stdout (thank you Matteo Tenca).
+- utility: Added support for RapidDisk "model" branding and support for revalidate size in NVMe Target logic.
+- utility: Traced, found and fixed all discovered memory leaks (a huge undertaking, thank you Matteo Tenca!!!).
+- utility: Rewrite daemon to execute commands from a shared library instead of popen to utility (another huge undertaking, thank you Matteo Tenca!!!).
+- utility: Added checks in URL parsing logic for REST API (thank you Matteo Tenca).
+- utility: Fix forking logic in daemon and remove need for realpath() usage (thank you Matteo Tenca).
+- utility: Define and standardize error messaging for consistency and improve verbose mode (thank you Matteo Tenca).
+- scripts: Fixed error checking in NVMe Target hostnqn script file.
+- scripts: Added fio execution script file examples.
+- scripts: Added valgrind test script to check for memory leaks (thank you Matteo Tenca).
+- build: Update Makefiles and add support for CPPFLAGS, CFLAGS, LDFLAGS, etc. (thank you Matteo Tenca).
+- build: Update Debian and RPM packaging with updated depends (thank you Matteo Tenca).
+- documentation: Added dm-writecache stats notes.
+- documentation: Added contrib file and cleaned up README and man pages.
+- documentation: Added doxygen documentation support (thank you Matteo Tenca).
 * Sat Jun 11 2022 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Fixed support for 5.14.
 - documentation: Updated README files.
@@ -104,7 +153,7 @@ rm -rf %{buildroot}
 * Fri Dec 17 2021 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Updated for 5.14 and 5.15 kernels
 - utility: Added NVMe Target support / framework
-- utility: Added support for dm-writecache status readout in API (github issue #65)
+- utility: Added support for dm-writecache status readout in API (github issue ##65)
 - utility: Module checker code now traverses via sysfs
 - utility: Added module checker in daemon
 - documentation: Clean up formatting and add content
@@ -131,7 +180,7 @@ rm -rf %{buildroot}
 - utility: Restructured userspace CLI
 - test: Restructured and improved test framework
 - misc: Code / documentation cleanup
-* Thu May 26 2020 Petros Koutoupis <petros@petroskoutoupis.com>
+* Tue May 26 2020 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: added support for 5.7 kernel
 - utility: fixed GCC compilation warnings
 - utility: code style cleanup
@@ -145,7 +194,7 @@ rm -rf %{buildroot}
 - utility: Remove dm-crypt code; Not sure why i had it in the first place. Doesn't really belong. Just use cryptsetup.
 - utility: Removed archive/restore code and dependency on zlib. Again, can just use dd and tar. Is anyone even using this?
 - misc: Updated licensing and logo location (thanks Boian!).
-* Mon May 25 2018 Petros Koutoupis <petros@petroskoutoupis.com>
+* Fri May 25 2018 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: added support for 4.17 kernel.
 - build: Cleaned up module clean Makefile.
 - Updated copyright years.
@@ -179,7 +228,7 @@ rm -rf %{buildroot}
 * Mon May 9 2016 Petros Koutoupis <petros@petroskoutoupis.com>
 - kernel: Refuse misaligned discard requests.
 - kernel: Convert ENOMEM to ENOSPC when cannot alloc pages.
-- kernel: Added 4k physical block size attribute.
+- kernel: Added 4k physical block size attribute
 * Fri Apr 22 2016 Petros Koutoupis <petros@petroskoutoupis.com>
 - Code cleanup.
 - Also need to remove CONFIG_BLK_DEV_RAM_COUNT from distro specific packages.

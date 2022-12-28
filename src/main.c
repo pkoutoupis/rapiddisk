@@ -1,6 +1,9 @@
 /**
+ * @file main.c
+ * @brief Main administration functions implementation
+ * @details This file contains all the functions related to the administration utility.
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -23,7 +26,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 8.2.0
+* @version 9.0.0
 * @date 26 September 2022
 */
 
@@ -66,6 +69,7 @@ void online_menu(char *string)
 	       "\t\t\t(default: write-through). Writeback caching is supplied by the dm-writecache\n"
 	       "\t\t\tkernel module and is not intended for production use as it may result in data\n"
 	       "\t\t\tloss on hardware/power failure.\n"
+	       "\t-q\t\tList all system memory and block device resources.\n"
 	       "\t-R\t\tRevalidate size of NVMe export using existing RapidDisk device.\n"
 	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"

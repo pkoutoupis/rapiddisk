@@ -3,7 +3,7 @@
  * @brief Common structure and value definitions
  * @details This header file defines constants and structures shared by the rapiddisk and the rapiddiskd source
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -26,7 +26,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 8.2.0
+ * @version 9.0.0
  * @date 26 September 2022
  */
 #ifndef COMMON_H
@@ -48,8 +48,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #define PROCESS			"rapiddisk"
 /** Rapiddiskd (daemon) Process name */
 #define DAEMON			PROCESS "d"
-#define COPYRIGHT		"Copyright 2011 - 2022 Petros Koutoupis"
-#define VERSION_NUM	  	"8.2.0"
+#define COPYRIGHT		"Copyright 2011 - 2023 Petros Koutoupis"
+#define VERSION_NUM	  	"9.0.0"
 #define SUCCESS			0
 #define INVALID_VALUE		-1
 #define NAMELEN			0x200
@@ -65,14 +65,14 @@ typedef char bool;
 #define SYS_RDSK		"/sys/kernel/rapiddisk/mgmt"
 #define SYS_MODULE		"/sys/module"
 
-#define FILEDATA			0x40
+#define FILEDATA		0x40
 
-#define NAMELEN				0x200
+#define NAMELEN			0x200
 
-#define DISABLED			0
-#define ENABLED				1
+#define DISABLED		0
+#define ENABLED			1
 
-#define ERR_CALLOC			"%s: calloc: %s"
+#define ERR_CALLOC		"%s: calloc: %s"
 #define ERR_FLUSHING		"Error flushing file descriptors: %s, %s."
 #define ERR_MALFORMED		"Error: wrong number of arguments or malformed URL."
 #define ERR_INVALIDURL		"Invalid URL"
@@ -81,10 +81,10 @@ typedef char bool;
 #define ERR_UNSUPPORTED		"Unsupported"
 #define ERR_INVALID_SIZE	"Invalid size"
 #define ERR_NOTANUMBER		"Not a number."
-#define ERR_SCANDIR			"%s: scandir: %s"
-#define ERR_FOPEN			"%s: fopen: %s, %s"
-#define ERR_FREAD			"%s: fread: %s, %s"
-#define ERR_MODULES			"%s, The needed modules are not loaded..."
+#define ERR_SCANDIR		"%s: scandir: %s"
+#define ERR_FOPEN		"%s: fopen: %s, %s"
+#define ERR_FREAD		"%s: fread: %s, %s"
+#define ERR_MODULES		"%s, The needed modules are not loaded..."
 #define ERR_ALREADY_RUNNING	"%s, The daemon is already running..."
 #define ERR_NEW_MHD_DAEMON 	"Error creating MHD Daemon: %s, %s."
 #define ERR_SIGPIPE_HANDLER	"Failed to install SIGPIPE handler: %s, %s"
@@ -209,10 +209,9 @@ typedef struct NVMET_PORTS {
 	struct NVMET_PORTS *next;
 } NVMET_PORTS;
 
-typedef struct PTHREAD_ARGS {
+typedef struct DAEMON_ARGS {
 	bool verbose;
 	char port[0xf];
-	char path[NAMELEN];
-} PTHREAD_ARGS;
+} DAEMON_ARGS;
 
 #endif

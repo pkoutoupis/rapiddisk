@@ -95,8 +95,8 @@ An example of a POST command:
 Change into the project's parent directory path.
 
 > To build the rapiddisk management utility, you will need to have the
-> `libjansson` and `libmicrohttpd` development library files installed
-> on your host system.
+> `libjansson`, `libpcre2-dev`, `libdevmapper` and `libmicrohttpd`
+> development library files installed on your host system.
 >
 > You are required to having either the full kernel source or the kernel
 > headers installed for your current kernel revision.
