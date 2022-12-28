@@ -829,8 +829,13 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 	close(fd);
 
 	if ((((size * 1024 * 1024) / BYTES_PER_BLOCK) <= (max_sectors)) || ((size * 1024) == (rd_size / 1024))) {
-		msg = "Error. Please specify a size larger than %llu Mbytes";
-		print_error(msg, return_message, (((max_sectors * BYTES_PER_BLOCK) / 1024) / 1024));
+		if ((size * 1024) == (rd_size / 1024)) {
+			msg = "Error. Size is currently set to %llu Mbytes. Please specify a size larger than %llu Mbytes.";
+			print_error(msg, return_message, (rd_size / 1024) / 1024, (((max_sectors * BYTES_PER_BLOCK) / 1024) / 1024));
+		} else {
+			msg = "Error. Please specify a size larger than %llu Mbytes.";
+			print_error(msg, return_message, (((max_sectors * BYTES_PER_BLOCK) / 1024) / 1024));
+		}
 		return -EINVAL;
 	}
 
