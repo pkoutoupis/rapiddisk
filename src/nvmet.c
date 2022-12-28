@@ -538,37 +538,12 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, path2[NAMELEN] = {0x0};
 	struct dirent **list;
 	char *msg;
-	NVMET_PROFILE *nvmet = NULL;
-	NVMET_PROFILE *nvmet_orig = NULL;
 	char error_message[NAMELEN] = {0};
-	char full_device_name[NAMELEN] = {0};
 
-	nvmet = nvmet_scan_subsystem(error_message);
-	if ((nvmet == NULL) && (strlen(error_message) != 0)) {
-		msg = "%s";
-		print_error(msg, return_message, error_message);
-		return INVALID_VALUE;
-	}
-
-	nvmet_orig = nvmet;
-
-	sprintf(full_device_name, "/dev/%s", device);
-
-	while (nvmet != NULL) {
-		if (strcmp(full_device_name, nvmet->device) == SUCCESS) {
-			rc = SUCCESS;
-			break;
-		}
-		nvmet = nvmet->next;
-	}
-
-	free_nvmet_linked_lists(NULL, nvmet_orig);
-
-	if (rc == SUCCESS) {
-		msg = "Error: device %s already in use.";
-		print_error(msg, return_message, device);
-		return INVALID_VALUE;
-	}
+	/*
+	 * We do not care if the device has already been exported. We will continue to go through
+	 * the motions to add more host NQNs to export the target to.
+	 */
 
 	/* Check to see if device exists */
 	while (rd_prof != NULL) {
@@ -845,7 +820,7 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
  */
 int nvmet_unexport_volume(char *device, char *host, int port, char *return_message)
 {
-	int rc = INVALID_VALUE, n, err;
+	int rc = INVALID_VALUE, n, err, hostno = 0;
 	FILE *fp;
 	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0};
 	struct dirent **list;
@@ -884,6 +859,7 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 		return rc;
 	}
 
+	/* Remove host NQN */
 	if (strlen(host) != 0) {
 		sprintf(path, "%s/%s%s-%s/allowed_hosts/%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device, host);
 		if (access(path, F_OK) == SUCCESS) {
@@ -905,36 +881,31 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 		/* If a host is defined without any port number, just remove and exit. */
 		if (port == INVALID_VALUE)
 			return SUCCESS;
-	} else {
-		/* If no host is defined, remove all hosts */
-		sprintf(path, "%s/%s%s-%s/allowed_hosts/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-		if ((err = scandir(path, &list, NULL, NULL)) < 0) {
-			goto host_check_out;
-		}
-		for (n = 0; n < err; n++) {
-			if (strncmp(list[n]->d_name, ".", 1) != SUCCESS) {
-				sprintf(path, "%s/%s%s-%s/allowed_hosts/%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device, list[n]->d_name);
-				if (access(path, F_OK) == SUCCESS) {
-					rc = unlink(path);
-					if (rc != SUCCESS) {
-						msg = "Error. Unable to remove hosts. %s: unlink: %s";
-						print_error(msg, return_message, __func__, strerror(errno));
-						list = clean_scandir(list, err);
-						return rc;
-					}
-				}
-			}
-		}
-		list = clean_scandir(list, err);
-		if (return_message == NULL) {
-			msg = "Block device %s has been unmapped from all NVMe Target hosts.";
-			print_error(msg, return_message, device);
-		}
 	}
 
-host_check_out:
+	/*
+	 * Grab number of entries in allowed_hosts directory. If more than zero still exist, we will not
+	 * proceed with the rest
+	 */
+	sprintf(path, "%s/%s%s-%s/allowed_hosts/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+	if ((err = scandir(path, &list, NULL, NULL)) < 0) {
+		msg = "Error. Unable to scan host exports directory for %s. %s: unlink: %s";
+		print_error(msg, return_message, path, __func__, strerror(errno));
+		return rc;
+	}
+	hostno = err;
+	if (err > 0) {
+		for (n = 0; n < err; n++) {
+			if (strncmp(list[n]->d_name, ".", 1) != SUCCESS) {
+				msg = "The target is still mapped to host NQN %s";
+				print_error(msg, return_message, list[n]->d_name);
+			}
+		}
+	}
+	list = clean_scandir(list, err);
 
-	if (port != INVALID_VALUE) {
+	/* Remove NVMe Target interface port */
+	if ((port != INVALID_VALUE) && (hostno == 0)) {
 		sprintf(path, "%s/%d/subsystems/%s%s-%s", SYS_NVMET_PORTS, port, NQN_HDR_STR, hostname, device);
 		if (access(path, F_OK) == SUCCESS) {
 			rc = unlink(path);
@@ -947,58 +918,36 @@ host_check_out:
 				msg = "Block device %s has been unmapped from NVMe Target port %d.";
 				print_error(msg, return_message, device, port);
 			}
-//		} else {
-//			msg = "%s: Port %d and / or export does not exist";
-//			print_error(msg, return_message, __func__, port);
-//			return rc;
-		}
-	} else {
-		/* If no port is defined, unmap from all ports */
-		sprintf(path, "%s", SYS_NVMET_PORTS);
-		if ((err = scandir(path, &list, NULL, NULL)) < 0)
-			goto port_check_out;
-		for (n = 0; n < err; n++) {
-			if (strncmp(list[n]->d_name, ".", 1) != SUCCESS) {
-				sprintf(path, "%s/%s/subsystems/%s%s-%s", SYS_NVMET_PORTS, list[n]->d_name, NQN_HDR_STR, hostname, device);
-				if (access(path, F_OK) == SUCCESS) {
-					rc = unlink(path);
-					if (rc != SUCCESS) {
-						msg = "Error. Unable to remove NQN from ports. %s: unlink: %s";
-						print_error(msg, return_message, __func__, strerror(errno));
-						list = clean_scandir(list, err);
-						return rc;
-					}
-				}
-			}
-		}
-		list = clean_scandir(list, err);
-		if (return_message == NULL) {
-			msg = "Block device %s has been unmapped from all NVMe Target ports.";
-			print_error(msg, return_message, device);
+		} else {
+			/* The NVMe Target interface port number that was defined does not exist on the system */
+			msg = "%s: Port %d and / or export does not exist";
+			print_error(msg, return_message, __func__, port);
+			return rc;
 		}
 	}
 
-port_check_out:
-
-	/* If a port and / or host are defined, just remove / unmap and exit. */
-
-	/* I changed this test from "((strlen(host) == 0) && (port == INVALID_VALUE))"
-	 * because prevented the complete removal of the mapping
+	/*
+	 * If there are no more allowed_hosts and the target is not being exported by the port, remove
+	 * the target export from the entire subsystem. NOTE - we are not checking other ports (yet).
+	 * This check will come in a future update.
 	 */
-
-//	if ((strlen(host) != 0) && (port != INVALID_VALUE)) {
+	if ((port != INVALID_VALUE) && (hostno == 0)) {
 		if (access(path, F_OK) == SUCCESS) {
-			/* Disable volume */
-			sprintf(path, "%s/%s%s-%s/namespaces/1/enable", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-			if ((fp = fopen(path, "w")) == NULL){
-				msg = "Error. Unable to open namespace enable file %s. %s: fopen: %s";
-				print_error(msg, return_message, path, __func__, strerror(errno));
-				return INVALID_VALUE;
-			}
-			fprintf(fp, "0");
-			fclose(fp);
+			msg = "Error. Target is still exported through the port: %s";
+			print_error(msg, return_message, __func__, path);
+			return INVALID_VALUE;
 		}
+		/* Disable volume */
+		sprintf(path, "%s/%s%s-%s/namespaces/1/enable", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		if ((fp = fopen(path, "w")) == NULL){
+			msg = "Error. Unable to open namespace enable file %s. %s: fopen: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return INVALID_VALUE;
+		}
+		fprintf(fp, "0");
+		fclose(fp);
 
+		/* Remove namespace */
 		sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if (access(path, F_OK) == SUCCESS) {
 			if ((rc = rmdir(path)) != SUCCESS) {
@@ -1017,10 +966,9 @@ port_check_out:
 				return rc;
 			}
 		}
-//	}
-
-	msg = "Block device %s has been removed from the NVMe Target subsystem.";
-	print_error(msg, return_message, device);
+		msg = "Block device %s has been removed from the NVMe Target subsystem.";
+		print_error(msg, return_message, device);
+	}
 
 	return SUCCESS;
 }
