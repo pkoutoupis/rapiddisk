@@ -563,8 +563,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	}
 
 	if (rc != SUCCESS) {
-		msg = "Error. Device %s does not exist";
-		print_error(msg, return_message, device);
+		print_error(ERR_DEV_NOEXIST, return_message, device);
 		return INVALID_VALUE;
 	}
 
@@ -721,7 +720,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	}
 
 	sprintf(path, "port %d", port);
-	msg = "Block device %s has been mapped to %s through %s as %s%s-%s";
+	msg = "Block device %s has been mapped to %s through %s as %s%s-%s.";
 	print_error(msg, return_message, device, ((strlen(host) == 0) ? "all hosts" : (char *)host), ((port == INVALID_VALUE) ? "all ports" : (char *)path), NQN_HDR_STR, hostname, device);
 	return SUCCESS;
 }
@@ -759,8 +758,7 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
 		rc_prof = rc_prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Device %s does not exist";
-		print_error(msg, return_message, device);
+		print_error(ERR_DEV_NOEXIST, return_message, device);
 		return INVALID_VALUE;
 	} else
 		rc = INVALID_VALUE;
@@ -769,7 +767,7 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
 	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
 		sprintf(path, "%s%s-%s", NQN_HDR_STR, hostname, device);
-		msg = "Error. NQN export: %s does not exist";
+		msg = "Error. NQN export: %s does not exist.";
 		print_error(msg, return_message, path);
 		return rc;
 	}
@@ -777,7 +775,7 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
 	/* Check if namespace 1 exists. That is the only namespace we define. */
 	sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
-		msg = "%s: A RapidDisk defined namespace does not exist";
+		msg = "%s: A RapidDisk defined namespace does not exist.";
 		print_error(msg, return_message, __func__);
 		return rc;
 	}
@@ -830,7 +828,7 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
 		sprintf(path, "%s%s-%s", NQN_HDR_STR, hostname, device);
-		msg = "Error. NQN export: %s does not exist";
+		msg = "Error. NQN export: %s does not exist.";
 		print_error(msg, return_message, path);
 		return rc;
 	}
@@ -838,7 +836,7 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 	/* Check if namespace 1 exists. That is the only namespace we define. */
 	sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
-		msg = "%s: A RapidDisk defined namespace does not exist";
+		msg = "%s: A RapidDisk defined namespace does not exist.";
 		print_error(msg, return_message, __func__);
 		return rc;
 	}
@@ -897,7 +895,7 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 	if (err > 0) {
 		for (n = 0; n < err; n++) {
 			if (strncmp(list[n]->d_name, ".", 1) != SUCCESS) {
-				msg = "The target is still mapped to host NQN %s";
+				msg = "The target is still mapped to host NQN %s.";
 				print_error(msg, return_message, list[n]->d_name);
 			}
 		}
@@ -920,7 +918,7 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 			}
 		} else {
 			/* The NVMe Target interface port number that was defined does not exist on the system */
-			msg = "%s: Port %d and / or export does not exist";
+			msg = "%s: Port %d and / or export does not exist.";
 			print_error(msg, return_message, __func__, port);
 			return rc;
 		}
@@ -933,7 +931,7 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 	 */
 	if ((port != INVALID_VALUE) && (hostno == 0)) {
 		if (access(path, F_OK) == SUCCESS) {
-			msg = "Error. Target is still exported through the port: %s";
+			msg = "Error. Target is still exported through the port: %s.";
 			print_error(msg, return_message, __func__, path);
 			return INVALID_VALUE;
 		}
@@ -1151,7 +1149,7 @@ int nvmet_disable_port(int port, char *return_message)
 
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
 	if (access(path, F_OK) != SUCCESS) {
-		msg = "Error. NVMe Target Port %d does not exist";
+		msg = "Error. NVMe Target Port %d does not exist.";
 		print_error(msg, return_message, port);
 		return rc;
 	}

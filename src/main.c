@@ -497,7 +497,7 @@ int main(int argc, char *argv[])
 	/* This preprocessor if/endif is useful when the debbugger can't run as root */
 #ifndef DEBUG
 	if (geteuid() != 0) {
-		printf("\nYou must be root or contain sudo permissions to initiate this\n\n");
+		printf("\nYou must be root or contain sudo permissions to initiate this.\n\n");
 		return -EACCES;
 	}
 #endif

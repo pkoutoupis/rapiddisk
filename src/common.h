@@ -75,11 +75,11 @@ typedef char bool;
 #define ERR_CALLOC		"%s: calloc: %s"
 #define ERR_FLUSHING		"Error flushing file descriptors: %s, %s."
 #define ERR_MALFORMED		"Error: wrong number of arguments or malformed URL."
-#define ERR_INVALIDURL		"Invalid URL"
+#define ERR_INVALIDURL		"Invalid URL."
 #define ERR_INVALIDDEVNAME	"Invalid device name."
-#define ERR_DEV_STATUS		"Can't get device status"
-#define ERR_UNSUPPORTED		"Unsupported"
-#define ERR_INVALID_SIZE	"Invalid size"
+#define ERR_DEV_STATUS		"Can't get device status."
+#define ERR_UNSUPPORTED		"Unsupported."
+#define ERR_INVALID_SIZE	"Invalid size."
 #define ERR_NOTANUMBER		"Not a number."
 #define ERR_SCANDIR		"%s: scandir: %s"
 #define ERR_FOPEN		"%s: fopen: %s, %s"
@@ -89,6 +89,8 @@ typedef char bool;
 #define ERR_NEW_MHD_DAEMON 	"Error creating MHD Daemon: %s, %s."
 #define ERR_SIGPIPE_HANDLER	"Failed to install SIGPIPE handler: %s, %s"
 #define ERR_INVALID_MODE	"Invalid cache mode in URL."
+#define ERR_DEV_NOEXIST		"Error. Device %s does not exist."
+#define ERR_CACHE_TGT_NOEXIST	"Error. Cache target %s does not exist."
 
 /**
  * For RapidDisk device list
