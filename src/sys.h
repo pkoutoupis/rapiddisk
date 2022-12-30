@@ -27,7 +27,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
  * @version 9.0.0
- * @date 26 September 2022
+ * @date 30 December 2023
  */
 #ifndef SYS_H
 #define SYS_H
@@ -37,7 +37,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #ifndef SERVER
 int resources_list(struct MEM_PROFILE *, struct VOLUME_PROFILE *);
 #endif
-int get_memory_usage(struct MEM_PROFILE *, char *return_message);
-struct VOLUME_PROFILE *search_volumes_targets(char *return_message);
+int get_memory_usage(struct MEM_PROFILE *, char *);
+struct VOLUME_PROFILE *search_volumes_targets(char *);
 
 #endif //SYS_H

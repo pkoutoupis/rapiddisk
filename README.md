@@ -206,3 +206,69 @@ To start the service at boot via systemd:
 ```console
 # systemctl enable rapiddiskd.service
 ```
+
+## Managing RapidDisk as an NVMe Target
+There are a few things that need to be known when using the NVMe Target
+features of the RapidDisk suite.
+ 
+### Loading the NVMe Target Kernel Modules
+In order to map any RapidDisk device and export it in the NVMe Target
+framework, the nvmet and the nvmet-tcp or nvmet-rdma kernel modules must be
+inserted.
+
+```console
+# modprobe nvmet nvmet-tcp
+```
+
+### Enabling NVMe Target Ports
+At least one Ethernet interface will need to be configured as a target
+port to export the RapidDisk volume from.
+
+```console
+# rapiddisk -i eth -P 1 -t tcp
+```
+
+### Exporting Targets
+When exporting a volume, a RapidDisk volume and a target port must be
+defined. If a host NQN is not defined, the administration utility will
+provide access to any host NQN. Note - a target can be exported across more
+than one target port.
+
+```console
+# rapiddisk -e -b rd3 -P 1
+```
+
+If a host NQN is defined, access is restricted to only those host NQNs.
+Note - the following command example can be repeated multiple times to add
+additional host NQNs for the specified target export. 
+
+```console
+# rapiddisk -e -b rd3 -P 1 -H nqn.host1
+```
+
+### Unexporting Targets
+Unexporting RapidDisk volumes looks a bit different than exporting. If a
+host NQN is defined for a specified target, only that NQN will be removed from
+accessing the exported target.
+
+```console
+# rapiddisk -x -b rd3 -H nqn.host1
+```
+
+Removing all allowed host NQNs will revert access to any and all host NQNs
+requesting access to the target.
+
+If a target port is defined, the exported target will not be exported from the
+interface if one condition is met: the target has no defined allowed host NQNs.
+
+```console
+# rapiddisk -x -b rd3 -P 1 -H nqn.host1
+```
+OR
+
+```console
+# rapiddisk -x -b rd3 -P 1
+```
+
+And if there are no defined allowed host NQNs and the target is not being exported
+across any target ports, the entire target is removed from the subsystem.

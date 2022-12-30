@@ -24,7 +24,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
 * @version 9.0.0
-* @date 26 September 2022
+* @date 30 December 2023
 */
 
 #define SERVER
@@ -107,9 +107,13 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	while ((i = getopt(argc, argv, "?hp:vVd")) != INVALID_VALUE) {
+	while ((i = getopt(argc, argv, "?dhp:vV")) != INVALID_VALUE) {
 		switch (i) {
 			case '?':
+			case 'd':
+				verbose = 1;
+				debug = 1;
+				break;
 			case 'h':
 				online_menu();
 				return SUCCESS;
@@ -152,10 +156,6 @@ int main(int argc, char *argv[])
 				return SUCCESS;
 			case 'V':
 				verbose = 1;
-				break;
-			case 'd':
-				verbose = 1;
-				debug = 1;
 				break;
 			default:
 				break;

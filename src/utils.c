@@ -1,5 +1,5 @@
 /**
- * @file util.c
+ * @file utils.c
  * @brief Utility function definitions
  * @details This file contains all the utility functions
  * @copyright @verbatim
@@ -27,7 +27,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
 * @version 9.0.0
-* @date 26 September 2022
+* @date 30 December 2023
 */
 #include "utils.h"
 #include "json.h"
@@ -371,4 +371,18 @@ void print_message(int ret_value, char *message, bool json_flag) {
 	} else {
 		printf("%s\n", message);
 	}
+}
+
+/**
+ * If the file name starts with a dot, return false. Otherwise, return true.
+ *
+ * @param list This is the directory entry that is being passed to the function.
+ *
+ * @return the number of files in the directory.
+ */
+int scandir_filter_no_dot(const struct dirent *list) {
+	if (strncmp(list->d_name, ".", 1) == SUCCESS) {
+		return FALSE;
+	}
+	return TRUE;
 }

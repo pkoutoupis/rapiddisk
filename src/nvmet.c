@@ -27,7 +27,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
 * @version 9.0.0
-* @date 26 September 2022
+* @date 30 December 2023
 */
 
 #include "nvmet.h"
@@ -886,19 +886,15 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 	 * proceed with the rest
 	 */
 	sprintf(path, "%s/%s%s-%s/allowed_hosts/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-	if ((err = scandir(path, &list, NULL, NULL)) < 0) {
+	if ((err = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
 		msg = "Error. Unable to scan host exports directory for %s. %s: unlink: %s";
 		print_error(msg, return_message, path, __func__, strerror(errno));
 		return rc;
 	}
-	hostno = err;
-	if (err > 0) {
-		for (n = 0; n < err; n++) {
-			if (strncmp(list[n]->d_name, ".", 1) != SUCCESS) {
-				msg = "The target is still mapped to host NQN %s.";
-				print_error(msg, return_message, list[n]->d_name);
-			}
-		}
+	for (n = 0; n < err; n++) {
+		hostno++;
+		msg = "The target is still mapped to host NQN %s.";
+		print_error(msg, return_message, list[n]->d_name);
 	}
 	list = clean_scandir(list, err);
 

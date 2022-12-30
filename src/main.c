@@ -27,7 +27,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
 * @version 9.0.0
-* @date 26 September 2022
+* @date 30 December 2023
 */
 
 #include "main.h"
@@ -54,7 +54,7 @@ void online_menu(char *string)
 	       "\t-d\t\tDetach RAM disk device.\n"
 	       "\t-e\t\tExport a RapidDisk block device as an NVMe Target.\n"
 	       "\t-f\t\tErase all data to a specified RapidDisk device \033[31;1m(dangerous)\033[0m.\n"
-	       "\t-g\t\tDo not print header, useful with -j.\n"
+	       "\t-g\t\tDo not print header.\n"
 	       "\t-H\t\tThe host to export / unexport the NVMe Target to / from.\n"
 	       "\t-h\t\tDisplay the help menu.\n"
 	       "\t-i\t\tDefine the network interface to enable for NVMe Target exporting.\n"
@@ -149,6 +149,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				sprintf(host, "%s", optarg);
 				break;
 			case 'j':
+				header_flag = FALSE;
 				json_flag = TRUE;
 				break;
 			case 'L':
