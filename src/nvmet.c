@@ -817,11 +817,13 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
  */
 int nvmet_unexport_volume(char *device, char *host, int port, char *return_message)
 {
-	int rc = INVALID_VALUE, n, err, hostno = 0;
+	int rc = INVALID_VALUE, n, err, hostno = 0, allowed_host_number = 0;
 	FILE *fp;
 	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0};
 	struct dirent **list;
 	char *msg;
+	char json_message[NAMELEN] = {0};
+	char json_message_temp[NAMELEN] = {0};
 
 	gethostname(hostname, sizeof(hostname));
 	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
@@ -842,7 +844,7 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 
 	/* Make sure that no other namespaces exist. We do not create anything higher than 1. */
 	sprintf(path, "%s/%s%s-%s/namespaces/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-	if ((err = scandir(path, &list, NULL, NULL)) < 0) {
+	if ((err = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
 		msg = "Error. Unable to access %s. %s: scandir: %s";
 		print_error(msg, return_message, path, __func__, strerror(errno));
 		return INVALID_VALUE;
@@ -850,11 +852,22 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 
 	list = clean_scandir(list, err);
 
-	if (err > 3) {
+	if (err > 1) {
 		msg = "An invalid number of namespaces not created by RapidDisk exist.";
 		print_error("%s", return_message, msg);
 		return rc;
 	}
+
+	/*
+	 * Grab number of entries in allowed_hosts directory. We need this later, to check if one of them has been removed.
+	 */
+	sprintf(path, "%s/%s%s-%s/allowed_hosts/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+	if ((allowed_host_number = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
+		msg = "Error. Unable to scan host exports directory for %s. %s: unlink: %s";
+		print_error(msg, return_message, path, __func__, strerror(errno));
+		return rc;
+	}
+	list = clean_scandir(list, allowed_host_number);
 
 	/* Remove host NQN */
 	if (strlen(host) != 0) {
@@ -866,14 +879,17 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 				print_error(msg, return_message, __func__, strerror(errno));
 				return rc;
 			}
+			msg = "Block device %s has been unmapped from NVMe Initiator host %s.";
 			if (return_message == NULL) {
-				msg = "Block device %s has been unmapped from NVMe Target host %s.";
 				print_error(msg, return_message, device, host);
+			} else {
+				sprintf(json_message_temp, msg, device, host);
+				strcat(json_message, json_message_temp);
 			}
 		} else {
-			msg = "%s: Host %s does not exist";
-			print_error(msg, return_message, __func__, host);
-			return rc;
+			msg = "NVMe Initiator Host '%s' does not exist.";
+			print_error(msg, return_message, host);
+			return INVALID_VALUE;
 		}
 		/* If a host is defined without any port number, just remove and exit. */
 		if (port == INVALID_VALUE)
@@ -882,20 +898,32 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 
 	/*
 	 * Grab number of entries in allowed_hosts directory. If more than zero still exist, we will not
-	 * proceed with the rest
+	 * proceed with the rest. If an entry was removed, the operation is considered successful.
 	 */
 	sprintf(path, "%s/%s%s-%s/allowed_hosts/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-	if ((err = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
+	if ((hostno = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
 		msg = "Error. Unable to scan host exports directory for %s. %s: unlink: %s";
 		print_error(msg, return_message, path, __func__, strerror(errno));
 		return rc;
 	}
-	for (n = 0; n < err; n++) {
-		hostno++;
-		msg = "The target is still mapped to host NQN %s.";
-		print_error(msg, return_message, list[n]->d_name);
+
+	if (hostno > 0) {
+		if (strlen(json_message) > 0) {
+			strcat(json_message, " ");
+		}
+		strcat(json_message, "One or more target(s) is/are still mapped to NQN(s): ");
+		for (n = 0; n < hostno; n++) {
+			strcat(json_message, list[n]->d_name);
+			strcat(json_message, ", ");
+		}
+
+		size_t size = strlen(json_message);
+		size = size - 2;
+		json_message[size] = '\0';
+		strcat(json_message, ".");
 	}
-	list = clean_scandir(list, err);
+
+	list = clean_scandir(list, hostno);
 
 	/* Remove NVMe Target interface port */
 	if ((port != INVALID_VALUE) && (hostno == 0)) {
@@ -907,9 +935,15 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 				print_error(msg, return_message, __func__, strerror(errno));
 				return rc;
 			}
+			msg = "Block device %s has been unmapped from NVMe Target port %d.";
 			if (return_message == NULL) {
-				msg = "Block device %s has been unmapped from NVMe Target port %d.";
 				print_error(msg, return_message, device, port);
+			} else {
+				sprintf(json_message_temp, msg, device, port);
+				if (strlen(json_message) > 0) {
+					strcat(json_message, " ");
+				}
+				strcat(json_message, json_message_temp);
 			}
 		} else {
 			/* The NVMe Target interface port number that was defined does not exist on the system */
@@ -959,11 +993,33 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 				return rc;
 			}
 		}
-		msg = "Block device %s has been removed from the NVMe Target subsystem.";
-		print_error(msg, return_message, device);
 	}
 
-	return SUCCESS;
+	if ((strlen(json_message) == 0) || hostno == 0) {
+		rc = SUCCESS;
+		msg = "Block device %s has been removed from the NVMe Target subsystem.";
+		sprintf(json_message_temp, msg, device);
+		if (strlen(json_message) > 0) {
+			strcat(json_message, " ");
+		}
+		strcat(json_message, json_message_temp);
+		print_error("%s", return_message, json_message);
+	} else if ((allowed_host_number - hostno) > 0) {
+		rc = SUCCESS;
+		msg = "Block device %s could not be removed from the NVMe Target subsystem, but has been unmapped from NVMe Target host %s.";
+		sprintf(json_message_temp, msg, device, host);
+		if (strlen(json_message) > 0) {
+			strcat(json_message, " ");
+		}
+		strcat(json_message, json_message_temp);
+		printf("-%s-\n", json_message);
+		print_error("%s", return_message, json_message);
+	} else {
+		rc = INVALID_VALUE;
+		msg = "Block device %s could not be removed from the NVMe Target subsystem for unspecified host. %s";
+		print_error(msg, return_message, device, json_message);
+	}
+	return rc;
 }
 
 /*
