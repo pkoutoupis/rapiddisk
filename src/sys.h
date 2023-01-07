@@ -35,9 +35,9 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #include "common.h"
 
 #ifndef SERVER
-int resources_list(struct MEM_PROFILE *, struct VOLUME_PROFILE *);
+int resources_list(struct MEM_PROFILE *mem_profile, struct VOLUME_PROFILE *);
 #endif
-int get_memory_usage(struct MEM_PROFILE *, char *);
-struct VOLUME_PROFILE *search_volumes_targets(char *);
+int get_memory_usage(struct MEM_PROFILE *mem_profile, char *return_message);
+struct VOLUME_PROFILE *search_volumes_targets(char *return_message);
 
 #endif //SYS_H

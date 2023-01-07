@@ -538,7 +538,6 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, path2[NAMELEN] = {0x0};
 	struct dirent **list;
 	char *msg;
-	char error_message[NAMELEN] = {0};
 
 	/*
 	 * We do not care if the device has already been exported. We will continue to go through
@@ -606,6 +605,16 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	} else {
 		/* Configure the target to be seen only by the specified host(s) */
 
+		/* Make sure that no other hosts can access the target */
+		sprintf(path, "%s/%s%s-%s/attr_allow_any_host", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		if ((fp = fopen(path, "w")) == NULL){
+			msg = "Error. Unable to open %s. %s: fopen: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return INVALID_VALUE;
+		}
+		fprintf(fp, "0");
+		fclose(fp);
+
 		sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
 		if (access(path, F_OK) != SUCCESS) {
 			if ((rc = mkdir(path, mode)) != SUCCESS) {
@@ -625,16 +634,6 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 				return rc;
 			}
 		}
-
-		/* Make sure that no other hosts can access the target */
-		sprintf(path, "%s/%s%s-%s/attr_allow_any_host", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-		if ((fp = fopen(path, "w")) == NULL){
-			msg = "Error. Unable to open %s. %s: fopen: %s";
-			print_error(msg, return_message, path, __func__, strerror(errno));
-			return INVALID_VALUE;
-		}
-		fprintf(fp, "0");
-		fclose(fp);
 	}
 
 	/* Set model */

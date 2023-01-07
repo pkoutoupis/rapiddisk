@@ -36,7 +36,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 
 int preg_replace(const char *re, char *replacement, char *subject, char *result, size_t pcre2_result_len);
 int split(char* input_string, char** output_arr, char* delim);
-int scandir_filter_no_dot(const struct dirent *);
+int scandir_filter_no_dot(const struct dirent *list);
 void free_linked_lists(RC_PROFILE *rc_head, RD_PROFILE *rd_head, VOLUME_PROFILE *vp_head);
 void free_nvmet_linked_lists(struct NVMET_PORTS *ports_head, struct NVMET_PROFILE *nvmet_head);
 struct dirent **clean_scandir(struct dirent **scanlist, int num);

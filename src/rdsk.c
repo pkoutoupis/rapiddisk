@@ -511,8 +511,7 @@ void *dm_get_status(char* device, enum CACHE_TYPE cache_type) {
 		return NULL;
 	}
 
-	dm_get_next_target(dmt, NULL, &start, &length,
-								  &target_type, &params);
+	dm_get_next_target(dmt, NULL, &start, &length, &target_type, &params);
 	if (target_type) {
 		size_t result_size = strlen(params) * 2;
 		char *result = calloc(1, result_size);

@@ -64,6 +64,7 @@ SRC := json.c main.c net.c nvmet.c rapiddiskd.c rdsk.c sys.c utils.c
 
 .PHONY: all
 all: $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG)
+	@echo Successfully built all $(BIN_TOOL_NDEBUG) and $(BIN_DAEMON_NDEBUG) binary files.
 
 # This checks avoid creating/including the .h dependencies Makefiles
 # Disables parallelization if "clean" is present in the goal list
@@ -108,7 +109,7 @@ tools-strip: all
 
 .PHONY: install
 install: all
-	@echo Installing all $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG) binary files.
+	@echo Installing all $(BIN_TOOL_NDEBUG) and $(BIN_DAEMON_NDEBUG) binary files.
 	$(INSTALL) $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG)
 
 .PHONY: install-strip
@@ -116,12 +117,12 @@ install-strip: tools-install-strip
 
 .PHONY: tools-install-strip
 tools-install-strip: all
-	@echo Installing stripped $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG) binary files.
+	@echo Installing stripped $(BIN_TOOL_NDEBUG) and $(BIN_DAEMON_NDEBUG) binary files.
 	$(INSTALL_STRIP) $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG)
 
 .PHONY: uninstall
 uninstall:
-	@echo Uninstalling $(BIN_TOOL_NDEBUG) $(BIN_DAEMON_NDEBUG) binary files.
+	@echo Uninstalling $(BIN_TOOL_NDEBUG) and $(BIN_DAEMON_NDEBUG) binary files.
 	$(RM) $(DESTDIR)$(DIR)/$(BIN_TOOL_NDEBUG)
 	$(RM) $(DESTDIR)$(DIR)/$(BIN_DAEMON_NDEBUG)
 

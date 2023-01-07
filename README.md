@@ -95,7 +95,7 @@ An example of a POST command:
 Change into the project's parent directory path.
 
 > To build the rapiddisk management utility, you will need to have the
-> `libjansson`, `libpcre2-dev`, `libdevmapper` and `libmicrohttpd`
+> `libjansson`, `libpcre2`, `libdevmapper` and `libmicrohttpd`
 > development library files installed on your host system.
 >
 > You are required to having either the full kernel source or the kernel
@@ -210,7 +210,7 @@ To start the service at boot via systemd:
 ## Managing RapidDisk as an NVMe Target
 There are a few things that need to be known when using the NVMe Target
 features of the RapidDisk suite.
- 
+
 ### Loading the NVMe Target Kernel Modules
 In order to map any RapidDisk device and export it in the NVMe Target
 framework, the nvmet and the nvmet-tcp or nvmet-rdma kernel modules must be
@@ -240,7 +240,7 @@ than one target port.
 
 If a host NQN is defined, access is restricted to only those host NQNs.
 Note - the following command example can be repeated multiple times to add
-additional host NQNs for the specified target export. 
+additional host NQNs for the specified target export.
 
 ```console
 # rapiddisk -e -b rd3 -P 1 -H nqn.host1
