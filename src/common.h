@@ -90,6 +90,7 @@ typedef char bool;
 #define ERR_SIGPIPE_HANDLER	"Failed to install SIGPIPE handler: %s, %s"
 #define ERR_INVALID_MODE	"Invalid cache mode in URL."
 #define ERR_DEV_NOEXIST		"Error. Device %s does not exist."
+#define ERR_PORT_NOEXIST		"Error. Port %d does not exist."
 #define ERR_CACHE_TGT_NOEXIST	"Error. Cache target %s does not exist."
 
 /**
