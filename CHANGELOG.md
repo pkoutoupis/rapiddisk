@@ -14,6 +14,7 @@
 - utility: Fix forking logic in daemon and remove need for realpath() usage (thank you Matteo Tenca).
 - utility: Define and standardize error messaging for consistency and improve verbose mode (thank you Matteo Tenca).
 - utility: Fix resize operation error messaging (github issue #142).
+- utility: Cleaned up and optimized NVMe Target management.
 - scripts: Fixed error checking in NVMe Target hostnqn script file.
 - scripts: Added fio execution script file examples.
 - scripts: Added valgrind test script to check for memory leaks (thank you Matteo Tenca).
