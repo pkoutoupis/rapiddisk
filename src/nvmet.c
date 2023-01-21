@@ -564,7 +564,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	rc = INVALID_VALUE;
 
 	if (port != INVALID_VALUE) {
-		ports = nvmet_scan_ports(return_message);
+		ports = nvmet_scan_all_ports(return_message);
 		if ((ports == NULL) && (strlen(return_message) != 0)) {
 			msg = "%s";
 			print_error(msg, return_message, return_message);
@@ -1116,6 +1116,7 @@ int nvmet_enable_port(char *interface, int port, int protocol, char *return_mess
 	if (access(path, F_OK) == SUCCESS) {
 		msg = "Error. NVMe Target Port %d already exists.";
 		print_error(msg, return_message, port);
+		free_nvmet_linked_lists(ports, NULL);
 		return rc;
 	}
 
@@ -1123,6 +1124,7 @@ int nvmet_enable_port(char *interface, int port, int protocol, char *return_mess
 	if (ipaddr == NULL) {
 		msg = "Cannot find the IP address of interface %s. Error: %s";
 		print_error(msg, return_message, interface, error_message);
+		free_nvmet_linked_lists(ports, NULL);
 		return INVALID_VALUE;
 	}
 	sprintf(ip, "%s", ipaddr);
@@ -1130,6 +1132,7 @@ int nvmet_enable_port(char *interface, int port, int protocol, char *return_mess
 	if (ip_validate(ip) != SUCCESS) {
 		msg = "Error. IP address %s is invalid.";
 		print_error(msg, return_message, ip);
+		free_nvmet_linked_lists(ports, NULL);
 		return rc;
 	}
 
