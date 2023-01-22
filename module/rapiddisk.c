@@ -819,9 +819,9 @@ static int attach_device(unsigned long num, unsigned long long size)
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
-	blk_queue_write_cache(disk->queue, true, false);
+	blk_queue_write_cache(disk->queue, false, false);
 #else
-	blk_queue_write_cache(rdsk->rdsk_queue, true, false);
+	blk_queue_write_cache(rdsk->rdsk_queue, false, false);
 #endif
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
 	blk_queue_flush(rdsk->rdsk_queue, REQ_FLUSH);
