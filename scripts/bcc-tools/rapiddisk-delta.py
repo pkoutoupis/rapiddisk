@@ -16,7 +16,7 @@ import argparse
 # arguments
 examples = """examples:
     ./rapiddisk-delta.py           # trace all operations (default)
-    ./rapiddisk-delta.py -u 10     # trace operations slower than specified microseconds
+    ./rapiddisk-delta.py -u 10     # trace operations slower than specified microseconds (default: 0)
     ./rapiddisk-delta.py -p 185    # trace PID 185 only
 """
 parser = argparse.ArgumentParser(
@@ -71,7 +71,6 @@ static u64 delta_return(void)
 
     // calculate delta
     u64 ts = bpf_ktime_get_ns();
-    //u64 delta_us = (ts - valp->ts) / 1000;
     u64 delta_ns = ts - valp->ts;
     entryinfo.delete(&id);
 
@@ -141,6 +140,7 @@ b.attach_kretprobe(event="rdsk_ioctl", fn_name="trace_ioctl_return")
 b.attach_kretprobe(event=make_request_fn, fn_name="trace_make_request_return")
 
 # header
+print("Tracing rapiddisk operation latency... Hit Ctrl-C to end.")
 print("%-18s %-6s %-16s %-6s %s" % ("TIME(s)", "CPU", "COMM", "PID", "MESSAGE"))
 
 # format output
