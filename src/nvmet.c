@@ -79,7 +79,7 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message)
 	char *msg;
 
 	if (access(SYS_NVMET, F_OK) != SUCCESS) {
-		msg = "The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp kernel modules and ensure that the kernel user configuration filesystem is mounted.";
+		msg = "The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp (or nvme-loop) kernel modules and ensure that the kernel user configuration filesystem is mounted.";
 		print_error("%s", return_message, msg);
 		return NULL;
 	}
@@ -1090,7 +1090,7 @@ int nvmet_view_ports(bool json_flag, char *error_message)
  *
  * @param interface The interface to use for the port.
  * @param port The port number to create.
- * @param protocol 0 = TCP, 1 = RDMA
+ * @param protocol 0 = TCP, 1 = RDMA, 2 = LOOP
  * @param return_message This is a pointer to a buffer that will be filled with the return message.
  *
  * @return The return value is the return code of the function.
@@ -1105,55 +1105,72 @@ int nvmet_enable_port(char *interface, int port, int protocol, char *return_mess
 	char *msg;
 	char error_message[NAMELEN] = {0};
 
-	ports = nvmet_scan_ports(error_message);
-	if ((ports == NULL) && (strlen(error_message) != 0)) {
-		msg = "%s";
-		print_error(msg, return_message, error_message);
-		return INVALID_VALUE;
-	}
-
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
 	if (access(path, F_OK) == SUCCESS) {
 		msg = "Error. NVMe Target Port %d already exists.";
 		print_error(msg, return_message, port);
-		free_nvmet_linked_lists(ports, NULL);
 		return rc;
 	}
 
-	char *ipaddr = nvmet_interface_ip_get(interface, error_message);
-	if (ipaddr == NULL) {
-		msg = "Cannot find the IP address of interface %s. Error: %s";
-		print_error(msg, return_message, interface, error_message);
-		free_nvmet_linked_lists(ports, NULL);
-		return INVALID_VALUE;
-	}
-	sprintf(ip, "%s", ipaddr);
+	if (protocol != XFER_MODE_LOOP) {
+		ports = nvmet_scan_ports(error_message);
+		if ((ports == NULL) && (strlen(error_message) != 0)) {
+			msg = "%s";
+			print_error(msg, return_message, error_message);
+			return INVALID_VALUE;
+		}
 
-	if (ip_validate(ip) != SUCCESS) {
-		msg = "Error. IP address %s is invalid.";
-		print_error(msg, return_message, ip);
-		free_nvmet_linked_lists(ports, NULL);
-		return rc;
-	}
+		char *ipaddr = nvmet_interface_ip_get(interface, error_message);
+		if (ipaddr == NULL) {
+			msg = "Cannot find the IP address of interface %s. Error: %s";
+			print_error(msg, return_message, interface, error_message);
+			free_nvmet_linked_lists(ports, NULL);
+			return INVALID_VALUE;
+		}
+		sprintf(ip, "%s", ipaddr);
 
-	tmp_ports = ports;
-
-	while (ports != NULL) {
-		if (strcmp(ports->addr, ip) == SUCCESS) {
-			msg = "Error. Interface %s with IP address %s is already in use on port %d.";
-			print_error(msg, return_message, interface, ip, ports->port);
-			free_nvmet_linked_lists(tmp_ports, NULL);
+		if (ip_validate(ip) != SUCCESS) {
+			msg = "Error. IP address %s is invalid.";
+			print_error(msg, return_message, ip);
+			free_nvmet_linked_lists(ports, NULL);
 			return rc;
 		}
-		ports = ports->next;
-	}
 
-	free_nvmet_linked_lists(tmp_ports, NULL);
+		tmp_ports = ports;
+
+		while (ports != NULL) {
+			if (strcmp(ports->addr, ip) == SUCCESS) {
+				msg = "Error. Interface %s with IP address %s is already in use on port %d.";
+				print_error(msg, return_message, interface, ip, ports->port);
+				free_nvmet_linked_lists(tmp_ports, NULL);
+				return rc;
+			}
+			ports = ports->next;
+		}
+
+		free_nvmet_linked_lists(tmp_ports, NULL);
+	}
 
 	if ((rc = mkdir(path, mode)) != SUCCESS) {
 		msg = "Error. Unable to create port directory. %s: mkdir: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		return rc;
+	}
+
+	if (protocol == XFER_MODE_LOOP) {
+		sprintf(proto, "loop");
+		sprintf(path, "%s/%d/addr_trtype", SYS_NVMET_PORTS, port);
+		if ((fp = fopen(path, "w")) == NULL) {
+			msg = "Error. Unable to open %s. %s: fopen: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return INVALID_VALUE;
+		}
+		fprintf(fp, "%s", proto);
+		fclose(fp);
+
+		msg = "Successfully created port %d set for %s.";
+		print_error(msg, return_message, port, proto);
+		return SUCCESS;
 	}
 
 	sprintf(path, "%s/%d/addr_trsvcid", SYS_NVMET_PORTS, port);

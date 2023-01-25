@@ -60,6 +60,8 @@
 /* ioctls */
 #define IOCTL_INVALID_CDQUERY	0x5331
 #define IOCTL_INVALID_CDQUERY2	0x5395
+#define IOCTL_INVALID_TTY	0x5401
+#define IOCTL_INVALID_SG_IO	0x2285
 #define IOCTL_RD_GET_STATS	0x0529
 #define IOCTL_RD_GET_USAGE	0x0530
 #define IOCTL_RD_BLKFLSBUF	0x0531
@@ -715,6 +717,8 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		return error;
 	case IOCTL_INVALID_CDQUERY:
 	case IOCTL_INVALID_CDQUERY2:
+	case IOCTL_INVALID_TTY:
+	case IOCTL_INVALID_SG_IO:
 		return -EINVAL;
 	case IOCTL_RD_GET_STATS:
 		return copy_to_user((void __user *)arg,
