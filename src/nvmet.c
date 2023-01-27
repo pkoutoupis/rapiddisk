@@ -651,7 +651,8 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 				print_error(msg, return_message, __func__, strerror(errno));
 				return rc;
 			}
-		}
+		} else
+			goto nvme_export_enable_volume;
 	}
 
 	/* Set model */
@@ -689,6 +690,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 		fprintf(fp, "/dev/mapper/%s", device);
 	fclose(fp);
 
+nvme_export_enable_volume:
 	/* Enable volume */
 	sprintf(path, "%s/%s%s-%s/namespaces/1/enable", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if ((fp = fopen(path, "w")) == NULL){
