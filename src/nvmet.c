@@ -531,7 +531,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, path2[NAMELEN] = {0x0};
 	struct dirent **list;
-	char *msg;
+	char *msg, error_message[NAMELEN] = {0};
 	struct NVMET_PORTS *ports;
 
 	/*
@@ -564,10 +564,10 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	rc = INVALID_VALUE;
 
 	if (port != INVALID_VALUE) {
-		ports = nvmet_scan_all_ports(return_message);
-		if ((ports == NULL) && (strlen(return_message) != 0)) {
+		ports = nvmet_scan_all_ports(error_message);
+		if ((ports == NULL) && (strlen(error_message) != 0)) {
 			msg = "%s";
-			print_error(msg, return_message, return_message);
+			print_error(msg, return_message, error_message);
 			return INVALID_VALUE;
 		}
 		while (ports != NULL) {
