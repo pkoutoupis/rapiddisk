@@ -249,14 +249,14 @@ struct NVMET_PORTS *nvmet_scan_ports(char *return_message)
  */
 
 /**
- * > This function scans the /sys/kernel/config/nvmet/ports directory for all NVMe Target ports and returns a linked list
- * of all ports found
+ * This function scans the /sys/kernel/config/nvmet/ports directory for all the ports that are currently configured
  *
  * @param return_message This is a pointer to a string that will be populated with an error message if the function fails.
+ * @param rc return code
  *
  * @return A pointer to the first element of a linked list of struct NVMET_PORTS.
  */
-struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message)
+struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message, int *rc)
 {
 	int err, n = 0;
 	char file[NAMELEN * 2] = {0};
@@ -321,6 +321,7 @@ struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message)
 		}
 	}
 	ports = clean_scandir(ports, err);
+	*rc = SUCCESS;
 	return ports_head;
 }
 
@@ -526,12 +527,12 @@ int nvmet_view_exports(bool json_flag, char *error_message)
  */
 int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *device, char *host, int port, char *return_message)
 {
-	int rc = INVALID_VALUE, n, err;
+	int rc = INVALID_VALUE, n, err, rv = INVALID_VALUE;
 	FILE *fp;
 	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, path2[NAMELEN] = {0x0};
 	struct dirent **list;
-	char *msg, error_message[NAMELEN] = {0};
+	char *msg;
 	struct NVMET_PORTS *ports;
 
 	/*
@@ -564,10 +565,8 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	rc = INVALID_VALUE;
 
 	if (port != INVALID_VALUE) {
-		ports = nvmet_scan_all_ports(error_message);
-		if ((ports == NULL) && (strlen(error_message) != 0)) {
-			msg = "%s";
-			print_error(msg, return_message, error_message);
+		ports =  nvmet_scan_all_ports(return_message, &rv);
+		if (rv == INVALID_VALUE) {
 			return INVALID_VALUE;
 		}
 		while (ports != NULL) {
@@ -1055,11 +1054,11 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 int nvmet_view_ports(bool json_flag, char *error_message)
 {
 	int i = 1;
-	int rc = SUCCESS;
+	int rc = SUCCESS, rv = INVALID_VALUE;
 	struct NVMET_PORTS *ports = NULL, *tmp_ports = NULL;
 
-	ports = nvmet_scan_all_ports(error_message);
-	if ((ports == NULL) && (strlen(error_message) != 0)) {
+	ports = nvmet_scan_all_ports(error_message, &rv);
+	if (rv == INVALID_VALUE) {
 		return INVALID_VALUE;
 	}
 
@@ -1310,11 +1309,11 @@ int nvmet_view_exports_json(char *error_message, char **json_result) {
  * @param json_result This is the JSON string that will be returned to the caller.
  */
 int nvmet_view_ports_json(char *error_message, char **json_result) {
-	int rc = SUCCESS;
+	int rc = SUCCESS, rv = INVALID_VALUE;
 	struct NVMET_PORTS *ports = NULL;
 
-	ports = nvmet_scan_all_ports(error_message);
-	if ((ports == NULL) && (strlen(error_message) != 0)) {
+	ports = nvmet_scan_all_ports(error_message, &rv);
+	if (rv == INVALID_VALUE) {
 		return INVALID_VALUE;
 	}
 
