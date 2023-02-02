@@ -1,6 +1,6 @@
 /* rxro.c */
 
-/** Copyright © 2016 - 2022 Petros Koutoupis
+/** Copyright © 2016 - 2023 Petros Koutoupis
  ** All rights reserved.
  **
  ** This program is free software: you can redistribute it and/or modify

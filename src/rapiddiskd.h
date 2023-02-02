@@ -3,7 +3,7 @@
  * @brief Daemon defines
  * @details This header file defines some constants used by the daemon
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 8.2.0
- * @date 26 September 2022
+ * @version 9.0.0
+ * @date 30 December 2023
  */
 
 #ifndef DAEMON_H
@@ -52,12 +52,12 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #define CMD_LIST_NVMET		"/v1/listAllNVMeTargets"
 #define CMD_LIST_NVMET_PORTS	"/v1/listAllNVMePorts"
 
-#define PID_FILE			"/run/rapiddiskd.pid"
+#define PID_FILE		"/run/rapiddiskd.pid"
 #define D_STDERR_LOG		"/tmp/rapiddiskd_err.log"
 #define D_STDOUT_LOG		"/tmp/rapiddiskd_out.log"
-#define D_EXITING			"Daemon exiting."
-#define D_STARTING			"Starting daemon..."
-#define D_RECV_REQ			"Recevied request '%s'."
+#define D_EXITING		"Daemon exiting."
+#define D_STARTING		"Starting daemon..."
+#define D_RECV_REQ		"Recevied request '%s'."
 #define D_LOOP_EXITING		"Daemon loop function exiting: %s."
 #define D_SIGNAL_RECEIVED	"Signal_handler function, SIGNAL received: %s."
 

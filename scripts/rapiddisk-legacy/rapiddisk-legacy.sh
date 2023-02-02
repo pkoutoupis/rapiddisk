@@ -8,8 +8,8 @@ fi
 ## usage ##
 function help_menu()
 {
-	echo -e "$1 8.2.0"
-	echo -e "Copyright 2011 - 2022 Petros Koutoupis"
+	echo -e "$1 9.0.0"
+	echo -e "Copyright 2011 - 2023 Petros Koutoupis"
 	echo -e ""
 	echo -e "$1 is an administration tool to manage the RapidDisk RAM disk devices and"
 	echo -e "\tRapidDisk-Cache mappings."

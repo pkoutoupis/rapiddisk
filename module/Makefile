@@ -1,4 +1,4 @@
-# Copyright © 2011 - 2022 Petros Koutoupis
+# Copyright © 2011 - 2023 Petros Koutoupis
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,7 +15,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-VERSION = 8.2.0
+VERSION = 9.0.0
 
 ifeq ($(KSRC),)
 	KSRC := /lib/modules/$(shell uname -r)/build

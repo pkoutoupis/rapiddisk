@@ -32,6 +32,9 @@ Export a RapidDisk block device as an NVMe Target.
 -f
 Erase all data to a specified RapidDisk device (dangerous).
 .TP
+-g
+Do not print header.
+.TP
 -H
 The host to export / unexport the NVMe Target to / from.
 .TP
@@ -62,6 +65,9 @@ The port to export / unexport the NVMe Target to / from.
 -p
 Define cache policy: write-through (wt), write-around (wa) or writeback (wb) (dangerous) (default: write-through).
 Writeback caching is supplied by the dm-writecache kernel module and is not intended for production use as it may result in data loss on hardware/power failure.
+.TP
+-q
+List all system memory and block device resources.
 .TP
 -R
 Revalidate size of NVMe export using existing RapidDisk device.
@@ -130,6 +136,46 @@ rapiddisk -e -b rd3 -P 1 -H nqn.host1
 rapiddisk -R -b rd0
 .TP
 rapiddisk -x -b rd3 -P 1 -H nqn.host1
+.SH MANAGING RAPIDDISK AS AN NVME TARGET 
+There are a few things that need to be known when using the NVMe Target features of the RapidDisk suite.
+.TP
+1.
+In order to map any RapidDisk device and export it in the NVMe Target framework, the nvmet and the nvmet-tcp or nvmet-rdma kernel modules must be inserted.
+.TP
+2.
+At least one Ethernet interface will need to be configured as a target port to export the RapidDisk volume from.
+.RS
+.P
+ex) rapiddisk -i eth -P 1 -t tcp
+.RE
+.TP
+3.
+When exporting a volume, a RapidDisk volume and a target port must be defined. If a host NQN is not defined, the administration utility will provide access to any host NQN. Note - a target can be exported across more than one target port.
+.RS
+.P
+ex) rapiddisk -e -b rd3 -P 1
+.P
+If a host NQN is defined, access is restricted to only those host NQNs. Note - the following command example can be repeated multiple times to add additional host NQNs for the specified target export.
+.P
+ex) rapiddisk -e -b rd3 -P 1 -H nqn.host1
+.RE
+.TP
+4.
+Unexporting RapidDisk volumes looks a bit different than exporting. If a host NQN is defined for a specified target, only that NQN will be removed from accessing the exported target.
+.RS
+.P
+ex) rapiddisk -x -b rd3 -H nqn.host1
+.P
+Removing all allowed host NQNs will revert access to any and all host NQNs requesting access to the target.
+.P
+If a target port is defined, the exported target will not be exported from the interface if one condition is met: the target has no defined allowed host NQNs.
+.P
+ex) rapiddisk -x -b rd3 -P 1 -H nqn.host1
+.P
+ex) rapiddisk -x -b rd3 -P 1
+.P
+And if there are no defined allowed host NQNs and the target is not being exported across any target ports, the entire target is removed from the subsystem.
+.RE
 .SH EXIT STATUS
 rapiddisk returns a zero exit status if no error occurs during operation. A non-zero value is returned on error.
 .SH AUTHORS

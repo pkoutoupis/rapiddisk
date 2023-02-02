@@ -1,6 +1,9 @@
 /**
+ * @file main.c
+ * @brief Main administration functions implementation
+ * @details This file contains all the functions related to the administration utility.
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -23,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 8.2.0
-* @date 26 September 2022
+* @version 9.0.0
+* @date 30 December 2023
 */
 
 #include "main.h"
@@ -51,7 +54,7 @@ void online_menu(char *string)
 	       "\t-d\t\tDetach RAM disk device.\n"
 	       "\t-e\t\tExport a RapidDisk block device as an NVMe Target.\n"
 	       "\t-f\t\tErase all data to a specified RapidDisk device \033[31;1m(dangerous)\033[0m.\n"
-	       "\t-g\t\tDo not print header, useful with -j.\n"
+	       "\t-g\t\tDo not print header.\n"
 	       "\t-H\t\tThe host to export / unexport the NVMe Target to / from.\n"
 	       "\t-h\t\tDisplay the help menu.\n"
 	       "\t-i\t\tDefine the network interface to enable for NVMe Target exporting.\n"
@@ -66,6 +69,7 @@ void online_menu(char *string)
 	       "\t\t\t(default: write-through). Writeback caching is supplied by the dm-writecache\n"
 	       "\t\t\tkernel module and is not intended for production use as it may result in data\n"
 	       "\t\t\tloss on hardware/power failure.\n"
+	       "\t-q\t\tList all system memory and block device resources.\n"
 	       "\t-R\t\tRevalidate size of NVMe export using existing RapidDisk device.\n"
 	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
@@ -145,6 +149,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				sprintf(host, "%s", optarg);
 				break;
 			case 'j':
+				header_flag = FALSE;
 				json_flag = TRUE;
 				break;
 			case 'L':
@@ -493,7 +498,7 @@ int main(int argc, char *argv[])
 	/* This preprocessor if/endif is useful when the debbugger can't run as root */
 #ifndef DEBUG
 	if (geteuid() != 0) {
-		printf("\nYou must be root or contain sudo permissions to initiate this\n\n");
+		printf("\nYou must be root or contain sudo permissions to initiate this.\n\n");
 		return -EACCES;
 	}
 #endif

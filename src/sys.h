@@ -1,9 +1,9 @@
 /**
- * @file
+ * @file sys.h
  * @brief System-related function definitions
  * @details This header file defines system-related functions
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 8.2.0
- * @date 26 September 2022
+ * @version 9.0.0
+ * @date 30 December 2023
  */
 #ifndef SYS_H
 #define SYS_H
@@ -35,9 +35,9 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #include "common.h"
 
 #ifndef SERVER
-int resources_list(struct MEM_PROFILE *, struct VOLUME_PROFILE *);
+int resources_list(struct MEM_PROFILE *mem_profile, struct VOLUME_PROFILE *);
 #endif
-int get_memory_usage(struct MEM_PROFILE *, char *return_message);
+int get_memory_usage(struct MEM_PROFILE *mem_profile, char *return_message);
 struct VOLUME_PROFILE *search_volumes_targets(char *return_message);
 
 #endif //SYS_H

@@ -1,6 +1,9 @@
 /**
+ * @file rdsk.c
+ * @brief RapidDisk function definitions
+ * @details This file defines some RapidDisk related functions
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -23,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 8.2.0
-* @date 26 September 2022
+* @version 9.0.0
+* @date 30 December 2023
 */
 
 #include "rdsk.h"
@@ -145,7 +148,7 @@ char *read_info(char *name, char *string, char *return_message)
 	}
 	fclose(fp);
 	len = strlen(buf);
-	strncpy(obuf, buf, (len - 1));
+	strncpy(obuf, buf, (len - 1));   /* Do not copy tailing escape character */
 	sprintf(obuf, "%s", obuf);
 
 	return obuf;
@@ -508,8 +511,7 @@ void *dm_get_status(char* device, enum CACHE_TYPE cache_type) {
 		return NULL;
 	}
 
-	dm_get_next_target(dmt, NULL, &start, &length,
-								  &target_type, &params);
+	dm_get_next_target(dmt, NULL, &start, &length, &target_type, &params);
 	if (target_type) {
 		size_t result_size = strlen(params) * 2;
 		char *result = calloc(1, result_size);
@@ -651,8 +653,7 @@ int cache_device_map(struct RD_PROFILE *rd_prof, struct RC_PROFILE *rc_prof, cha
 		rd_prof = rd_prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Device %s does not exist";
-		print_error(msg, return_message, ramdisk);
+		print_error(ERR_DEV_NOEXIST, return_message, ramdisk);
 		return -ENOENT;
 	}
 
@@ -800,8 +801,7 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 		prof = prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Device %s does not exist";
-		print_error(msg, return_message, string);
+		print_error(ERR_DEV_NOEXIST, return_message, string);
 		return -ENOENT;
 	}
 
@@ -826,8 +826,13 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 	close(fd);
 
 	if ((((size * 1024 * 1024) / BYTES_PER_BLOCK) <= (max_sectors)) || ((size * 1024) == (rd_size / 1024))) {
-		msg = "Error. Please specify a size larger than %llu Mbytes";
-		print_error(msg, return_message, (((max_sectors * BYTES_PER_BLOCK) / 1024) / 1024));
+		if ((size * 1024) == (rd_size / 1024)) {
+			msg = "Error. Size is currently set to %llu Mbytes. Please specify a size larger than %llu Mbytes.";
+			print_error(msg, return_message, (rd_size / 1024) / 1024, (((max_sectors * BYTES_PER_BLOCK) / 1024) / 1024));
+		} else {
+			msg = "Error. Please specify a size larger than %llu Mbytes.";
+			print_error(msg, return_message, (((max_sectors * BYTES_PER_BLOCK) / 1024) / 1024));
+		}
 		return -EINVAL;
 	}
 
@@ -845,7 +850,7 @@ int mem_device_resize(struct RD_PROFILE *prof, char *string, unsigned long long 
 		return -EIO;
 	}
 	fclose(fp);
-	print_error("Resized device %s to %llu Mbytes", return_message, string, size);
+	print_error("Resized device %s to %llu Mbytes.", return_message, string, size);
 	return SUCCESS;
 }
 
@@ -893,7 +898,7 @@ int mem_device_attach(struct RD_PROFILE *prof, unsigned long long size, char *re
 	}
 
 	fclose(fp);
-	print_error("Attached device rd%d of size %llu Mbytes", return_message, dsk, size);
+	print_error("Attached device rd%d of size %llu Mbytes.", return_message, dsk, size);
 	return SUCCESS;
 }
 
@@ -921,8 +926,7 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *str
 		rd_prof = rd_prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Device %s does not exist";
-		print_error(msg, return_message, string);
+		print_error(ERR_DEV_NOEXIST, return_message, string);
 		return INVALID_VALUE;
 	}
 	/* Check to make sure RapidDisk device isn't in a mapping */
@@ -975,7 +979,7 @@ int mem_device_detach(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *str
 	}
 
 	fclose(fp);
-	print_error("Detached device %s", return_message, string);
+	print_error("Detached device %s.", return_message, string);
 	if (buf) free(buf);
 
 	return SUCCESS;
@@ -1005,8 +1009,7 @@ int mem_device_lock(struct RD_PROFILE *rd_prof, char *string, bool lock, char *r
 	}
 
 	if (rc != SUCCESS) {
-		msg = "Error. Device %s does not exist";
-		print_error(msg, return_message, string);
+		print_error(ERR_DEV_NOEXIST, return_message, string);
 		return -ENOENT;
 	}
 
@@ -1054,8 +1057,7 @@ int cache_device_unmap(struct RC_PROFILE *prof, char *string, char *return_messa
 		prof = prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Cache target %s does not exist";
-		print_error(msg, return_message, string);
+		print_error(ERR_CACHE_TGT_NOEXIST, return_message, string);
 		return -ENOENT;
 	}
 
@@ -1085,7 +1087,7 @@ int cache_device_unmap(struct RC_PROFILE *prof, char *string, char *return_messa
 	/* if the mapping is a write-back one, flush before remove */
 	if (strstr(string, "rc-wb") != NULL) {
 		if ((rc = dm_flush_device(string) != SUCCESS)) {
-			msg = "Unable to flush dirty cache data to %s";
+			msg = "Unable to flush dirty cache data to %s.";
 			print_error(msg, return_message, string);
 			return rc;
 		}
@@ -1123,14 +1125,13 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 		rd_prof = rd_prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Device %s does not exist";
-		print_error(msg, return_message, string);
+		print_error(ERR_DEV_NOEXIST, return_message, string);
 		return -ENOENT;
 	}
 	/* Check to make sure RapidDisk device isn't in a mapping */
 	while (rc_prof != NULL) {
 		if (strcmp(string, rc_prof->cache) == SUCCESS) {
-			msg = "Error. Unable to remove %s. This RapidDisk device is currently mapped as a cache drive to %s";
+			msg = "Error. Unable to remove %s. This RapidDisk device is currently mapped as a cache drive to %s.";
 			print_error(msg, return_message, string, rc_prof->device);
 			return -EBUSY;
 		}
@@ -1138,7 +1139,7 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 	}
 
 	if ((buf = calloc(1, BUFSZ)) == NULL) {
-		msg = "%s: malloc: Unable to allocate memory";
+		msg = "%s: malloc: Unable to allocate memory.";
 		print_error(msg, return_message, __func__);
 		return -ENOMEM;
 	}
@@ -1153,7 +1154,7 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 	fread(buf, BUFSZ, 1, fp);
 	fclose(fp);
 	if ((strstr(buf, string) != NULL)) {
-		msg = "%s is currently mounted. Please \"umount\" and retry";
+		msg = "%s is currently mounted. Please \"umount\" and retry.";
 		print_error(msg, return_message, string);
 		if (buf) free(buf);
 		return -EBUSY;
@@ -1174,7 +1175,7 @@ int mem_device_flush(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *stri
 		return -EIO;
 	}
 	close(fd);
-	print_error("Flushed all data from device %s", return_message, string);
+	print_error("Flushed all data from device %s.", return_message, string);
 
 	return SUCCESS;
 }
@@ -1261,8 +1262,7 @@ int cache_wb_device_stat(struct RC_PROFILE *rc_prof, char *cache)
 		rc_prof = rc_prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Cache target %s does not exist";
-		print_error(msg, NULL, cache);
+		print_error(ERR_CACHE_TGT_NOEXIST, NULL, cache);
 		return -ENOENT;
 	}
 	struct WC_STATS *wc_stats = dm_get_status(cache, WRITEBACK);
@@ -1302,8 +1302,7 @@ int cache_device_stat(struct RC_PROFILE *rc_prof, char *cache)
 		rc_prof = rc_prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Cache target %s does not exist";
-		print_error(msg, NULL, cache);
+		print_error(ERR_CACHE_TGT_NOEXIST, NULL, cache);
 		return -ENOENT;
 	}
 	struct RC_STATS *rc_stats = dm_get_status(cache, WRITETHROUGH);
@@ -1346,8 +1345,7 @@ int cache_device_stat_json(struct RC_PROFILE *rc_prof, char *cache, RC_STATS **r
 		rc_prof = rc_prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Cache target %s does not exist";
-		print_error(msg, status_message, cache);
+		print_error(ERR_CACHE_TGT_NOEXIST, status_message, cache);
 		print_message(rc, status_message, TRUE);
 		return -ENOENT;
 	}
@@ -1383,8 +1381,7 @@ int cache_wb_device_stat_json(struct RC_PROFILE *rc_prof, char *cache, WC_STATS 
 		rc_prof = rc_prof->next;
 	}
 	if (rc != SUCCESS) {
-		msg = "Error. Cache target %s does not exist";
-		print_error(msg, status_message, cache);
+		print_error(ERR_CACHE_TGT_NOEXIST, status_message, cache);
 		print_message(rc, status_message, TRUE);
 		return -ENOENT;
 	}

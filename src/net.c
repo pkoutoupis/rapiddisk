@@ -3,7 +3,7 @@
  * @brief Daemon functions implementation
  * @details This file contains all the function related to the daemon
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 8.2.0
- * @date 26 September 2022
+ * @version 9.0.0
+ * @date 30 December 2023
  */
 
 #define SERVER
@@ -65,7 +65,7 @@ static int answer_to_connection(void *cls, struct MHD_Connection *connection, co
 	struct RC_PROFILE *cache = NULL;
 	struct VOLUME_PROFILE *volumes = NULL;
 	struct MEM_PROFILE *mem = NULL;
-	struct PTHREAD_ARGS *args = (struct PTHREAD_ARGS *) cls;
+	struct DAEMON_ARGS *args = (struct DAEMON_ARGS *) cls;
 	char *error_message = calloc(1, NAMELEN);
 	char *split_arr[64] = {NULL};
 	char msg[NAMELEN] = {0};
@@ -681,7 +681,7 @@ static void signal_handler(int sig) {
 /**
  * Installs the SIGPIPE signal catcher
  */
-static void ignore_sigpipe (PTHREAD_ARGS *args) {
+static void ignore_sigpipe (DAEMON_ARGS *args) {
 	struct sigaction oldsig;
 	struct sigaction sig;
 	char msg[NAMELEN] = {0};
@@ -724,7 +724,7 @@ static void catch_exit_signals() {
  */
 int mgmt_thread(void *arg)
 {
-	struct PTHREAD_ARGS *args = (struct PTHREAD_ARGS *)arg;
+	struct DAEMON_ARGS *args = (struct DAEMON_ARGS *)arg;
 	struct MHD_Daemon *mydaemon = NULL;
 	char msg[NAMELEN] = {0};
 

@@ -1,9 +1,9 @@
 /**
- * @file
+ * @file utils.h
  * @brief Utility functions declarations
  * @details This header file defines some utility functions
  * @copyright @verbatim
-Copyright © 2011 - 2022 Petros Koutoupis
+Copyright © 2011 - 2023 Petros Koutoupis
 
 All rights reserved.
 
@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 8.2.0
- * @date 26 September 2022
+ * @version 9.0.0
+ * @date 30 December 2023
  */
 #ifndef UTILS_H
 #define UTILS_H
@@ -36,6 +36,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 
 int preg_replace(const char *re, char *replacement, char *subject, char *result, size_t pcre2_result_len);
 int split(char* input_string, char** output_arr, char* delim);
+int scandir_filter_no_dot(const struct dirent *list);
 void free_linked_lists(RC_PROFILE *rc_head, RD_PROFILE *rd_head, VOLUME_PROFILE *vp_head);
 void free_nvmet_linked_lists(struct NVMET_PORTS *ports_head, struct NVMET_PROFILE *nvmet_head);
 struct dirent **clean_scandir(struct dirent **scanlist, int num);
