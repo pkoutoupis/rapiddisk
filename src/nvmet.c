@@ -68,7 +68,7 @@ struct NVMET_PORTS *ports_end = NULL;
  *
  * @return A linked list of NVMET_PROFILE structs.
  */
-struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message)
+struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc)
 {
 	int err, err2, n = 0, i;
 	char file[NAMELEN * 2] = {0};
@@ -147,6 +147,7 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message)
 		}
 	}
 	list = clean_scandir(list, err);
+	*rc = SUCCESS;
 	return nvmet_head;
 }
 
@@ -161,7 +162,7 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message)
  *
  * @return A pointer to the head of a linked list of structs.
  */
-struct NVMET_PORTS *nvmet_scan_ports(char *return_message)
+struct NVMET_PORTS *nvmet_scan_ports(char *return_message, int *rc)
 {
 	int err, err2, n = 0, i;
 	char file[NAMELEN * 2] = {0};
@@ -241,6 +242,7 @@ struct NVMET_PORTS *nvmet_scan_ports(char *return_message)
 		}
 	}
 	ports = clean_scandir(ports, err);
+	*rc = SUCCESS;
 	return ports_head;
 }
 
@@ -448,19 +450,20 @@ char *nvmet_interface_ip_get(char *interface, char *return_message)
 int nvmet_view_exports(bool json_flag, char *error_message)
 {
 	int i = 1;
-	int rc = SUCCESS;
+	int rc = SUCCESS, rv = INVALID_VALUE;
 	struct NVMET_PROFILE *nvmet, *tmp;
 	struct NVMET_PORTS *ports, *tmp_ports;
 
-	nvmet = nvmet_scan_subsystem(error_message);
-	if ((nvmet == NULL) && (strlen(error_message) != 0)) {
+	nvmet = nvmet_scan_subsystem(error_message, &rv);
+	if (rv == INVALID_VALUE) {
 		return INVALID_VALUE;
 	}
 
-	ports = nvmet_scan_ports(error_message);
-	if ((ports == NULL) && (strlen(error_message) != 0)) {
-		free_nvmet_linked_lists(ports, NULL);
-		ports = NULL;
+	rv = INVALID_VALUE;
+
+	ports = nvmet_scan_ports(error_message, &rv);
+	if (rv == INVALID_VALUE) {
+		free_nvmet_linked_lists(NULL, nvmet);
 		return INVALID_VALUE;
 	}
 
@@ -530,10 +533,11 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	int rc = INVALID_VALUE, n, err, rv = INVALID_VALUE;
 	FILE *fp;
 	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
-	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, path2[NAMELEN] = {0x0};
+	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, link[NAMELEN] = {0x0};
 	struct dirent **list;
 	char *msg;
 	struct NVMET_PORTS *ports;
+	struct NVMET_PORTS *orig_ports;
 
 	/*
 	 * We do not care if the device has already been exported. We will continue to go through
@@ -541,6 +545,8 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	 */
 
 	/* Check to see if device exists */
+
+	/* Looks for rd* ramdisk */
 	while (rd_prof != NULL) {
 		if (strcmp(device, rd_prof->device) == SUCCESS) {
 			rc = SUCCESS;
@@ -549,6 +555,7 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 		rd_prof = rd_prof->next;
 	}
 
+	/* Looks for rc-* mappings */
 	while (rc_prof != NULL) {
 		if (strcmp(device, rc_prof->device) == SUCCESS) {
 			rc = SUCCESS;
@@ -559,16 +566,18 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 
 	if (rc != SUCCESS) {
 		print_error(ERR_DEV_NOEXIST, return_message, device);
-		return INVALID_VALUE;
+		return rc;
 	}
 
+	/* Reset rc to INVALID_VALUE after device check */
 	rc = INVALID_VALUE;
 
 	if (port != INVALID_VALUE) {
-		ports =  nvmet_scan_all_ports(return_message, &rv);
+		ports = nvmet_scan_all_ports(return_message, &rv);
 		if (rv == INVALID_VALUE) {
-			return INVALID_VALUE;
+			return rc;
 		}
+		orig_ports = ports;
 		while (ports != NULL) {
 			if (port == ports->port) {
 				rc = SUCCESS;
@@ -578,16 +587,29 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 		}
 		if (rc != SUCCESS) {
 			print_error(ERR_PORT_NOEXIST, return_message, port);
-			free_nvmet_linked_lists(ports, NULL);
-			return INVALID_VALUE;
+			free_nvmet_linked_lists(orig_ports, NULL);
+			return rc;
 		}
-		free_nvmet_linked_lists(ports, NULL);
+
+		/* Reset rc to INVALID_VALUE after port check */
+		rc = INVALID_VALUE;
+
+		free_nvmet_linked_lists(orig_ports, NULL);
 	}
+
 	/* Create NQN */
-	gethostname(hostname, sizeof(hostname));
+	if (gethostname(hostname, sizeof(hostname)) < 0) {
+		msg = "Error. Unable to obtain hostname. %s: gethostname: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
+		return rc;
+	}
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+	 */
 	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
-		if ((rc = mkdir(path, mode)) != SUCCESS) {
+		if (mkdir(path, mode) != SUCCESS) {
 			msg = "Error. Unable to create target directory %s. %s: mkdir: %s";
 			print_error(msg, return_message, path, __func__, strerror(errno));
 			return rc;
@@ -595,7 +617,12 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	}
 
 	/* Set host NQNs to access target */
+
+	/* If host is empty, it means we can allow all remotes to connect */
 	if (strlen(host) == 0) {
+		/* Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/allowed_hosts
+	 	 */
 		sprintf(path, "%s/%s%s-%s/allowed_hosts", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if ((err = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
 			msg = "Error. Unable to access %s. %s: scandir: %s";
@@ -605,12 +632,19 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 
 		list = clean_scandir(list, err);
 
+		/* If err > 0 we have already specified some remote hosts which are the only ones
+		 * allowed to connect, so it is pointless to go further since we cannot enable
+		 * the unrestricted access mode
+		 */
 		if (err > 0) {
 			msg = "One or more hosts exist. Please remove existing host or define a new one.";
 			print_error("%s", return_message, msg);
 			return INVALID_VALUE;
 		}
 
+		/* Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/attr_allow_any_host
+	 	 */
 		sprintf(path, "%s/%s%s-%s/attr_allow_any_host", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if ((fp = fopen(path, "w")) == NULL){
 			msg = "Error. Unable to open %s. %s: fopen: %s";
@@ -622,7 +656,11 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	} else {
 		/* Configure the target to be seen only by the specified host(s) */
 
-		/* Make sure that no other hosts can access the target */
+		/* Make sure that no other hosts can access the target
+		 *
+		 * Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/attr_allow_any_host
+	 	 */
 		sprintf(path, "%s/%s%s-%s/attr_allow_any_host", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 		if ((fp = fopen(path, "w")) == NULL){
 			msg = "Error. Unable to open %s. %s: fopen: %s";
@@ -632,20 +670,30 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 		fprintf(fp, "0");
 		fclose(fp);
 
+		/* Example of this path:
+		 * /sys/kernel/config/nvmet/hosts/<REMOTE-HOST>
+	 	 */
 		sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
 		if (access(path, F_OK) != SUCCESS) {
-			if ((rc = mkdir(path, mode)) != SUCCESS) {
+			if (mkdir(path, mode) != SUCCESS) {
 				msg = "Error. Unable to create host directory %s. %s: mkdir: %s";
 				print_error(msg, return_message, path, __func__, strerror(errno));
 				return rc;
 			}
 		}
-		sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
-		sprintf(path2, "%s/%s%s-%s/allowed_hosts/%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device, host);
 
-		if (access(path2, F_OK) != SUCCESS) {
-			rc = symlink(path, path2);
-			if (rc != SUCCESS) {
+		/* Example of this path:
+		 * /sys/kernel/config/nvmet/hosts/<REMOTE-HOST>
+	 	 */
+		sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
+
+		/* Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/allowed_hosts/<REMOTE-HOST>
+	 	 */
+		sprintf(link, "%s/%s%s-%s/allowed_hosts/%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device, host);
+
+		if (access(link, F_OK) != SUCCESS) {
+			if (symlink(path, link) != SUCCESS) {
 				msg = "Error. Unable to link host to port. %s: symlink: %s";
 				print_error(msg, return_message, __func__, strerror(errno));
 				return rc;
@@ -654,34 +702,46 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 			goto nvme_export_enable_volume;
 	}
 
-	/* Set model */
+	/* Set model
+	 *
+	 * Example of this path:
+	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/attr_model
+	 */
 	sprintf(path, "%s/%s%s-%s/attr_model", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) == SUCCESS) {
 		if ((fp = fopen(path, "w")) == NULL){
 			msg = "Error. Unable to set model string to file %s. %s: fopen: %s";
 			print_error(msg, return_message, path, __func__, strerror(errno));
-			return INVALID_VALUE;
+			return rc;
 		}
 		fprintf(fp, "RapidDisk");
 		fclose(fp);
 	}
 
-	/* Create namespace */
+	/* Create namespace
+	 *
+	 * Example of this path:
+	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/namespaces/1
+	 */
 	sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if (access(path, F_OK) != SUCCESS) {
-		if ((rc = mkdir(path, mode)) != SUCCESS) {
+		if (mkdir(path, mode) != SUCCESS) {
 			msg = "Error. Unable to create namespace directory %s. %s: mkdir: %s";
 			print_error(msg, return_message, path, __func__, strerror(errno));
 			return rc;
 		}
 	}
 
-	/* Set device */
+	/* Set device
+	 *
+	 * Example of this path:
+	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/namespaces/1/device_path
+	 */
 	sprintf(path, "%s/%s%s-%s/namespaces/1/device_path", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if ((fp = fopen(path, "w")) == NULL){
 		msg = "Error. Unable to open device_path file: %s. %s: fopen: %s";
 		print_error(msg, return_message, path, __func__, strerror(errno));
-		return INVALID_VALUE;
+		return rc;
 	}
 	if (strncmp(device, "rd", 2) == SUCCESS)
 		fprintf(fp, "/dev/%s", device);
@@ -690,23 +750,33 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	fclose(fp);
 
 nvme_export_enable_volume:
-	/* Enable volume */
+	/* Enable volume
+	 *
+	 * Example of this path:
+	 *
+	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/namespaces/1/enable
+	 */
 	sprintf(path, "%s/%s%s-%s/namespaces/1/enable", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
 	if ((fp = fopen(path, "w")) == NULL){
 		msg = "Error. Unable to open namespace enable file %s. %s: fopen: %s";
 		print_error(msg, return_message, path, __func__, strerror(errno));
-		return INVALID_VALUE;
+		return rc;
 	}
 	fprintf(fp, "1");
 	fclose(fp);
 
 	/* Set to a port */
 	if (port != INVALID_VALUE) {
+		/* Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+	 	 */
 		sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-		sprintf(path2, "%s/%d/subsystems/%s%s-%s", SYS_NVMET_PORTS, port, NQN_HDR_STR, hostname, device);
-		if (access(path2, F_OK) != SUCCESS) {
-			rc = symlink(path, path2);
-			if (rc != SUCCESS) {
+		/* Example of this path:
+		 * /sys/kernel/config/nvmet/ports/<PORT>/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+	 	 */
+		sprintf(link, "%s/%d/subsystems/%s%s-%s", SYS_NVMET_PORTS, port, NQN_HDR_STR, hostname, device);
+		if (access(link, F_OK) != SUCCESS) {
+			if (symlink(path, link) != SUCCESS) {
 				msg = "Error. Unable to create link of NQN to port. %s: symlink: %s";
 				print_error(msg, return_message, __func__, strerror(errno));
 				return rc;
@@ -717,14 +787,19 @@ nvme_export_enable_volume:
 		if ((err = scandir(SYS_NVMET_PORTS, &list, scandir_filter_no_dot, NULL)) < 0) {
 			msg = "%s: scandir: %s";
 			print_error(msg, return_message, __func__, strerror(errno));
-			return INVALID_VALUE;
+			return rc;
 		}
 		for (n = 0; n < err; n++) {
+			/* Example of this path:
+		 	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+	 	 	 */
 			sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-			sprintf(path2, "%s/%s/subsystems/%s%s-%s", SYS_NVMET_PORTS, list[n]->d_name, NQN_HDR_STR, hostname, device);
-			if (access(path2, F_OK) != SUCCESS) {
-				rc = symlink(path, path2);
-				if (rc != SUCCESS) {
+			/* Example of this path:
+			 * /sys/kernel/config/nvmet/ports/<PORT_ON_DISK>/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+			 */
+			sprintf(link, "%s/%s/subsystems/%s%s-%s", SYS_NVMET_PORTS, list[n]->d_name, NQN_HDR_STR, hostname, device);
+			if (access(link, F_OK) != SUCCESS) {
+				if (symlink(path, link) != SUCCESS) {
 					msg = "Error. Unable to create link of NQN to port. %s: symlink: %s";
 					print_error(msg, return_message, __func__, strerror(errno));
 					list = clean_scandir(list, err);
@@ -834,167 +909,202 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
  */
 int nvmet_unexport_volume(char *device, char *host, int port, char *return_message)
 {
-	int rc = INVALID_VALUE, n, err, hostno = 0, allowed_host_number = 0;
+	int rc = INVALID_VALUE, n, allowed_host_number, rv = INVALID_VALUE, port_number;
 	FILE *fp;
-	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0};
+	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0}, nqn[NAMELEN] = {0x0};
+	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 	struct dirent **list;
 	char *msg;
-	char json_message[NAMELEN] = {0};
-	char json_message_temp[NAMELEN] = {0};
+	char target_string[NAMELEN] = {0};
+	char target_string_final[NAMELEN] = {0};
+	char regexp[NAMELEN] = {0};
+	struct NVMET_PROFILE *profile;
+	struct NVMET_PROFILE *orig_profile;
+	struct NVMET_PORTS *ports;
+	struct NVMET_PORTS *orig_ports;
 
-	gethostname(hostname, sizeof(hostname));
-	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-	if (access(path, F_OK) != SUCCESS) {
-		sprintf(path, "%s%s-%s", NQN_HDR_STR, hostname, device);
-		msg = "Error. NQN export: %s does not exist.";
-		print_error(msg, return_message, path);
+	if (gethostname(hostname, sizeof(hostname)) < 0) {
+		msg = "Error. Unable to obtain hostname. %s: gethostname: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
 		return rc;
 	}
 
-	/* Check if namespace 1 exists. That is the only namespace we define. */
-	sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-	if (access(path, F_OK) != SUCCESS) {
-		msg = "%s: A RapidDisk defined namespace does not exist.";
-		print_error(msg, return_message, __func__);
-		return rc;
-	}
+	sprintf(nqn, "%s%s-%s", NQN_HDR_STR, hostname, device);
 
-	/* Make sure that no other namespaces exist. We do not create anything higher than 1. */
-	sprintf(path, "%s/%s%s-%s/namespaces/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-	if ((err = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
-		msg = "Error. Unable to access %s. %s: scandir: %s";
-		print_error(msg, return_message, path, __func__, strerror(errno));
-		return INVALID_VALUE;
-	}
-
-	list = clean_scandir(list, err);
-
-	if (err > 1) {
-		msg = "An invalid number of namespaces not created by RapidDisk exist.";
-		print_error("%s", return_message, msg);
-		return rc;
-	}
-
-	/*
-	 * Grab number of entries in allowed_hosts directory. We need this later, to check if one of them has been removed.
-	 */
-	sprintf(path, "%s/%s%s-%s/allowed_hosts/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-	if ((allowed_host_number = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
-		msg = "Error. Unable to scan host exports directory for %s. %s: unlink: %s";
-		print_error(msg, return_message, path, __func__, strerror(errno));
-		return rc;
-	}
-	list = clean_scandir(list, allowed_host_number);
-
-	/* Remove host NQN */
-	if (strlen(host) != 0) {
-		sprintf(path, "%s/%s%s-%s/allowed_hosts/%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device, host);
-		if (access(path, F_OK) == SUCCESS) {
-			rc = unlink(path);
-			if (rc != SUCCESS) {
-				msg = "Error. Unable to remove host. %s: unlink: %s";
-				print_error(msg, return_message, __func__, strerror(errno));
-				return rc;
+	if (port != INVALID_VALUE) {
+		ports = nvmet_scan_ports(return_message, &rv);
+		if (rv == INVALID_VALUE) {
+			return rc;
+		}
+		orig_ports = ports;
+		while (ports != NULL) {
+			if (port == ports->port) {
+				rc = 1;
+				if (strcmp(nqn, ports->nqn) == 0) {
+					rc = SUCCESS;
+					break;
+				}
 			}
-			msg = "Block device %s has been unmapped from NVMe Initiator host %s.";
-			if (return_message == NULL) {
-				print_error(msg, return_message, device, host);
-			} else {
-				sprintf(json_message_temp, msg, device, host);
-				strcat(json_message, json_message_temp);
-			}
-		} else {
-			msg = "NVMe Initiator Host '%s' does not exist.";
-			print_error(msg, return_message, host);
+			ports = ports->next;
+		}
+		if (rc == INVALID_VALUE) {
+			print_error(ERR_PORT_NOEXIST, return_message, port);
+			free_nvmet_linked_lists(orig_ports, NULL);
+			return rc;
+		} else if (rc == 1) {
+			print_error("NQN %s does not exists!", return_message, nqn);
+			free_nvmet_linked_lists(orig_ports, NULL);
 			return INVALID_VALUE;
 		}
-		/* If a host is defined without any port number, just remove and exit. */
-		if (port == INVALID_VALUE)
-			return SUCCESS;
+
+		/* Reset rc to INVALID_VALUE after port check */
+		rc = INVALID_VALUE;
+
+		free_nvmet_linked_lists(orig_ports, NULL);
+	} else {
+		profile = nvmet_scan_subsystem(return_message, &rv);
+		if (rv == INVALID_VALUE) {
+			return rc;
+		}
+		orig_profile = profile;
+		while (profile != NULL) {
+			if (strcmp(nqn, profile->nqn) == 0) {
+				rc = SUCCESS;
+				break;
+			}
+			profile = profile->next;
+		}
+		if (rc != SUCCESS) {
+			print_error("NQN %s does not exists!", return_message, nqn);
+			free_nvmet_linked_lists(NULL, orig_profile);
+			return rc;
+		}
+
+		/* Reset rc to INVALID_VALUE after nqn check */
+		rc = INVALID_VALUE;
+
+		free_nvmet_linked_lists(NULL, orig_profile);
 	}
 
-	/*
-	 * Grab number of entries in allowed_hosts directory. If more than zero still exist, we will not
-	 * proceed with the rest. If an entry was removed, the operation is considered successful.
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/allowed_hosts
 	 */
-	sprintf(path, "%s/%s%s-%s/allowed_hosts/", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
-	if ((hostno = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
-		msg = "Error. Unable to scan host exports directory for %s. %s: unlink: %s";
+	sprintf(path, "%s/%s/allowed_hosts", SYS_NVMET_TGT, nqn);
+	if ((allowed_host_number = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
+		msg = "Error. Unable to access %s. %s: scandir: %s";
 		print_error(msg, return_message, path, __func__, strerror(errno));
 		return rc;
 	}
 
-	if (hostno > 0) {
-		if (strlen(json_message) > 0) {
-			strcat(json_message, " ");
+	if (allowed_host_number > 0) {
+		for (n = 0; n < allowed_host_number; n++) {
+			strcat(target_string, list[n]->d_name);
+			strcat(target_string, " ");
 		}
-		strcat(json_message, "One or more target(s) is/are still mapped to NQN(s): ");
-		for (n = 0; n < hostno; n++) {
-			strcat(json_message, list[n]->d_name);
-			strcat(json_message, ", ");
-		}
-
-		size_t size = strlen(json_message);
-		size = size - 2;
-		json_message[size] = '\0';
-		strcat(json_message, ".");
+		size_t size = strlen(target_string);
+		size = size - 1;
+		target_string[size] = '\0';
 	}
 
-	list = clean_scandir(list, hostno);
+	list = clean_scandir(list, allowed_host_number);
 
-	/* Remove NVMe Target interface port */
-	if ((port != INVALID_VALUE) && (hostno == 0)) {
-		sprintf(path, "%s/%d/subsystems/%s%s-%s", SYS_NVMET_PORTS, port, NQN_HDR_STR, hostname, device);
+	if (allowed_host_number > 0 && strlen(host) <= 0) {
+		msg = "Error. No host provided, but one or more target(s) is/are still mapped to NQN(s): %s. Please remove them first.";
+		print_error(msg, return_message, target_string);
+		return rc;
+	} else if (allowed_host_number > 0 && strlen(host) > 0) {
+		/* Example of this path:
+	 	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/allowed_hosts/<HOST>
+	 	 */
+		sprintf(path, "%s/%s/allowed_hosts/%s", SYS_NVMET_TGT, nqn, host);
 		if (access(path, F_OK) == SUCCESS) {
-			rc = unlink(path);
-			if (rc != SUCCESS) {
-				msg = "Error. Unable to remove NQN from port. %s: unlink: %s";
-				print_error(msg, return_message, __func__, strerror(errno));
+			if (unlink(path) != SUCCESS) {
+				msg = "Error. Unable to remove link %s. %s: unlink: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
 				return rc;
 			}
-			msg = "Block device %s has been unmapped from NVMe Target port %d.";
-			if (return_message == NULL) {
-				print_error(msg, return_message, device, port);
-			} else {
-				sprintf(json_message_temp, msg, device, port);
-				if (strlen(json_message) > 0) {
-					strcat(json_message, " ");
-				}
-				strcat(json_message, json_message_temp);
+		}
+		/* Example of this path:
+	 	 * /sys/kernel/config/nvmet/hosts/<HOST>
+	 	 */
+		sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
+		if (access(path, F_OK) == SUCCESS) {
+			if (rmdir(path) != SUCCESS) {
+				msg = "Error. Unable to remove dir %s. %s: rmdir: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				return rc;
 			}
-		} else {
-			/* The NVMe Target interface port number that was defined does not exist on the system */
-			msg = "%s: Port %d and / or export does not exist.";
-			print_error(msg, return_message, __func__, port);
+			allowed_host_number--;
+		}
+
+		if (allowed_host_number > 0) {
+			sprintf(regexp, "%s%s%s", "\\s?", host, "\\s?");
+			preg_replace(regexp, "", target_string, target_string_final, sizeof(target_string_final));
+			msg = "Error. One or more target(s) is/are still mapped to NQN(s): %s. Please remove them first.";
+			print_error(msg, return_message, target_string_final);
 			return rc;
 		}
 	}
-
-	/*
-	 * If there are no more allowed_hosts and the target is not being exported by the port, remove
-	 * the target export from the entire subsystem. NOTE - we are not checking other ports (yet).
-	 * This check will come in a future update.
-	 */
-	if ((port != INVALID_VALUE) && (hostno == 0)) {
-		if (access(path, F_OK) == SUCCESS) {
-			msg = "Error. Target is still exported through the port: %s.";
-			print_error(msg, return_message, __func__, path);
-			return INVALID_VALUE;
+	if (allowed_host_number == 0) {
+		if (port != INVALID_VALUE) {
+			/* Example of this path:
+		 	 * /sys/kernel/config/nvmet/ports/<PORT>/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+	 	 	 */
+			sprintf(path, "%s/%d/subsystems/%s", SYS_NVMET_PORTS, port, nqn);
+			if (access(path, F_OK) == SUCCESS) {
+				if (unlink(path) != SUCCESS) {
+					msg = "Error. Unable to remove link of NQN to port. %s: unlink: %s";
+					print_error(msg, return_message, __func__, strerror(errno));
+					return rc;
+				}
+			}
+		} else {
+			sprintf(path, "%s", SYS_NVMET_PORTS);
+			if ((port_number = scandir(path, &list, scandir_filter_no_dot, NULL)) < 0) {
+				msg = "Error. Unable to scan host exports directory for %s. %s: unlink: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				return rc;
+			}
+			for (n = 0; n < port_number; n++) {
+				sprintf(path, "%s/%s", SYS_NVMET_PORTS, list[n]->d_name);
+				if (access(path, F_OK) == SUCCESS) {
+					sprintf(path, "%s/%s/subsystems/%s", SYS_NVMET_PORTS, list[n]->d_name, nqn);
+					if (access(path, F_OK) == SUCCESS) {
+						if (unlink(path) != SUCCESS) {
+							msg = "Error. Unable to remove NQN %s. %s: rmdir: %s";
+							print_error(msg, return_message, path, __func__, strerror(errno));
+							list = clean_scandir(list, port_number);
+							return rc;
+						}
+					}
+				}
+			}
+			list = clean_scandir(list, port_number);
 		}
-		/* Disable volume */
-		sprintf(path, "%s/%s%s-%s/namespaces/1/enable", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		sprintf(path, "%s/%s/attr_allow_any_host", SYS_NVMET_TGT, nqn);
 		if ((fp = fopen(path, "w")) == NULL){
-			msg = "Error. Unable to open namespace enable file %s. %s: fopen: %s";
+			msg = "Error. Unable to open %s. %s: fopen: %s";
 			print_error(msg, return_message, path, __func__, strerror(errno));
 			return INVALID_VALUE;
 		}
 		fprintf(fp, "0");
 		fclose(fp);
 
+		/* Disable volume */
+		sprintf(path, "%s/%s/namespaces/1/enable", SYS_NVMET_TGT, nqn);
+		if ((fp = fopen(path, "w")) == NULL){
+			msg = "Error. Unable to open namespace enable file %s. %s: fopen: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return rc;
+		}
+		fprintf(fp, "0");
+		fclose(fp);
+
 		/* Remove namespace */
-		sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		sprintf(path, "%s/%s/namespaces/1", SYS_NVMET_TGT, nqn);
 		if (access(path, F_OK) == SUCCESS) {
-			if ((rc = rmdir(path)) != SUCCESS) {
+			if (rmdir(path) != SUCCESS) {
 				msg = "Error. Unable to remove namespace %s. %s: rmdir: %s";
 				print_error(msg, return_message, path, __func__, strerror(errno));
 				return rc;
@@ -1002,9 +1112,17 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 		}
 
 		/* Remove NQN from NVMeT Subsystem */
-		sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		sprintf(path, "%s/%s", SYS_NVMET_TGT, nqn);
 		if (access(path, F_OK) == SUCCESS) {
-			if ((rc = rmdir(path)) != SUCCESS) {
+			if (rmdir(path) != SUCCESS) {
+				sprintf(path, "%s/%s/namespaces/1", SYS_NVMET_TGT, nqn);
+				if (access(path, F_OK) != SUCCESS) {
+					if (mkdir(path, mode) != SUCCESS) {
+						msg = "Error. Unable to restore namespace %s. %s: mkdir: %s";
+						print_error(msg, return_message, path, __func__, strerror(errno));
+						return rc;
+					}
+				}
 				msg = "Error. Unable to remove NQN from NVMe Target subsystem %s. %s: rmdir: %s";
 				print_error(msg, return_message, path, __func__, strerror(errno));
 				return rc;
@@ -1012,31 +1130,9 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 		}
 	}
 
-	if ((strlen(json_message) == 0) || hostno == 0) {
-		rc = SUCCESS;
-		msg = "Block device %s has been removed from the NVMe Target subsystem.";
-		sprintf(json_message_temp, msg, device);
-		if (strlen(json_message) > 0) {
-			strcat(json_message, " ");
-		}
-		strcat(json_message, json_message_temp);
-		print_error("%s", return_message, json_message);
-	} else if ((allowed_host_number - hostno) > 0) {
-		rc = SUCCESS;
-		msg = "Block device %s could not be removed from the NVMe Target subsystem, but has been unmapped from NVMe Target host %s.";
-		sprintf(json_message_temp, msg, device, host);
-		if (strlen(json_message) > 0) {
-			strcat(json_message, " ");
-		}
-		strcat(json_message, json_message_temp);
-		printf("-%s-\n", json_message);
-		print_error("%s", return_message, json_message);
-	} else {
-		rc = INVALID_VALUE;
-		msg = "Block device %s could not be removed from the NVMe Target subsystem for unspecified host. %s";
-		print_error(msg, return_message, device, json_message);
-	}
-	return rc;
+	msg = "Block device %s has been removed from the NVMe Target subsystem.";
+	print_error(msg, return_message, device);
+	return SUCCESS;
 }
 
 /*
@@ -1098,7 +1194,7 @@ int nvmet_view_ports(bool json_flag, char *error_message)
  */
 int nvmet_enable_port(char *interface, int port, int protocol, char *return_message)
 {
-	int rc = INVALID_VALUE;
+	int rc = INVALID_VALUE, rv = INVALID_VALUE;
 	FILE *fp;
 	char path[NAMELEN] = {0x0}, ip[0xF] = {0x0}, proto[0x5] = {0x0};
 	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
@@ -1114,10 +1210,8 @@ int nvmet_enable_port(char *interface, int port, int protocol, char *return_mess
 	}
 
 	if (protocol != XFER_MODE_LOOP) {
-		ports = nvmet_scan_ports(error_message);
-		if ((ports == NULL) && (strlen(error_message) != 0)) {
-			msg = "%s";
-			print_error(msg, return_message, error_message);
+		ports = nvmet_scan_ports(return_message, &rv);
+		if (rv == INVALID_VALUE) {
 			return INVALID_VALUE;
 		}
 
@@ -1279,17 +1373,19 @@ int nvmet_disable_port(int port, char *return_message)
  * @param json_result This is the JSON string that will be returned to the caller.
  */
 int nvmet_view_exports_json(char *error_message, char **json_result) {
-	int rc = SUCCESS;
+	int rc = SUCCESS, rv = INVALID_VALUE;
 	struct NVMET_PROFILE *nvmet = NULL;
 	struct NVMET_PORTS *ports = NULL;
 
-	nvmet = nvmet_scan_subsystem(error_message);
-	if ((nvmet == NULL) && (strlen(error_message) != 0)) {
+	nvmet = nvmet_scan_subsystem(error_message, &rv);
+	if (rv == INVALID_VALUE) {
 		return INVALID_VALUE;
 	}
 
-	ports = nvmet_scan_ports(error_message);
-	if ((ports == NULL) && (strlen(error_message) != 0)) {
+	rv = INVALID_VALUE;
+
+	ports = nvmet_scan_ports(error_message, &rv);
+	if (rv == INVALID_VALUE) {
 		free_nvmet_linked_lists(NULL, nvmet);
 		nvmet = NULL;
 		return INVALID_VALUE;

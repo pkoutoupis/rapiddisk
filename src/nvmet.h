@@ -39,8 +39,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #define XFER_MODE_RDMA			1
 #define XFER_MODE_LOOP			2
 
-struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message);
-struct NVMET_PORTS *nvmet_scan_ports(char *return_message);
+struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc);
+struct NVMET_PORTS *nvmet_scan_ports(char *return_message, int *rc);
 struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message, int *rc);
 char *nvmet_interface_ip_get(char *interface, char *return_message);
 #ifndef SERVER
