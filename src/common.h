@@ -201,6 +201,7 @@ typedef struct NVMET_PROFILE {
 	int namespc;
 	char device[0x1F];
 	int enabled;
+	struct NVMET_ALLOWED_HOST *allowed_hosts;
 	struct NVMET_PROFILE *next;
 } NVMET_PROFILE;
 
@@ -216,5 +217,10 @@ typedef struct DAEMON_ARGS {
 	bool verbose;
 	char port[0xf];
 } DAEMON_ARGS;
+
+typedef struct NVMET_ALLOWED_HOST { ;
+	char allowed_host[NAMELEN];
+	struct NVMET_ALLOWED_HOST *next;
+} NVMET_ALLOWED_HOST;
 
 #endif

@@ -152,9 +152,31 @@ void clean_ports(NVMET_PORTS *head) {
 	}
 }
 
+void clean_hosts(NVMET_ALLOWED_HOST *head) {
+	/* if there is only one item in the list, remove it */
+	if (head->next == NULL) {
+		if (head != NULL) free(head);
+		head = NULL;
+	} else {
+		/* get to the second to last node in the list */
+		struct NVMET_ALLOWED_HOST *current = head;
+		while (current->next->next != NULL) {
+			current = current->next;
+		}
+
+		/* now current points to the second to last item of the list, so let's remove current->next */
+		if (current->next != NULL) {
+			free(current->next);
+			current->next = NULL;
+		}
+		clean_hosts(head);
+	}
+}
+
 void clean_nvmet(NVMET_PROFILE *head) {
 	/* if there is only one item in the list, remove it */
 	if (head->next == NULL) {
+		if (head->allowed_hosts != NULL && head->allowed_hosts->next == NULL) free(head->allowed_hosts);
 		if (head != NULL) free(head);
 		head = NULL;
 	} else {
@@ -163,7 +185,9 @@ void clean_nvmet(NVMET_PROFILE *head) {
 		while (current->next->next != NULL) {
 			current = current->next;
 		}
-
+		if (current->next->allowed_hosts != NULL) {
+			clean_hosts(current->next->allowed_hosts);
+		}
 		/* now current points to the second to last item of the list, so let's remove current->next */
 		if (current->next != NULL) {
 			free(current->next);
