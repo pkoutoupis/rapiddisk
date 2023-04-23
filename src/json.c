@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 9.0.0
-* @date 30 December 2023
+* @version 9.1.0
+* @date 23 April 2023
 */
 
 #include "common.h"
@@ -499,8 +499,8 @@ int json_cache_wb_statistics(struct WC_STATS *stats, char **stats_result, bool w
  */
 int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, char **json_result, bool wantresult)
 {
-	json_t *root, *array = json_array(), *nvmet_array = json_array(), *ports_array = json_array();
-	json_t *nvmet_object = json_object(), *ports_object = json_object();
+	json_t *root, *array = json_array(), *nvmet_array = json_array();
+	json_t *nvmet_object = json_object();
 	NVMET_PROFILE *nvmet_orig = nvmet;
 	NVMET_PORTS *ports;
 	NVMET_ALLOWED_HOST *allowed_hosts;
@@ -529,7 +529,6 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, char **json_result, boo
 			json_object_set_new(object_p, "port", json_integer(ports->port));
 			json_object_set_new(object_p, "address", json_string(ports->addr));
 			json_object_set_new(object_p, "protocol", json_string(ports->protocol));
-			json_object_set_new(object_p, "nqn", json_string(ports->nqn));
 			json_array_append_new(assigned_ports_array, object_p);
 			ports = ports->next;
 		}
@@ -540,25 +539,6 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, char **json_result, boo
 	}
 	json_object_set_new(nvmet_object, "nvmet_targets", nvmet_array);
 	json_array_append_new(array, nvmet_object);
-
-	nvmet = nvmet_orig;
-
-	while (nvmet != NULL) {
-		ports = nvmet->assigned_ports;
-		while (ports != NULL) {
-			json_t *object_pp = json_object();
-			json_object_set_new(object_pp, "port", json_integer(ports->port));
-			json_object_set_new(object_pp, "address", json_string(ports->addr));
-			json_object_set_new(object_pp, "protocol", json_string(ports->protocol));
-			json_object_set_new(object_pp, "nqn", json_string(ports->nqn));
-			json_array_append_new(ports_array, object_pp);
-			ports = ports->next;
-		}
-		nvmet = nvmet->next;
-	}
-
-	json_object_set_new(ports_object, "nvmet_ports", ports_array);
-	json_array_append_new(array, ports_object);
 
 	root = json_pack("{s:o}", "targets", array);
 	char *jdumped = json_dumps(root, 0);

@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 9.0.0
- * @date 30 December 2023
+ * @version 9.1.0
+ * @date 21 April 2023
  */
 #ifndef COMMON_H
 #define COMMON_H
@@ -49,7 +49,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 /** Rapiddiskd (daemon) Process name */
 #define DAEMON			PROCESS "d"
 #define COPYRIGHT		"Copyright 2011 - 2023 Petros Koutoupis"
-#define VERSION_NUM	  	"9.0.0"
+#define VERSION_NUM	  	"9.1.0"
 #define SUCCESS			0
 #define INVALID_VALUE		-1
 #define NAMELEN			0x200

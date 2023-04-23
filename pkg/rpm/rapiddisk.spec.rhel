@@ -1,6 +1,6 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 9.0.0
+Version: 9.1.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
@@ -107,6 +107,16 @@ rm -rf %{buildroot}
 %attr(0644,root,root) /usr/lib/systemd/system-preset/30-rapiddiskd.preset
 
 %changelog
+* Sun Apr 23 2023 Petros Koutoupis <petros@petroskoutoupis.com>
+- module: Fixed large performance regression bug with resize mutex.
+- module: Added RHEL 9 support.
+- module: Added support for new ioctls.
+- module: Fixed GFP_HIGHMEM page allocation bug.
+- utility: Added NVMe Target loopback support.
+- utility: Fixed issue #155 with strlen of NULL string segfault.
+- utility: Reworked nvmet exports, unexports and port scanning logic (thank you Matteo Tenca).
+- scripts: Added example BCC tools script.
+- documentation: Added RPM building documentation.
 * Wed Dec 28 2022 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Added code to capture page count metrics.
 - module: Updated ioctl support.

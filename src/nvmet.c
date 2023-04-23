@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 9.0.0
-* @date 30 December 2023
+* @version 9.1.0
+* @date 23 April 2023
 */
 
 #include "nvmet.h"
@@ -521,7 +521,7 @@ char *nvmet_interface_ip_get(char *interface, char *return_message)
  */
 int nvmet_view_exports(bool json_flag, char *error_message)
 {
-	int i = 1, ii = 1;
+	int i = 1;
 	int rc = SUCCESS, rv = INVALID_VALUE;
 	struct NVMET_PROFILE *nvmet, *nvmet_orig;
 	struct NVMET_PORTS *ports;
@@ -547,38 +547,18 @@ int nvmet_view_exports(bool json_flag, char *error_message)
 			       ((nvmet->enabled == 0) ? "False" : "True"));
 			hosts = nvmet->allowed_hosts;
 			while (hosts != NULL) {
-				printf("\t\t%d: Allowed host: %s\n", ii, hosts->allowed_host);
-				ii++;
+				printf("\t\tAllowed host: %s\n", hosts->allowed_host);
 				hosts = hosts->next;
 			}
-			ii = 1;
 			ports = nvmet->assigned_ports;
 			while (ports != NULL) {
-				printf("\t\t%d: Linked port: %d\tIP address: %s (%s)\n", ii, ports->port,
+				printf("\t\tLinked port: %d\tIP address: %s (%s)\n", ports->port,
 					   ports->addr, ports->protocol);
-				ii++;
 				ports = ports->next;
 			}
-			ii = 1;
 			i++;
 			nvmet = nvmet->next;
 		}
-	}
-	nvmet = nvmet_orig;
-	i = 1;
-	printf("\nExported NVMe Ports\n\n");
-	if (nvmet == NULL) {
-		printf("\tNone.\n\n");
-		return SUCCESS;
-	}
-	while (nvmet != NULL) {
-		ports = nvmet->assigned_ports;
-		while (ports != NULL) {
-			printf("\t%d: Port: %d - %s (%s)\tNQN: %s\n", i, ports->port, ports->addr, ports->protocol, ports->nqn);
-			i++;
-			ports = ports->next;
-		}
-		nvmet = nvmet->next;
 	}
 	free_nvmet_linked_lists(NULL, nvmet_orig);
 	return SUCCESS;
@@ -1137,9 +1117,9 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 		if (allowed_host_number > 0) {
 			sprintf(regexp, "%s%s%s", "\\s?", host, "\\s?");
 			preg_replace(regexp, "", target_string, target_string_final, sizeof(target_string_final));
-			msg = "Error. One or more target(s) is/are still mapped to NQN(s): %s. Please remove them first.";
+			msg = "Warning. One or more target(s) is/are still mapped to NQN(s): %s. Please remove them first.";
 			print_error(msg, return_message, target_string_final);
-			return rc;
+			return SUCCESS;
 		}
 	}
 	if (allowed_host_number == 0) {
@@ -1196,9 +1176,9 @@ int nvmet_unexport_volume(char *device, char *host, int port, char *return_messa
 			/* The NQN is mapped to the user specified port AND some other ports,
 			 * so we should not remove it globally
 			 */
-			msg = "Error. The NQN was removed from port %d, but is still exported on other ports.";
+			msg = "Warning. The NQN was removed from port %d, but is still exported on other ports.";
 			print_error(msg, return_message, port);
-			return rc;
+			return SUCCESS;
 		}
 
 		sprintf(path, "%s/%s/attr_allow_any_host", SYS_NVMET_TGT, nqn);
