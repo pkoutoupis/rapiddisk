@@ -176,7 +176,14 @@ void clean_hosts(NVMET_ALLOWED_HOST *head) {
 void clean_nvmet(NVMET_PROFILE *head) {
 	/* if there is only one item in the list, remove it */
 	if (head->next == NULL) {
-		if (head->allowed_hosts != NULL && head->allowed_hosts->next == NULL) free(head->allowed_hosts);
+		if (head->allowed_hosts != NULL) {
+			clean_hosts(head->allowed_hosts);
+			head->allowed_hosts = NULL;
+		}
+		if (head->assigned_ports != NULL) {
+			clean_ports(head->assigned_ports);
+			head->assigned_ports = NULL;
+		}
 		if (head != NULL) free(head);
 		head = NULL;
 	} else {
@@ -187,6 +194,11 @@ void clean_nvmet(NVMET_PROFILE *head) {
 		}
 		if (current->next->allowed_hosts != NULL) {
 			clean_hosts(current->next->allowed_hosts);
+			current->next->allowed_hosts = NULL;
+		}
+		if (current->next->assigned_ports != NULL) {
+			clean_ports(current->next->assigned_ports);
+			current->next->assigned_ports = NULL;
 		}
 		/* now current points to the second to last item of the list, so let's remove current->next */
 		if (current->next != NULL) {

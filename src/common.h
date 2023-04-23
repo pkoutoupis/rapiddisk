@@ -202,6 +202,7 @@ typedef struct NVMET_PROFILE {
 	char device[0x1F];
 	int enabled;
 	struct NVMET_ALLOWED_HOST *allowed_hosts;
+	struct NVMET_PORTS *assigned_ports;
 	struct NVMET_PROFILE *next;
 } NVMET_PROFILE;
 
