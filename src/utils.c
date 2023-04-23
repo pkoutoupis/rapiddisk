@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 9.0.0
-* @date 30 December 2023
+* @version 9.1.0
+* @date 23 April 2023
 */
 #include "utils.h"
 #include "json.h"
@@ -152,9 +152,38 @@ void clean_ports(NVMET_PORTS *head) {
 	}
 }
 
+void clean_hosts(NVMET_ALLOWED_HOST *head) {
+	/* if there is only one item in the list, remove it */
+	if (head->next == NULL) {
+		if (head != NULL) free(head);
+		head = NULL;
+	} else {
+		/* get to the second to last node in the list */
+		struct NVMET_ALLOWED_HOST *current = head;
+		while (current->next->next != NULL) {
+			current = current->next;
+		}
+
+		/* now current points to the second to last item of the list, so let's remove current->next */
+		if (current->next != NULL) {
+			free(current->next);
+			current->next = NULL;
+		}
+		clean_hosts(head);
+	}
+}
+
 void clean_nvmet(NVMET_PROFILE *head) {
 	/* if there is only one item in the list, remove it */
 	if (head->next == NULL) {
+		if (head->allowed_hosts != NULL) {
+			clean_hosts(head->allowed_hosts);
+			head->allowed_hosts = NULL;
+		}
+		if (head->assigned_ports != NULL) {
+			clean_ports(head->assigned_ports);
+			head->assigned_ports = NULL;
+		}
 		if (head != NULL) free(head);
 		head = NULL;
 	} else {
@@ -163,7 +192,14 @@ void clean_nvmet(NVMET_PROFILE *head) {
 		while (current->next->next != NULL) {
 			current = current->next;
 		}
-
+		if (current->next->allowed_hosts != NULL) {
+			clean_hosts(current->next->allowed_hosts);
+			current->next->allowed_hosts = NULL;
+		}
+		if (current->next->assigned_ports != NULL) {
+			clean_ports(current->next->assigned_ports);
+			current->next->assigned_ports = NULL;
+		}
 		/* now current points to the second to last item of the list, so let's remove current->next */
 		if (current->next != NULL) {
 			free(current->next);

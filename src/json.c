@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 9.0.0
-* @date 30 December 2023
+* @version 9.1.0
+* @date 23 April 2023
 */
 
 #include "common.h"
@@ -488,20 +488,22 @@ int json_cache_wb_statistics(struct WC_STATS *stats, char **stats_result, bool w
  */
 
 /**
- * It takes a linked list of NVMET_PROFILE and NVMET_PORTS structures and converts them to JSON
+ * It takes a linked list of NVMET_PROFILE structures and converts them to JSON
  *
  * @param nvmet A pointer to the first element of the linked list of NVMET_PROFILE structures.
- * @param ports A pointer to the first element of the linked list of NVMET_PORTS structures.
  * @param json_result This is a pointer to a pointer to a char.  It's used to return the JSON string to the caller.
  * @param wantresult If TRUE, the function will place the pointer to the JSON string into *stats_result (must be free()d later).
  * If FALSE, the JSON string will be printed to stdout.
  *
  * @return A JSON string containing the NVMET targets and ports.
  */
-int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *ports, char **json_result, bool wantresult)
+int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, char **json_result, bool wantresult)
 {
-	json_t *root, *array = json_array(), *nvmet_array = json_array(), *ports_array = json_array();
-	json_t *nvmet_object = json_object(), *ports_object = json_object();
+	json_t *root, *array = json_array(), *nvmet_array = json_array();
+	json_t *nvmet_object = json_object();
+	NVMET_PROFILE *nvmet_orig = nvmet;
+	NVMET_PORTS *ports;
+	NVMET_ALLOWED_HOST *allowed_hosts;
 	int res = SUCCESS;
 
 	while (nvmet != NULL) {
@@ -510,23 +512,33 @@ int json_nvmet_view_exports(struct NVMET_PROFILE *nvmet, struct NVMET_PORTS *por
 		json_object_set_new(object, "namespace", json_integer(nvmet->namespc));
 		json_object_set_new(object, "device", json_string(nvmet->device));
 		json_object_set_new(object, "enabled", json_string((nvmet->enabled == ENABLED) ? "true" : "false"));
+		json_t *hosts_allowed_array = json_array();
+		allowed_hosts = nvmet->allowed_hosts;
+		while (allowed_hosts != NULL) {
+			json_t *object_h = json_object();
+			json_object_set_new(object_h, "host", json_string(allowed_hosts->allowed_host));
+			json_array_append_new(hosts_allowed_array, object_h);
+			allowed_hosts = allowed_hosts->next;
+		}
+		json_object_set_new(object, "allowed_hosts", hosts_allowed_array);
+
+		json_t *assigned_ports_array = json_array();
+		ports = nvmet->assigned_ports;
+		while (ports != NULL) {
+			json_t *object_p = json_object();
+			json_object_set_new(object_p, "port", json_integer(ports->port));
+			json_object_set_new(object_p, "address", json_string(ports->addr));
+			json_object_set_new(object_p, "protocol", json_string(ports->protocol));
+			json_array_append_new(assigned_ports_array, object_p);
+			ports = ports->next;
+		}
+		json_object_set_new(object, "assigned_ports", assigned_ports_array);
+
 		json_array_append_new(nvmet_array, object);
 		nvmet = nvmet->next;
 	}
 	json_object_set_new(nvmet_object, "nvmet_targets", nvmet_array);
 	json_array_append_new(array, nvmet_object);
-
-	while (ports != NULL) {
-		json_t *object = json_object();
-		json_object_set_new(object, "port", json_integer(ports->port));
-		json_object_set_new(object, "address", json_string(ports->addr));
-		json_object_set_new(object, "protocol", json_string(ports->protocol));
-		json_object_set_new(object, "nqn", json_string(ports->nqn));
-		json_array_append_new(ports_array, object);
-		ports = ports->next;
-	}
-	json_object_set_new(ports_object, "nvmet_ports", ports_array);
-	json_array_append_new(array, ports_object);
 
 	root = json_pack("{s:o}", "targets", array);
 	char *jdumped = json_dumps(root, 0);

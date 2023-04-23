@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 9.0.0
-* @date 30 December 2023
+* @version 9.1.0
+* @date 23 April 2023
 */
 
 #include "main.h"
@@ -73,7 +73,7 @@ void online_menu(char *string)
 	       "\t-R\t\tRevalidate size of NVMe export using existing RapidDisk device.\n"
 	       "\t-r\t\tDynamically grow the size of an existing RapidDisk device.\n"
 	       "\t-s\t\tObtain RapidDisk-Cache Mappings statistics.\n"
-	       "\t-t\t\tDefine the NVMe Target port's transfer protocol (i.e. tcp or rdma).\n"
+	       "\t-t\t\tDefine the NVMe Target port's transfer protocol (i.e. tcp, rdma or loop).\n"
 	       "\t-U\t\tUnlock a RapidDisk block device (set to read-write).\n"
 	       "\t-u\t\tUnmap a RapidDisk device from another block device.\n"
 	       "\t-v\t\tDisplay the utility version string.\n"
@@ -90,6 +90,7 @@ void online_menu(char *string)
 	       "\trapiddisk -L rd2\n"
 	       "\trapiddisk -U rd3\n"
 	       "\trapiddisk -i eth0 -P 1 -t tcp\n"
+	       "\trapiddisk -i NULL -P 2 -t loop\n"
 	       "\trapiddisk -X -P 1\n"
 	       "\trapiddisk -e -b rd3 -P 1 -H nqn.host1\n"
 	       "\trapiddisk -R -b rd0\n"
@@ -196,6 +197,8 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			case 't':
 				if (strcmp(optarg, "rdma") == 0)
 					xfer = XFER_MODE_RDMA;
+				else if (strcmp(optarg, "loop") == 0)
+					xfer = XFER_MODE_LOOP;
 				break;
 			case 'U':
 				action = ACTION_UNLOCK;

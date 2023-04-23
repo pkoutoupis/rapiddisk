@@ -41,7 +41,7 @@
 #include <linux/radix-tree.h>
 #include <linux/io.h>
 
-#define VERSION_STR		"9.0.0"
+#define VERSION_STR		"9.1.0"
 #define PREFIX			"rapiddisk"
 #define BYTES_PER_SECTOR	512
 #define MAX_RDSKS		1024
@@ -52,21 +52,26 @@
 
 #define FREE_BATCH		16
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0)
+#if (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
+	/* Not sure of a cleaner way to do this. */
+#else
 #define SECTOR_SHIFT		9
 #define PAGE_SECTORS_SHIFT	(PAGE_SHIFT - SECTOR_SHIFT)
 #define PAGE_SECTORS		BIT(PAGE_SECTORS_SHIFT)
+#endif
 #endif
 
 /* ioctls */
 #define IOCTL_INVALID_CDQUERY	0x5331
 #define IOCTL_INVALID_CDQUERY2	0x5395
+#define IOCTL_INVALID_TTY	0x5401
+#define IOCTL_INVALID_SG_IO	0x2285
 #define IOCTL_RD_GET_STATS	0x0529
 #define IOCTL_RD_GET_USAGE	0x0530
 #define IOCTL_RD_BLKFLSBUF	0x0531
 
 static DEFINE_MUTEX(sysfs_mutex);
 static DEFINE_MUTEX(ioctl_mutex);
-static DEFINE_MUTEX(resize_mutex);
 
 struct rdsk_device {
 	int num;
@@ -111,7 +116,7 @@ static int rdsk_ioctl(struct block_device *, fmode_t,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
 static void rdsk_submit_bio(struct bio *);
 #else
 static blk_qc_t rdsk_submit_bio(struct bio *);
@@ -268,10 +273,7 @@ static struct page *rdsk_insert_page(struct rdsk_device *rdsk, sector_t sector)
 	 * If XIP was reworked to use pfns and kmap throughout, this
 	 * restriction might be able to be lifted.
 	 */
-	gfp_flags = GFP_NOIO | __GFP_ZERO;
-#ifndef CONFIG_BLK_DEV_XIP
-	gfp_flags |= __GFP_HIGHMEM;
-#endif
+	gfp_flags = GFP_NOIO | __GFP_ZERO | __GFP_HIGHMEM;
 	page = alloc_page(gfp_flags);
 	if (!page)
 		return NULL;
@@ -283,13 +285,12 @@ static struct page *rdsk_insert_page(struct rdsk_device *rdsk, sector_t sector)
 
 	spin_lock(&rdsk->rdsk_lock);
 	idx = sector >> PAGE_SECTORS_SHIFT;
+	page->index = idx;
 	if (radix_tree_insert(&rdsk->rdsk_pages, idx, page)) {
 		__free_page(page);
 		page = radix_tree_lookup(&rdsk->rdsk_pages, idx);
 		BUG_ON(!page);
 		BUG_ON(page->index != idx);
-	} else {
-		page->index = idx;
 	}
 	spin_unlock(&rdsk->rdsk_lock);
 
@@ -379,7 +380,6 @@ static void copy_to_rdsk(struct rdsk_device *rdsk, const void *src,
 	page = rdsk_lookup_page(rdsk, sector);
 	BUG_ON(!page);
 
-	mutex_lock(&resize_mutex);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 	dst = kmap_atomic(page);
 #else
@@ -413,7 +413,6 @@ static void copy_to_rdsk(struct rdsk_device *rdsk, const void *src,
 
 	if ((sector + (n / BYTES_PER_SECTOR)) > rdsk->max_blk_alloc)
 		rdsk->max_blk_alloc = (sector + (n / BYTES_PER_SECTOR));
-	mutex_unlock(&resize_mutex);
 }
 
 static void copy_from_rdsk(void *dst, struct rdsk_device *rdsk,
@@ -512,7 +511,7 @@ out:
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
 static void
 #else
 static blk_qc_t
@@ -640,7 +639,11 @@ out:
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,16,0)
+#if  (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
+	return;
+#else
 	return BLK_QC_T_NONE;
+#endif
 #else
 	return;
 #endif
@@ -654,7 +657,11 @@ io_error:
 	bio_io_error(bio);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,16,0)
+#if  (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
+	return;
+#else
 	return BLK_QC_T_NONE;
+#endif
 #endif
 #endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
@@ -662,7 +669,7 @@ io_error:
 #endif
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
 static inline int bdev_openers(struct block_device *bdev)
 {
 	return atomic_read(&bdev->bd_openers);
@@ -715,6 +722,8 @@ static int rdsk_ioctl(struct block_device *bdev, fmode_t mode,
 		return error;
 	case IOCTL_INVALID_CDQUERY:
 	case IOCTL_INVALID_CDQUERY2:
+	case IOCTL_INVALID_TTY:
+	case IOCTL_INVALID_SG_IO:
 		return -EINVAL;
 	case IOCTL_RD_GET_STATS:
 		return copy_to_user((void __user *)arg,
@@ -740,7 +749,7 @@ static const struct block_device_operations rdsk_fops = {
 
 static int attach_device(unsigned long num, unsigned long long size)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
 	int err = GENERIC_ERROR;
 #endif
 	struct rdsk_device *rdsk, *tmp;
@@ -834,7 +843,7 @@ static int attach_device(unsigned long num, unsigned long long size)
 	disk->queue->nr_requests = nr_requests;
 	disk->queue->limits.discard_granularity = PAGE_SIZE;
 	disk->queue->limits.max_discard_sectors = UINT_MAX;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
 	blk_queue_max_discard_sectors(disk->queue, 0);
 #else
 	blk_queue_flag_set(QUEUE_FLAG_DISCARD, disk->queue);
@@ -872,7 +881,7 @@ static int attach_device(unsigned long num, unsigned long long size)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 	disk->queue = rdsk->rdsk_queue;
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
 	disk->flags |= GENHD_FL_NO_PART;
 #else
 	disk->flags |= GENHD_FL_SUPPRESS_PARTITION_INFO;
@@ -880,7 +889,7 @@ static int attach_device(unsigned long num, unsigned long long size)
 	sprintf(disk->disk_name, "rd%lu", num);
 	set_capacity(disk, sectors);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
 	err = add_disk(disk);
 	if (err)
 		goto out_free_queue;
@@ -943,27 +952,26 @@ static int resize_device(unsigned long num, unsigned long long size)
 	}
 	sectors = (size / BYTES_PER_SECTOR);
 
-	mutex_lock(&resize_mutex);
 	list_for_each_entry(rdsk, &rdsk_devices, rdsk_list)
 		if (rdsk->num == num) {
 			found = true;
 			break;
 		}
 
-	if (!found) {
-		mutex_unlock(&resize_mutex);
+	if (!found)
 		return GENERIC_ERROR;
-	}
 
+	/* WARNING - I am unable to rely on mutexes here due to its impact on performance.
+	 *   As a result, if reducing to a smaller size, there is a risk of a memory leak.
+	 *   If a resize is done, it should be done while no I/O is running to the device.
+	 */
 	if (size <= (rdsk->max_blk_alloc * BYTES_PER_SECTOR)) {
 		pr_warn("%s: Please specify a larger size for resizing.\n",
 			PREFIX);
-		mutex_unlock(&resize_mutex);
 		return GENERIC_ERROR;
 	}
 	set_capacity(rdsk->rdsk_disk, sectors);
 	rdsk->size = size;
-	mutex_unlock(&resize_mutex);
 	pr_info("%s: Resized rd%lu of %llu bytes in size.\n", PREFIX, num, size);
 	return SUCCESS;
 }

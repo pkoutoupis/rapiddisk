@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 9.0.0
- * @date 30 December 2023
+ * @version 9.1.0
+ * @date 23 April 2023
  */
 
 #ifndef NVMET_H
@@ -37,10 +37,11 @@ SPDX-License-Identifier: GPL-2.0-or-later
 
 #define XFER_MODE_TCP			0
 #define XFER_MODE_RDMA			1
+#define XFER_MODE_LOOP			2
 
-struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message);
-struct NVMET_PORTS *nvmet_scan_ports(char *return_message);
-struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message);
+struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc);
+struct NVMET_PORTS *nvmet_scan_ports(char *return_message, int *rc);
+struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message, int *rc);
 char *nvmet_interface_ip_get(char *interface, char *return_message);
 #ifndef SERVER
 int nvmet_view_exports(bool json_flag, char *error_message);

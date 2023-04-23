@@ -1,3 +1,14 @@
+### Release 9.1.0 ###
+- module: Fixed large performance regression bug with resize mutex.
+- module: Added RHEL 9 support.
+- module: Added support for new ioctls.
+- module: Fixed GFP_HIGHMEM page allocation bug.
+- utility: Added NVMe Target loopback support.
+- utility: Fixed issue #155 with strlen of NULL string segfault.
+- utility: Reworked nvmet exports, unexports and port scanning logic (thank you Matteo Tenca).
+- scripts: Added example BCC tools script.
+- documentation: Added RPM building documentation.
+
 ### Release 9.0.0 ###
 - module: Added code to capture page count metrics.
 - module: Updated ioctl support.

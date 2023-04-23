@@ -79,7 +79,7 @@ Dynamically grow the size of an existing RapidDisk device.
 Obtain RapidDisk-Cache Mappings statistics.
 .TP
 -t
-Define the NVMe Target port's transfer protocol (i.e. tcp or rdma).
+Define the NVMe Target port's transfer protocol (i.e. tcp, rdma or loop).
 .TP
 -U
 Unlock a RapidDisk block device (set to read-write).
@@ -128,6 +128,8 @@ rapiddisk -L rd2
 rapiddisk -U rd3
 .TP
 rapiddisk -i eth0 -P 1 -t tcp
+.TP
+rapiddisk -i NULL -P 1 -t loop
 .TP
 rapiddisk -X -P 1
 .TP

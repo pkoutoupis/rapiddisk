@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 9.0.0
- * @date 30 December 2023
+ * @version 9.1.0
+ * @date 23 April 2023
  */
 
 #define SERVER

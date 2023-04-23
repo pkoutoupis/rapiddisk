@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 9.0.0
- * @date 30 December 2023
+ * @version 9.1.0
+ * @date 21 April 2023
  */
 #ifndef COMMON_H
 #define COMMON_H
@@ -49,7 +49,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 /** Rapiddiskd (daemon) Process name */
 #define DAEMON			PROCESS "d"
 #define COPYRIGHT		"Copyright 2011 - 2023 Petros Koutoupis"
-#define VERSION_NUM	  	"9.0.0"
+#define VERSION_NUM	  	"9.1.0"
 #define SUCCESS			0
 #define INVALID_VALUE		-1
 #define NAMELEN			0x200
@@ -201,6 +201,8 @@ typedef struct NVMET_PROFILE {
 	int namespc;
 	char device[0x1F];
 	int enabled;
+	struct NVMET_ALLOWED_HOST *allowed_hosts;
+	struct NVMET_PORTS *assigned_ports;
 	struct NVMET_PROFILE *next;
 } NVMET_PROFILE;
 
@@ -216,5 +218,10 @@ typedef struct DAEMON_ARGS {
 	bool verbose;
 	char port[0xf];
 } DAEMON_ARGS;
+
+typedef struct NVMET_ALLOWED_HOST { ;
+	char allowed_host[NAMELEN];
+	struct NVMET_ALLOWED_HOST *next;
+} NVMET_ALLOWED_HOST;
 
 #endif

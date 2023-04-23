@@ -213,8 +213,8 @@ features of the RapidDisk suite.
 
 ### Loading the NVMe Target Kernel Modules
 In order to map any RapidDisk device and export it in the NVMe Target
-framework, the nvmet and the nvmet-tcp or nvmet-rdma kernel modules must be
-inserted.
+framework, the nvmet and the nvmet-tcp or nvmet-rdma (or nvme-loop) kernel
+modules must be inserted.
 
 ```console
 # modprobe nvmet nvmet-tcp

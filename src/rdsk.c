@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
 * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
 * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
-* @version 9.0.0
-* @date 30 December 2023
+* @version 9.1.0
+* @date 23 April 2023
 */
 
 #include "rdsk.h"
@@ -144,12 +144,12 @@ char *read_info(char *name, char *string, char *return_message)
 	if ((r != 1) && (feof(fp) == 0) && (ferror(fp) != 0)) {
 		msg = ERR_FREAD;
 		print_error(msg, return_message, __func__, "could not read file", file);
+		fclose(fp);
 		return NULL;
 	}
 	fclose(fp);
 	len = strlen(buf);
 	strncpy(obuf, buf, (len - 1));   /* Do not copy tailing escape character */
-	sprintf(obuf, "%s", obuf);
 
 	return obuf;
 }
@@ -310,7 +310,7 @@ struct RC_PROFILE *search_cache_targets(char *return_message)
 			}
 			if (strncmp(info_size, prof->device, sizeof(prof->device)) == 0) {
 				sprintf(file, "%s/%s/slaves", SYS_BLOCK, nodes[i]->d_name);
-				if ((num3 = scandir(file, &maps, NULL, NULL)) < 0) {
+				if ((num3 = scandir(file, &maps, scandir_filter_no_dot, NULL)) < 0) {
 					msg = ERR_SCANDIR;
 					print_error(msg, return_message, __func__, strerror(errno));
 					list = clean_scandir(list, num);
@@ -320,12 +320,10 @@ struct RC_PROFILE *search_cache_targets(char *return_message)
 					return NULL;
 				}
 				for (z=0;z < num3; z++) {
-					if (strncmp(maps[z]->d_name, ".", 1) != SUCCESS) {
-						if (strncmp(maps[z]->d_name, "rd", 2) == SUCCESS)
-							strcpy(prof->cache, (char *)maps[z]->d_name);
-						else
-							strcpy(prof->source, (char *)maps[z]->d_name);
-					}
+					if (strncmp(maps[z]->d_name, "rd", 2) == SUCCESS)
+						strcpy(prof->cache, (char *)maps[z]->d_name);
+					else
+						strcpy(prof->source, (char *)maps[z]->d_name);
 				}
 				maps = clean_scandir(maps, num3);
 			}

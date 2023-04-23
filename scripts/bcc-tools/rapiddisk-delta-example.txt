@@ -1,0 +1,21 @@
+Demonstration of rapiddisk-delta, the Linux eBPF/bcc version.
+
+
+rapiddisk-delta shows rapiddisk make_request and ioctl invocations and the time it took for the
+commands to return.
+For example:
+
+# ./rapiddisk-delta.py
+TIME(s)            CPU    COMM             PID    MESSAGE
+406.054258000      0      b'probe-bcache'  1510   b'op: rdsk_make_request()      delta (ns): 7066'
+406.054281000      0      b'probe-bcache'  1510   b'op: rdsk_make_request()      delta (ns): 3773'
+406.054294000      0      b'probe-bcache'  1510   b'op: rdsk_make_request()      delta (ns): 2819'
+406.095975000      0      b'multipathd'    831    b'op: rdsk_ioctl()             delta (ns): 6356'
+406.095993000      0      b'multipathd'    831    b'op: rdsk_ioctl()             delta (ns): 1270'
+417.443112000      0      b'dd'            1527   b'op: rdsk_make_request()      delta (ns): 7393'
+417.443163000      0      b'dd'            1527   b'op: rdsk_make_request()      delta (ns): 4580'
+[...]
+
+
+In a future revision, more details such as function operation type information will be included
+such as if it were a read, write, discard, etc. command.
