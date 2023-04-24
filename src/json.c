@@ -460,26 +460,36 @@ int json_cache_wb_statistics(struct WC_STATS *stats, char **stats_result, bool w
  *     {
  *       "nvmet_targets": [
  *         {
- *           "nqn": "rd1-test",
- *           "namespace": 2,
+ *           "nqn": "nqn.2021-06.org.rapiddisk:ubu22042-rd2",
+ *           "namespace": 1,
  *           "device": "/dev/rd2",
- *           "enabled": "true"
+ *           "enabled": "true",
+ *           "allowed_hosts": [
+ *             {
+ *               "host": "nqn.host2"
+ *             }
+ *           ],
+ *           "assigned_ports": [
+ *             {
+ *               "port": 1,
+ *               "address": "10.0.0.104",
+ *               "protocol": "tcp"
+ *             }
+ *           ]
  *         },
  *         {
- *           "nqn": "rd1-test",
+ *           "nqn": "nqn.2021-06.org.rapiddisk:ubu22042-rd0",
  *           "namespace": 1,
- *           "device": "/dev/rd1",
- *           "enabled": "true"
- *         }
- *       ]
- *     },
- *     {
- *       "nvmet_ports": [
- *         {
- *           "port": 1,
- *           "address": "10.0.0.185",
- *           "protocol": "tcp",
- *           "nqn": "rd1-test"
+ *           "device": "/dev/rd0",
+ *           "enabled": "true",
+ *           "allowed_hosts": [],
+ *           "assigned_ports": [
+ *             {
+ *               "port": 2,
+ *               "address": "UNDEFINED",
+ *               "protocol": "loop"
+ *             }
+ *           ]
  *         }
  *       ]
  *     }
