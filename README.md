@@ -8,7 +8,7 @@ RapidDisk contains a set of advanced Linux RAM Drive and Caching kernel
 modules. The user space utilities allow you to dynamically allocate RAM
 as block devices to either use them as stand alone drives or even map
 them as caching nodes to slower local (or remote) disk drives. The same
-utilies provide users with the capability to export the same volumes
+utilities provide users with the capability to export the same volumes
 across an NVMe Target network.
 
 ![Diagram](diagram.png)
