@@ -174,12 +174,20 @@ Uninstalling:
 ```console
 # make dkms-install
 ```
+**_Note_** - In dkms package versions 3.x and later, the REMAKE_INITRD option has
+been deprecated. As a result, the operating system's initrd is not remade on every
+dkms rebuild of the module. If this is desired, then it will need to be manually
+rebuilt per your operating system's procedures. Otherwise, you can install and enable
+the rapiddisk-on-boot functions which is supported on both Ubuntu and RHEL based
+Linux distributions.
 
 ## Uninstalling modules for DKMS support
 
 ```console
 # make dkms-uninstall
 ```
+**_Note_** - Please refer to the above note on initrd remakes during dkms rebuilds
+of the rapiddisk modules.
 
 ## Managing the RapidDisk daemon service
 
