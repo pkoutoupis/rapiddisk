@@ -1,17 +1,27 @@
 rapiddisk (9.1.0-1) UNRELEASED; urgency=medium
 
+  [Petros Koutoupis]
   * module: Fixed large performance regression bug with resize mutex.
   * module: Added RHEL 9 support.
   * module: Added support for new ioctls.
   * module: Fixed GFP_HIGHMEM page allocation bug.
   * utility: Added NVMe Target loopback support.
   * utility: Fixed issue #155 with strlen of NULL string segfault.
-  * utility: Reworked nvmet exports, unexports and port scanning logic (thank you Matteo Tenca).
+  * utility: Reworked nvmet exports, unexports and port scanning logic (thank
+    you Matteo Tenca).
   * scripts: Added example BCC tools script.
   * documentation: Added RPM building documentation.
 
+  [Matteo Tenca]
+  * New upstream release.
+  * Changed Build-Depends to adapt to the new dependency relations between 'dkms' and 'dh_dkms'
+    starting with Ubuntu 22.10 Kinetic.
+
+ -- Matteo Tenca <matteo.tenca@gmail.com>  Mon, 28 Apr 2023 00:00:00 +0000
+
 rapiddisk (9.0.0-1) UNRELEASED; urgency=medium
 
+  [Petros Koutoupis]
   * module: Added code to capture page count metrics.
   * module: Updated ioctl support.
   * module: Fixed page alloc usage decrement on discard.
@@ -37,7 +47,10 @@ rapiddisk (9.0.0-1) UNRELEASED; urgency=medium
   * documentation: Added contrib file and cleaned up README and man pages.
   * documentation: Added doxygen documentation support (thank you Matteo Tenca).
 
- -- Petros Koutoupis <petros@petroskoutoupis.com>  Wed, 28 Dec 2022 08:56:52 +0000
+  [Matteo Tenca]
+  * New upstream release.
+
+ -- Matteo Tenca <matteo.tenca@gmail.com>  Wed, 28 Dec 2022 08:56:52 +0000
 
 rapiddisk (8.2.0-1) UNRELEASED; urgency=medium
 
