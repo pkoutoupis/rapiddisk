@@ -43,6 +43,7 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc);
 struct NVMET_PORTS *nvmet_scan_ports(char *return_message, int *rc);
 struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message, int *rc);
 char *nvmet_interface_ip_get(char *interface, char *return_message);
+bool check_nvmet_subsystem(char *return_message);
 #ifndef SERVER
 int nvmet_view_exports(bool json_flag, char *error_message);
 int nvmet_view_ports(bool json_flag, char *error_message);

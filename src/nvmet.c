@@ -59,6 +59,23 @@ struct NVMET_PORTS *ports_end = NULL;
 struct NVMET_ALLOWED_HOST *allowed_host_head = NULL;
 struct NVMET_ALLOWED_HOST *allowed_host_end = NULL;
 
+/**
+ * The function checks if the NVMe Target subsystem is loaded and returns a message if it is not.
+ *
+ * @param return_message The parameter "return_message" is a pointer to a character array that will be used to store any
+ * error messages or status updates that the function generates during its execution.
+ *
+ * @return A boolean value (TRUE or FALSE) is being returned.
+ */
+bool check_nvmet_subsystem(char *return_message) {
+	if (access(SYS_NVMET, F_OK) != SUCCESS) {
+		char *msg = "The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp (or nvme-loop) kernel modules and ensure that the kernel user configuration filesystem is mounted.";
+		print_error("%s", return_message, msg);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 /*
  * description: Scan all NVMe Targets NQNs
  */
@@ -87,11 +104,7 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc)
 	ports_end = NULL;
 	char *msg;
 
-	if (access(SYS_NVMET, F_OK) != SUCCESS) {
-		msg = "The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp (or nvme-loop) kernel modules and ensure that the kernel user configuration filesystem is mounted.";
-		print_error("%s", return_message, msg);
-		return NULL;
-	}
+	if (check_nvmet_subsystem(return_message) == FALSE) return NULL;
 
 	ports = nvmet_scan_ports(return_message, &rv);
 	if (rv == INVALID_VALUE) {
@@ -244,11 +257,7 @@ struct NVMET_PORTS *nvmet_scan_ports(char *return_message, int *rc)
 	ports_end = NULL;
 	char *msg;
 
-	if (access(SYS_NVMET, F_OK) != SUCCESS) {
-		msg = "The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp kernel modules and ensure that the kernel user configuration filesystem is mounted.";
-		print_error("%s", return_message, msg);
-		return NULL;
-	}
+	if (check_nvmet_subsystem(return_message) == FALSE) return NULL;
 
 	if ((err = scandir(SYS_NVMET_PORTS, &ports, scandir_filter_no_dot, NULL)) < 0) {
 		msg = "%s: scandir: %s";
@@ -340,11 +349,7 @@ struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message, int *rc)
 	ports_end = NULL;
 	char *msg;
 
-	if (access(SYS_NVMET, F_OK) != SUCCESS) {
-		msg = "The NVMe Target subsystem is not loaded. Please load the nvmet and nvmet-tcp kernel modules and ensure that the kernel user configuration filesystem is mounted.";
-		print_error("%s", return_message, msg);
-		return NULL;
-	}
+	if (check_nvmet_subsystem(return_message) == FALSE) return NULL;
 
 	if ((err = scandir(SYS_NVMET_PORTS, &ports, scandir_filter_no_dot, NULL)) < 0) {
 		msg = "%s: scandir: %s";
@@ -598,6 +603,10 @@ int nvmet_export_volume(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *d
 	 * We do not care if the device has already been exported. We will continue to go through
 	 * the motions to add more host NQNs to export the target to.
 	 */
+
+	/* Check to see if NVMe subsystem is loaded */
+
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
 
 	/* Check to see if device exists */
 
@@ -881,6 +890,9 @@ int nvmet_revalidate_size(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char 
 	FILE *fp;
 	char hostname[0x40] = {0x0}, path[NAMELEN] = {0x0};
 	char *msg;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
 
 	/* Check to see if device exists */
 	while (rd_prof != NULL) {
@@ -1339,6 +1351,9 @@ int nvmet_enable_port(char *interface, int port, int protocol, char *return_mess
 	char *msg;
 	char error_message[NAMELEN] = {0};
 
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
 	if (access(path, F_OK) == SUCCESS) {
 		msg = "Error. NVMe Target Port %d already exists.";
@@ -1465,6 +1480,9 @@ int nvmet_disable_port(int port, char *return_message)
 	char path[NAMELEN] = {0x0};
 	struct dirent **list;
 	char *msg;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
 
 	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
 	if (access(path, F_OK) != SUCCESS) {
