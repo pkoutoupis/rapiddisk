@@ -1,5 +1,5 @@
 Source: rapiddisk
-Section: misc
+Section: kernel
 Priority: optional
 Maintainer: Matteo Tenca <matteo.tenca@gmail.com>
 Build-Depends: debhelper, dh-dkms | dh-sequence-dkms | dkms, libjansson-dev, libmicrohttpd-dev, libpcre2-dev, libdevmapper-dev
@@ -7,10 +7,24 @@ Homepage: https://github.com/pkoutoupis/rapiddisk/
 Vcs-Browser: https://github.com/pkoutoupis/rapiddisk/
 Vcs-Git: https://github.com/pkoutoupis/rapiddisk.git
 Standards-Version: 4.4.1
+Testsuite: autopkgtest-pkg-dkms
+
+Package: rapiddisk-dkms
+Architecture: all
+Depends: dkms, ${misc:Depends}
+Suggests: rapiddisk, rapiddisk-on-boot
+Description: Linux RAM Drive and Caching kernel modules (DKMS)
+ This software defined advanced RAM drive and storage
+ caching solution. This suite includes a collection of modules,
+ configuration files, and command line utilities for managing
+ RapidDisk enabled storage volumes and accessing them either
+ locally or across an NVMe Target network.
+ .
+ This is the kernel module for Linux.
 
 Package: rapiddisk
-Architecture: amd64
-Depends: dkms, ${shlibs:Depends}, ${misc:Depends}
+Architecture: any
+Depends: rapiddisk-dkms, ${shlibs:Depends}, ${misc:Depends}
 Suggests: rapiddisk-on-boot
 Description: RapidDisk
  The RapidDisk software defined advanced RAM drive and storage
@@ -20,8 +34,8 @@ Description: RapidDisk
  locally or across an NVMe Target network.
 
 Package: rapiddisk-on-boot
-Architecture: amd64
-Depends: rapiddisk
+Architecture: all
+Depends: rapiddisk, rapiddisk-dkms
 Description: RapidDisk Boot Install Script
  Allows to install a RapidDisk cache on the boot
  volume manipulating the initramfs-tools configuration.

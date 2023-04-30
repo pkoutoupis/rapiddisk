@@ -1,5 +1,0 @@
-module/Makefile usr/src/rapiddisk-DEB_VERSION_UPSTREAM
-module/rapiddisk-cache.c usr/src/rapiddisk-DEB_VERSION_UPSTREAM
-module/rapiddisk.c usr/src/rapiddisk-DEB_VERSION_UPSTREAM
-module/rapiddisk.txt usr/src/rapiddisk-DEB_VERSION_UPSTREAM
-
