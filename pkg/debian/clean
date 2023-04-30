@@ -1,3 +1,2 @@
-debian/rapiddisk.install
 debian/rapiddisk.rapiddiskd.service
-
+debian/rapiddisk-dkms.install

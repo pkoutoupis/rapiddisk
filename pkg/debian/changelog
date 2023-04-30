@@ -16,6 +16,8 @@ rapiddisk (9.1.0-1) UNRELEASED; urgency=medium
   * New upstream release.
   * Changed Build-Depends to adapt to the new dependency relations between 'dkms' and 'dh_dkms'
     starting with Ubuntu 22.10 Kinetic.
+  * Now four packages are created, rapiddisk, rapiddisk-dkms and
+    rapiddisk-on-boot, plus the debugging package.
 
  -- Matteo Tenca <matteo.tenca@gmail.com>  Mon, 28 Apr 2023 00:00:00 +0000
 

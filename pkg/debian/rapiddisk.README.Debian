@@ -1,0 +1,12 @@
+rapiddisk for Debian
+-----------------
+The systemd service file "rapiddiskd.service" is copied from the source tree
+to the debian directory with the name changed to "rapiddiskd.service", on each
+build.
+
+The dh_clean target deletes all the files ending in ".orig" in the build tree,
+leading to the removal of two project files under "scripts/rapiddisk-rootdev".
+This problem is fixed overriding the dh_clean target and excluding those
+files.
+
+ -- Matteo Tenca <matteo.tenca@gmail.com>  Sat, 07 May 2022 05:44:16 +0200

@@ -1,0 +1,5 @@
+module/Makefile usr/src/PDKMS-DEB_VERSION_UPSTREAM
+module/rapiddisk-cache.c usr/src/PDKMS-DEB_VERSION_UPSTREAM
+module/rapiddisk.c usr/src/PDKMS-DEB_VERSION_UPSTREAM
+module/rapiddisk.txt usr/src/PDKMS-DEB_VERSION_UPSTREAM
+
