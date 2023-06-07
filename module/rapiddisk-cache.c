@@ -178,8 +178,12 @@ int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,0,0)
 	(rw == WRITE) ? (iorq.bi_opf = REQ_OP_WRITE) : (iorq.bi_opf = REQ_OP_READ);
 #else
+#if (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 2)
+	iorq.bi_opf = rw;
+#else
 	iorq.bi_op = rw;
 	iorq.bi_op_flags = 0;
+#endif
 #endif
 #else
 	iorq.bi_rw = rw;

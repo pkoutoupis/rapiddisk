@@ -75,7 +75,7 @@ static DEFINE_MUTEX(ioctl_mutex);
 
 struct rdsk_device {
 	int num;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 	struct request_queue *rdsk_queue;
 #endif
 	struct gendisk *rdsk_disk;
@@ -928,7 +928,7 @@ static int detach_device(unsigned long num)
 	list_del(&rdsk->rdsk_list);
 	del_gendisk(rdsk->rdsk_disk);
 	put_disk(rdsk->rdsk_disk);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0)
 	blk_cleanup_queue(rdsk->rdsk_queue);
 #endif
 	rdsk_free_pages(rdsk);
