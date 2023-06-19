@@ -31,15 +31,19 @@ SPDX-License-Identifier: GPL-2.0-or-later
 */
 
 #include "nvmet.h"
+#include "common.h"
 #include "utils.h"
 #include "rdsk.h"
 #include "json.h"
 
 #include <net/if.h>
+#include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #define SYS_NVMET               "/sys/kernel/config/nvmet"
 #define SYS_NVMET_TGT           SYS_NVMET "/subsystems"
@@ -88,8 +92,7 @@ bool check_nvmet_subsystem(char *return_message) {
  *
  * @return A linked list of NVMET_PROFILE structs.
  */
-struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc)
-{
+struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc) {
 	int err2, n, i, ii, allowed_hosts, subsystems_number, rv = INVALID_VALUE;
 	char file[NAMELEN * 2] = {0};
 	struct NVMET_PROFILE *nvmet = NULL;
@@ -129,7 +132,7 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc)
 			return NULL;
 		}
 		for (i = 0; i < err2; i++) {
-			if ((nvmet = (struct NVMET_PROFILE *)calloc(1, sizeof(struct NVMET_PROFILE))) == NULL ) {
+			if ((nvmet = (struct NVMET_PROFILE *) calloc(1, sizeof(struct NVMET_PROFILE))) == NULL) {
 				msg = ERR_CALLOC;
 				print_error(msg, return_message, __func__, strerror(errno));
 				list = clean_scandir(list, subsystems_number);
@@ -137,11 +140,11 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc)
 				free_nvmet_linked_lists(orig_ports, nvmet_head);
 				return NULL;
 			}
-			strcpy(nvmet->nqn, (char *)list[n]->d_name);
+			strcpy(nvmet->nqn, (char *) list[n]->d_name);
 			ports_head = NULL;
 			while (ports != NULL) {
 				if (strcmp(nvmet->nqn, ports->nqn) == 0) {
-					if ((new_ports = (struct NVMET_PORTS *)calloc(1, sizeof(struct NVMET_PORTS))) == NULL ) {
+					if ((new_ports = (struct NVMET_PORTS *) calloc(1, sizeof(struct NVMET_PORTS))) == NULL) {
 						msg = ERR_CALLOC;
 						print_error(msg, return_message, __func__, strerror(errno));
 						list = clean_scandir(list, subsystems_number);
@@ -175,7 +178,7 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc)
 			}
 			allowed_host_head = NULL;
 			for (ii = 0; ii < allowed_hosts; ii++) {
-				if ((allowed_host = (struct NVMET_ALLOWED_HOST *)calloc(1, sizeof(struct NVMET_ALLOWED_HOST))) == NULL ) {
+				if ((allowed_host = (struct NVMET_ALLOWED_HOST *) calloc(1, sizeof(struct NVMET_ALLOWED_HOST))) == NULL) {
 					msg = ERR_CALLOC;
 					print_error(msg, return_message, __func__, strerror(errno));
 					list = clean_scandir(list, subsystems_number);
@@ -247,69 +250,78 @@ struct NVMET_PROFILE *nvmet_scan_subsystem(char *return_message, int *rc)
  *
  * @return A pointer to the head of a linked list of structs.
  */
-struct NVMET_PORTS *nvmet_scan_ports(char *return_message, int *rc)
-{
-	int err, err2, n = 0, i;
-	char file[NAMELEN * 2] = {0};
+struct NVMET_PORTS *nvmet_scan_ports(char *return_message, int *rc) {
+	int number_of_ports, number_of_nqn, n, i, port_number;
+	char file[NAMELEN * 2] = {0}, port_addr[NAMELEN] = {0}, port_type[NAMELEN] = {0};
 	struct NVMET_PORTS *nvmet_ports = NULL;
-	struct dirent **ports, **exports;
+	struct dirent **ports, **exports, *current_port;
 	ports_head = NULL;
 	ports_end = NULL;
-	char *msg;
+	char *msg, *port_name, *info;
 
 	if (check_nvmet_subsystem(return_message) == FALSE) return NULL;
 
-	if ((err = scandir(SYS_NVMET_PORTS, &ports, scandir_filter_no_dot, NULL)) < 0) {
+	if ((number_of_ports = scandir(SYS_NVMET_PORTS, &ports, scandir_filter_no_dot, NULL)) < 0) {
 		msg = "%s: scandir: %s";
 		print_error(msg, return_message, __func__, strerror(errno));
 		return NULL;
 	}
-	for (; n < err; n++) {
+	for (n = 0; n < number_of_ports; n++) {
 		memset(file, 0x0, NAMELEN);
 		sprintf(file, "%s/%s", SYS_NVMET_PORTS, ports[n]->d_name);
 		if (access(file, F_OK) != INVALID_VALUE) {
 			sprintf(file, "%s/%s/subsystems", SYS_NVMET_PORTS, ports[n]->d_name);
-			if ((err2 = scandir(file, &exports, scandir_filter_no_dot, NULL)) < 0) {
+			if ((number_of_nqn = scandir(file, &exports, scandir_filter_no_dot, NULL)) < 0) {
 				msg = "%s: scandir: %s";
 				print_error(msg, return_message, __func__, strerror(errno));
-				ports = clean_scandir(ports, err);
+				ports = clean_scandir(ports, number_of_ports);
 				return NULL;
 			}
-			for (i = 0; i < err2; i++) {
-				if ((nvmet_ports = (struct NVMET_PORTS *)calloc(1, sizeof(struct NVMET_PORTS))) == NULL ) {
+
+			current_port = ports[n];
+			port_name = current_port->d_name;
+			port_number = atoi(port_name);
+
+			sprintf(file, "%s/%s", SYS_NVMET_PORTS, port_name);
+			info = read_info(file, "addr_traddr", return_message);
+			if (info == NULL) {
+				free(nvmet_ports);
+				nvmet_ports = NULL;
+				ports = clean_scandir(ports, number_of_ports);
+				exports = clean_scandir(exports, number_of_nqn);
+				free_nvmet_linked_lists(ports_head, NULL);
+				return NULL;
+			}
+			sprintf(port_addr, "%s", info);
+
+			info = read_info(file, "addr_trtype", return_message);
+			if (info == NULL) {
+				free(nvmet_ports);
+				nvmet_ports = NULL;
+				ports = clean_scandir(ports, number_of_ports);
+				exports = clean_scandir(exports, number_of_nqn);
+				free_nvmet_linked_lists(ports_head, NULL);
+				return NULL;
+			}
+			sprintf(port_type, "%s", info);
+
+			for (i = 0; i <= number_of_nqn; i++) {
+				if ((number_of_nqn > 0) && (i == number_of_nqn)) continue;
+				if ((nvmet_ports = (struct NVMET_PORTS *) calloc(1, sizeof(struct NVMET_PORTS))) == NULL) {
 					msg = ERR_CALLOC;
 					print_error(msg, return_message, __func__, strerror(errno));
-					ports = clean_scandir(ports, err);
-					exports = clean_scandir(exports, err2);
+					ports = clean_scandir(ports, number_of_ports);
+					exports = clean_scandir(exports, number_of_nqn);
 					return NULL;
 				}
-				nvmet_ports->port = atoi(ports[n]->d_name);
-				sprintf(file, "%s/%s", SYS_NVMET_PORTS, ports[n]->d_name);
-				char *info = read_info(file, "addr_traddr", return_message);
-				if (info == NULL) {
-					free(nvmet_ports);
-					nvmet_ports = NULL;
-					ports = clean_scandir(ports, err);
-					exports = clean_scandir(exports, err2);
-					free_nvmet_linked_lists(ports_head, NULL);
-					return NULL;
-				}
-				sprintf(nvmet_ports->addr, "%s", info);
+				nvmet_ports->port = port_number;
+				sprintf(nvmet_ports->addr, "%s", port_addr);
 				if (strlen(nvmet_ports->addr) < 1)
 					sprintf(nvmet_ports->addr, "UNDEFINED");
-				info = read_info(file, "addr_trtype", return_message);
-				if (info == NULL) {
-					free(nvmet_ports);
-					nvmet_ports = NULL;
-					ports = clean_scandir(ports, err);
-					exports = clean_scandir(exports, err2);
-					free_nvmet_linked_lists(ports_head, NULL);
-					return NULL;
-				}
-				sprintf(nvmet_ports->protocol, "%s", info);
+				sprintf(nvmet_ports->protocol, "%s", port_type);
 				if (strlen(nvmet_ports->protocol) < 1)
 					sprintf(nvmet_ports->protocol, "UNDEFINED");
-				sprintf(nvmet_ports->nqn, "%s", exports[i]->d_name);
+				if (number_of_nqn > 0) sprintf(nvmet_ports->nqn, "%s", exports[i]->d_name);
 				if (strlen(nvmet_ports->nqn) < 1)
 					sprintf(nvmet_ports->nqn, "UNDEFINED");
 				if (ports_head == NULL)
@@ -319,10 +331,10 @@ struct NVMET_PORTS *nvmet_scan_ports(char *return_message, int *rc)
 				ports_end = nvmet_ports;
 				nvmet_ports->next = NULL;
 			}
-			exports = clean_scandir(exports, err2);
+			exports = clean_scandir(exports, number_of_nqn);
 		}
 	}
-	ports = clean_scandir(ports, err);
+	ports = clean_scandir(ports, number_of_ports);
 	*rc = SUCCESS;
 	return ports_head;
 }
@@ -339,8 +351,7 @@ struct NVMET_PORTS *nvmet_scan_ports(char *return_message, int *rc)
  *
  * @return A pointer to the first element of a linked list of struct NVMET_PORTS.
  */
-struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message, int *rc)
-{
+struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message, int *rc) {
 	int err, n = 0;
 	char file[NAMELEN * 2] = {0};
 	struct NVMET_PORTS *nvmet_ports;
@@ -360,7 +371,7 @@ struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message, int *rc)
 		memset(file, 0x0, NAMELEN);
 		sprintf(file, "%s/%s", SYS_NVMET_PORTS, ports[n]->d_name);
 		if (access(file, F_OK) != INVALID_VALUE) {
-			if ((nvmet_ports = (struct NVMET_PORTS *)calloc(1, sizeof(struct NVMET_PORTS))) == NULL ) {
+			if ((nvmet_ports = (struct NVMET_PORTS *) calloc(1, sizeof(struct NVMET_PORTS))) == NULL) {
 				msg = ERR_CALLOC;
 				print_error(msg, return_message, __func__, strerror(errno));
 				ports = clean_scandir(ports, err);
@@ -411,8 +422,7 @@ struct NVMET_PORTS *nvmet_scan_all_ports(char *return_message, int *rc)
  *
  * @return the value of the variable "number_validate".
  */
-int number_validate(char *str)
-{
+int number_validate(char *str) {
 	while (*str) {
 		if (!isdigit(*str))
 			return INVALID_VALUE;
@@ -427,10 +437,9 @@ int number_validate(char *str)
  *
  * @param ip The IP address to validate.
  *
- * @return the value of the variable "dots".
+ * @return an integer value, which could be either SUCCESS (0) or INVALID_VALUE (-1).
  */
-int ip_validate(char *ip)
-{
+int ip_validate(char *ip) {
 	int num, dots = 0;
 	char *ptr, *ip_dup;
 
@@ -439,24 +448,30 @@ int ip_validate(char *ip)
 	if (ip_dup == NULL)
 		return INVALID_VALUE;
 	ptr = strtok(ip_dup, ".");
-	if (ptr == NULL)
+	if (ptr == NULL) {
+		if (ip_dup) free(ip_dup);
 		return INVALID_VALUE;
+	}
 
 	while (ptr) {
-		if (number_validate(ptr) != SUCCESS)
+		if (number_validate(ptr) != SUCCESS) {
+			if (ip_dup) free(ip_dup);
 			return INVALID_VALUE;
+		}
 		num = atoi(ptr);
 		if (num >= 0 && num <= 255) {
 			ptr = strtok(NULL, ".");
 			if (ptr != NULL)
 				dots++;
-		} else
+		} else {
+			if (ip_dup) free(ip_dup);
 			return INVALID_VALUE;
+		}
 	}
-	if (dots != 3)
-		return INVALID_VALUE;
 
 	if (ip_dup) free(ip_dup);
+	if (dots != 3)
+		return INVALID_VALUE;
 
 	return SUCCESS;
 }
@@ -469,8 +484,7 @@ int ip_validate(char *ip)
  *
  * @return The IP address of the interface.
  */
-char *nvmet_interface_ip_get(char *interface, char *return_message)
-{
+char *nvmet_interface_ip_get(char *interface, char *return_message) {
 	int fd;
 	struct ifreq ifr;
 	static char ip[0xF] = {0};
@@ -495,7 +509,7 @@ char *nvmet_interface_ip_get(char *interface, char *return_message)
 	ifr.ifr_addr.sa_family = AF_INET;
 
 	/* I want the IP address attached to the interface (ex: eth0 or eno1) */
-	strncpy(ifr.ifr_name, interface, IFNAMSIZ-1);
+	strncpy(ifr.ifr_name, interface, IFNAMSIZ - 1);
 
 	if (ioctl(fd, SIOCGIFADDR, &ifr) == INVALID_VALUE) {
 		msg = "%s: ioctl: %s";
@@ -506,13 +520,931 @@ char *nvmet_interface_ip_get(char *interface, char *return_message)
 	close(fd);
 
 	/* Some more checks to addr.s_addr may be added here */
-	addr = ( (struct sockaddr_in *) &ifr.ifr_addr)->sin_addr;
+	addr = ((struct sockaddr_in *) &ifr.ifr_addr)->sin_addr;
 	sprintf(ip, "%s", inet_ntoa(addr));
 
 	return ip;
 }
 
 #ifndef SERVER
+
+int nvmet_create_port(char *interface, int port, int protocol, char *return_message) {
+	int rc = INVALID_VALUE, rv = INVALID_VALUE;
+	FILE *fp;
+	char path[NAMELEN] = {0x0}, ip[0xF] = {0x0}, proto[0x5] = {0x0};
+	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+	struct NVMET_PORTS *ports, *tmp_ports;
+	char *msg;
+	char error_message[NAMELEN] = {0};
+	bool interface_is_ip;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
+	if (access(path, F_OK) == SUCCESS) {
+		msg = "Error. NVMe Target Port %d already exists.";
+		print_error(msg, return_message, port);
+		return rc;
+	}
+
+	ports = nvmet_scan_ports(return_message, &rv);
+	if (rv == INVALID_VALUE) {
+		return INVALID_VALUE;
+	}
+
+	tmp_ports = ports;
+
+	switch (protocol) {
+		case XFER_MODE_TCP:
+		case XFER_MODE_RDMA:
+			if (ip_validate(interface) == SUCCESS) {
+				sprintf(ip, "%s", interface);
+				interface_is_ip = TRUE;
+			} else {
+				char *ipaddr = nvmet_interface_ip_get(interface, error_message);
+				if (ipaddr == NULL) {
+					free_nvmet_linked_lists(tmp_ports, NULL);
+					msg = "Cannot find the IP address of interface %s. Error: %s";
+					print_error(msg, return_message, interface, error_message);
+					return INVALID_VALUE;
+				}
+				sprintf(ip, "%s", ipaddr);
+				if (ip_validate(ip) != SUCCESS) {
+					free_nvmet_linked_lists(tmp_ports, NULL);
+					msg = "Error. IP address %s is invalid.";
+					print_error(msg, return_message, ip);
+					return rc;
+				}
+				interface_is_ip = FALSE;
+			}
+
+			while (ports != NULL) {
+				if (strcmp(ports->addr, ip) == SUCCESS) {
+					msg = "Error. IP address %s is already in use on port %d.";
+					print_error(msg, return_message, ip, ports->port);
+					free_nvmet_linked_lists(tmp_ports, NULL);
+					return rc;
+				}
+				ports = ports->next;
+			}
+
+			free_nvmet_linked_lists(tmp_ports, NULL);
+
+			if ((rc = mkdir(path, mode)) != SUCCESS) {
+				msg = "Error. Unable to create port directory. %s: mkdir: %s";
+				print_error(msg, return_message, __func__, strerror(errno));
+				return rc;
+			}
+
+			sprintf(path, "%s/%d/addr_trsvcid", SYS_NVMET_PORTS, port);
+			if ((fp = fopen(path, "w")) == NULL) {
+				msg = "Error. Unable to open %s. %s: fopen: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
+				rmdir(path);
+				return INVALID_VALUE;
+			}
+			fprintf(fp, "4420");
+			fclose(fp);
+
+			sprintf(path, "%s/%d/addr_adrfam", SYS_NVMET_PORTS, port);
+			if ((fp = fopen(path, "w")) == NULL) {
+				msg = "Error. Unable to open %s. %s: fopen: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
+				rmdir(path);
+				return INVALID_VALUE;
+			}
+			fprintf(fp, "ipv4");
+			fclose(fp);
+
+			if (protocol == XFER_MODE_RDMA)
+				sprintf(proto, "rdma");
+			else sprintf(proto, "tcp");
+
+			sprintf(path, "%s/%d/addr_trtype", SYS_NVMET_PORTS, port);
+			if ((fp = fopen(path, "w")) == NULL) {
+				msg = "Error. Unable to open %s. %s: fopen: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
+				rmdir(path);
+				return INVALID_VALUE;
+			}
+			fprintf(fp, "%s", proto);
+			fclose(fp);
+
+			sprintf(path, "%s/%d/addr_traddr", SYS_NVMET_PORTS, port);
+			if ((fp = fopen(path, "w")) == NULL) {
+				msg = "Error. Unable to open %s. %s: fopen: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
+				rmdir(path);
+				return INVALID_VALUE;
+			}
+			fprintf(fp, "%s", ip);
+			fclose(fp);
+			if (interface_is_ip == FALSE) {
+				msg = "Successfully created port %d set to %s for interface %s (with IP address %s).";
+				print_error(msg, return_message, port, proto, interface, ip);
+			} else {
+				msg = "Successfully created port %d set to %s for IP address %s.";
+				print_error(msg, return_message, port, proto, ip);
+			}
+			break;
+		case XFER_MODE_LOOP:
+			while (ports != NULL) {
+				if (strcmp(ports->protocol, "loop") == SUCCESS) {
+					msg = "Error. loop protocol is already in use on port %d.";
+					print_error(msg, return_message, ports->port);
+					free_nvmet_linked_lists(tmp_ports, NULL);
+					return rc;
+				}
+				ports = ports->next;
+			}
+
+			free_nvmet_linked_lists(tmp_ports, NULL);
+
+			if ((rc = mkdir(path, mode)) != SUCCESS) {
+				msg = "Error. Unable to create port directory. %s: mkdir: %s";
+				print_error(msg, return_message, __func__, strerror(errno));
+				return rc;
+			}
+			sprintf(proto, "loop");
+			sprintf(path, "%s/%d/addr_trtype", SYS_NVMET_PORTS, port);
+			if ((fp = fopen(path, "w")) == NULL) {
+				msg = "Error. Unable to open %s. %s: fopen: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
+				rmdir(path);
+				return INVALID_VALUE;
+			}
+			fprintf(fp, "%s", proto);
+			fclose(fp);
+
+			msg = "Successfully created port %d set for %s.";
+			print_error(msg, return_message, port, proto);
+			break;
+		default:
+			msg = "%s";
+			print_error(msg, return_message, "Error. Wrong protocol type.");
+			return INVALID_VALUE;
+	}
+	return SUCCESS;
+}
+
+int nvmet_remove_port(int port, char *return_message) {
+	int rc = INVALID_VALUE, rv = INVALID_VALUE;
+	char path[NAMELEN] = {0x0};
+	char *msg;
+	struct NVMET_PORTS *ports, *tmp_ports;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
+	if (access(path, F_OK) != SUCCESS) {
+		msg = "Error. NVMe Target Port %d does not exist.";
+		print_error(msg, return_message, port);
+		return rc;
+	}
+
+	ports = nvmet_scan_ports(return_message, &rv);
+	if (rv == INVALID_VALUE) {
+		return INVALID_VALUE;
+	}
+
+	tmp_ports = ports;
+
+	/* Make sure that no subsystems are mapped from this port. */
+	while (ports != NULL) {
+		if (ports->port == port) {
+			if (strcmp(ports->nqn, "UNDEFINED") != SUCCESS) {
+				msg = "Port %d is currently in use by some NQN, e.g. %s.";
+				print_error(msg, return_message, port, ports->nqn);
+				free_nvmet_linked_lists(tmp_ports, NULL);
+				return rc;
+			}
+		}
+		ports = ports->next;
+	}
+
+	free_nvmet_linked_lists(tmp_ports, NULL);
+
+	/* Remove the port */
+	if ((rc = rmdir(path)) != SUCCESS) {
+		msg = "Error. Unable to remove port. %s: rmdir: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
+		return rc;
+	}
+	msg = "NVMe Target port %d has been removed.";
+	print_error(msg, return_message, port);
+
+	return SUCCESS;
+}
+
+int nvmet_add_host(char *host, char *return_message) {
+	char path[NAMELEN] = {0};
+	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+	char *msg;
+	int rc = INVALID_VALUE;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/hosts/<REMOTE-HOST>
+	 */
+	sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
+	if (access(path, F_OK) != SUCCESS) {
+		if ((rc = mkdir(path, mode)) != SUCCESS) {
+			msg = "Error. Unable to create host directory %s. %s: mkdir: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return rc;
+		}
+		msg = "Added %s to the list of allowable hosts.";
+		print_error(msg, return_message, host);
+		rc = SUCCESS;
+	} else {
+		msg = "Host %s is already present in list of allowable hosts.";
+		print_error(msg, return_message, host);
+	}
+	return rc;
+}
+
+int nvmet_remove_host(char *host, char *return_message) {
+	struct NVMET_PROFILE *profile, *orig_profile;
+	int rv = INVALID_VALUE, rc = INVALID_VALUE;
+	struct NVMET_ALLOWED_HOST *allowed_hosts;
+	bool host_ok = TRUE;
+	char path[NAMELEN] = {0}, nqn[NAMELEN] = {0};
+	char *msg;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/hosts/<REMOTE-HOST>
+	 */
+	sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
+	if (access(path, F_OK) == SUCCESS) {
+		profile = nvmet_scan_subsystem(return_message, &rv);
+		if (rv == INVALID_VALUE) {
+			return rc;
+		}
+		orig_profile = profile;
+		while (profile != NULL) {
+			allowed_hosts = profile->allowed_hosts;
+			while (allowed_hosts != NULL) {
+				if (strcmp(allowed_hosts->allowed_host, host) == 0) {
+					host_ok = FALSE;
+					sprintf(nqn, "%s", profile->nqn);
+					break;
+				}
+				allowed_hosts = allowed_hosts->next;
+			}
+			if (host_ok == FALSE) break;
+			profile = profile->next;
+		}
+
+		free_nvmet_linked_lists(NULL, orig_profile);
+
+		if (host_ok == TRUE) {
+			if ((rc = rmdir(path)) != SUCCESS) {
+				msg = "Error. Unable to remove host directory %s. %s: rmdir: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				return rc;
+			}
+			msg = "Removed %s from the list of allowable hosts.";
+			print_error(msg, return_message, host);
+			rc = SUCCESS;
+		} else {
+			msg = "Error: the host %s is in use by NQN %s and maybe others.";
+			print_error(msg, return_message, host, nqn);
+		}
+	} else {
+		msg = "Error: the host %s is not in the allowed hosts list.";
+		print_error(msg, return_message, host);
+	}
+	return rc;
+}
+
+int nvmet_add_nqn(struct RD_PROFILE *rd_prof, RC_PROFILE *rc_prof, char *device, char *return_message) {
+	int rc = INVALID_VALUE;
+	char path[NAMELEN] = {0}, nqn[NAMELEN] = {0}, hostname[NAMELEN] = {0};
+	char *msg;
+	FILE *fp;
+	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	/* Grab hostname for NQN */
+	if (gethostname(hostname, sizeof(hostname)) < 0) {
+		msg = "Error. Unable to obtain hostname. %s: gethostname: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
+		return rc;
+	}
+
+	/* Check to see if device exists */
+
+	/* Looks for rd* ramdisk */
+	while (rd_prof != NULL) {
+		if (strcmp(device, rd_prof->device) == SUCCESS) {
+			rc = SUCCESS;
+			break;
+		}
+		rd_prof = rd_prof->next;
+	}
+
+	if (rc != SUCCESS) {
+		/* Looks for rc-* mappings */
+		while (rc_prof != NULL) {
+			if (strcmp(device, rc_prof->device) == SUCCESS) {
+				rc = SUCCESS;
+				break;
+			}
+			rc_prof = rc_prof->next;
+		}
+	}
+
+	if (rc != SUCCESS) {
+		print_error(ERR_DEV_NOEXIST, return_message, device);
+		return rc;
+	}
+
+	/* Reset rc to INVALID_VALUE after device check */
+	rc = INVALID_VALUE;
+
+	sprintf(nqn, "%s%s-%s", NQN_HDR_STR, hostname, device);
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+	 */
+	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+	if (access(path, F_OK) != SUCCESS) {
+		if ((rc = mkdir(path, mode)) != SUCCESS) {
+			msg = "Error. Unable to create target directory %s. %s: mkdir: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return rc;
+		}
+
+		/* Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/attr_allow_any_host
+	 	 */
+		sprintf(path, "%s/%s%s-%s/attr_allow_any_host", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		if ((fp = fopen(path, "w")) == NULL){
+			msg = "Error. Unable to open %s. %s: fopen: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return INVALID_VALUE;
+		}
+		fprintf(fp, "1");
+		fclose(fp);
+
+		/* Set model
+		 *
+		 * Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/attr_model
+		 */
+		sprintf(path, "%s/%s%s-%s/attr_model", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		if (access(path, F_OK) == SUCCESS) {
+			if ((fp = fopen(path, "w")) == NULL){
+				msg = "Error. Unable to set model string to file %s. %s: fopen: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				return rc;
+			}
+			fprintf(fp, "RapidDisk");
+			fclose(fp);
+		}
+
+		/* Create namespace
+		 *
+		 * Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/namespaces/1
+		 */
+		sprintf(path, "%s/%s%s-%s/namespaces/1", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		if (access(path, F_OK) != SUCCESS) {
+			if (mkdir(path, mode) != SUCCESS) {
+				msg = "Error. Unable to create namespace directory %s. %s: mkdir: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				return rc;
+			}
+		}
+
+		/* Set device
+		 *
+		 * Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/namespaces/1/device_path
+		 */
+		sprintf(path, "%s/%s%s-%s/namespaces/1/device_path", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		if ((fp = fopen(path, "w")) == NULL){
+			msg = "Error. Unable to open device_path file: %s. %s: fopen: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return rc;
+		}
+		if (strncmp(device, "rd", 2) == SUCCESS)
+			fprintf(fp, "/dev/%s", device);
+		else
+			fprintf(fp, "/dev/mapper/%s", device);
+		fclose(fp);
+
+		/* Enable volume
+		 *
+		 * Example of this path:
+		 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/namespaces/1/enable
+		 */
+		sprintf(path, "%s/%s%s-%s/namespaces/1/enable", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+		if ((fp = fopen(path, "w")) == NULL){
+			msg = "Error. Unable to open namespace enable file %s. %s: fopen: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return rc;
+		}
+		fprintf(fp, "1");
+		fclose(fp);
+
+		msg = "NQN %s successfully created.";
+		print_error(msg, return_message, nqn);
+		rc = SUCCESS;
+	} else {
+		msg = "Error. NQN %s already present.";
+		print_error(msg, return_message, nqn);
+	}
+	return rc;
+}
+
+int nvmet_remove_nqn(char *device, char *return_message) {
+	struct NVMET_PROFILE *profile, *orig_profile;
+	int rv = INVALID_VALUE, rc = INVALID_VALUE;
+	bool host_ok = TRUE, nqn_ok = FALSE, port_ok = TRUE;
+	char path[NAMELEN] = {0}, nqn[NAMELEN] = {0}, hostname[NAMELEN] = {0};
+	char *msg;
+	struct NVMET_ALLOWED_HOST *hosts;
+	struct NVMET_PORTS *ports;
+	mode_t mode = (S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+	FILE *fp;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	/* Grab hostname for NQN */
+	if (gethostname(hostname, sizeof(hostname)) < 0) {
+		msg = "Error. Unable to obtain hostname. %s: gethostname: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
+		return rc;
+	}
+
+	sprintf(nqn, "%s%s-%s", NQN_HDR_STR, hostname, device);
+
+	profile = nvmet_scan_subsystem(return_message, &rv);
+	if (rv == INVALID_VALUE) {
+		return rc;
+	}
+
+	orig_profile = profile;
+
+	while (profile != NULL) {
+		if (strcmp(profile->nqn, nqn) == 0) {
+			nqn_ok = TRUE;
+			hosts = profile->allowed_hosts;
+			if (hosts != NULL) {
+				host_ok = FALSE;
+			}
+			ports = profile->assigned_ports;
+			if (ports != NULL) {
+				port_ok = FALSE;
+			}
+			break;
+		}
+		profile = profile->next;
+	}
+
+	free_nvmet_linked_lists(NULL, orig_profile);
+
+	if (nqn_ok != TRUE) {
+		// NO NQN
+		msg = "Error. NQN %s does not exist.";
+		print_error(msg, return_message, nqn);
+		return rc;
+	} else if (host_ok != TRUE) {
+		// assigned hosts
+		msg = "%s";
+		print_error(msg, return_message, "Error. Remove all the assigned allowed hosts before removing the NQN.");
+		return rc;
+	} else if (port_ok != TRUE) {
+		// assigned ports
+		msg = "%s";
+		print_error(msg, return_message, "Error. Remove all the assigned ports before removing the NQN.");
+		return rc;
+	}
+
+	/* Disable volume */
+	sprintf(path, "%s/%s/namespaces/1/enable", SYS_NVMET_TGT, nqn);
+	if ((fp = fopen(path, "w")) == NULL){
+		msg = "Error. Unable to open namespace enable file %s. %s: fopen: %s";
+		print_error(msg, return_message, path, __func__, strerror(errno));
+		return rc;
+	}
+	fprintf(fp, "0");
+	fclose(fp);
+
+	/* Remove namespace */
+	sprintf(path, "%s/%s/namespaces/1", SYS_NVMET_TGT, nqn);
+	if (access(path, F_OK) == SUCCESS) {
+		if (rmdir(path) != SUCCESS) {
+			msg = "Error. Unable to remove namespace %s. %s: rmdir: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			return rc;
+		}
+	}
+
+	/* Remove NQN from NVMeT Subsystem */
+
+	/*
+	 * The check for the rmdir() result and the operations carried on upon failure
+	 * are intended to prevent the situation described below:
+	 *
+	 * if the rmdir() call fails, it means we could not remove the NQN dir:
+	 *
+	 * "/sys/kernel/config/nvmet/subsystems/<NQN>"
+	 *
+	 * from the NVMe subsystem.
+	 *
+	 * So, an additional test is performed to determine wheather the namespace directory:
+	 *
+	 * "/sys/kernel/config/nvmet/subsystems/<NQN>/namespaces/1"
+	 *
+	 * still exists or not.
+	 * If it was removed, the NVMe's kernel dir structure is corrupt, since the NQN's namespace has been
+	 * removed, but the NQN itself was not.
+	 *
+	 * Since the functions creating some linked lists, nvmet_scan_subsystem(), nvmet_scan_ports() and
+	 * nvmet_scan_all_ports(), immediatly check for the namespace to exist and return an error if it does not,
+	 * and since at least one of them is called when a NVMe operation is to be performed, any further rapiddisk
+	 * command intended to manipulate the NVMe subsystem will fail immediately.
+	 *
+	 * So, when the removal of:
+	 *
+	 * "/sys/kernel/config/nvmet/subsystems/<NQN>"
+	 *
+	 * fails, we check if the dir:
+	 *
+	 * "/sys/kernel/config/nvmet/subsystems/<NQN>/namespaces/1"
+	 *
+	 * is still present. If it is not, we recreate it.
+	 *
+	 * By doing this operation, we ensure that any further invocation of rapiddisk which is aimed to handle
+	 * the NVMe subsystem, would not fail immediatly.
+	 *
+	 */
+	sprintf(path, "%s/%s", SYS_NVMET_TGT, nqn);
+	if (access(path, F_OK) == SUCCESS) {
+		if (rmdir(path) != SUCCESS) {
+			msg = "Error. Unable to remove NQN from NVMe Target subsystem %s. %s: rmdir: %s";
+			print_error(msg, return_message, path, __func__, strerror(errno));
+			sprintf(path, "%s/%s/namespaces/1", SYS_NVMET_TGT, nqn);
+			if (access(path, F_OK) != SUCCESS) {
+				if (mkdir(path, mode) != SUCCESS) {
+					msg = "Error. Unable to restore namespace %s. %s: mkdir: %s";
+					print_error(msg, return_message, path, __func__, strerror(errno));
+					return rc;
+				}
+			}
+			return rc;
+		}
+	}
+
+	msg = "NQN %s removed successfully.";
+	print_error(msg, return_message, nqn);
+	return SUCCESS;
+
+}
+
+int nvmet_link_port_nqn(char *device, int port, char *return_message) {
+	int rc = INVALID_VALUE;
+	char path[NAMELEN] = {0}, nqn[NAMELEN] = {0}, hostname[NAMELEN] = {0}, link[NAMELEN] = {0};
+	char *msg;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	/* Grab hostname for NQN */
+	if (gethostname(hostname, sizeof(hostname)) < 0) {
+		msg = "Error. Unable to obtain hostname. %s: gethostname: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
+		return rc;
+	}
+
+	sprintf(nqn, "%s%s-%s", NQN_HDR_STR, hostname, device);
+
+	sprintf(path, "%s/%d", SYS_NVMET_PORTS, port);
+	if (access(path, F_OK) != SUCCESS) {
+		msg = "Error. NVMe Target Port %d does not exists.";
+		print_error(msg, return_message, port);
+		return rc;
+	}
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+	 */
+	sprintf(path, "%s/%s%s-%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/ports/<PORT>/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+  	 */
+	sprintf(link, "%s/%d/subsystems/%s%s-%s", SYS_NVMET_PORTS, port, NQN_HDR_STR, hostname, device);
+	if (access(link, F_OK) != SUCCESS) {
+		if (symlink(path, link) != SUCCESS) {
+			msg = "Error. Unable to create link of NQN to port. %s: symlink: %s";
+			print_error(msg, return_message, __func__, strerror(errno));
+			return rc;
+		}
+		msg = "Target Port %d linked to NQN %s successfully.";
+		print_error(msg, return_message, port, nqn);
+		rc = SUCCESS;
+	} else {
+		msg = "Error. Target Port %d already linked to NQN %s.";
+		print_error(msg, return_message, port, nqn);
+		return rc;
+	}
+	return rc;
+}
+
+int nvmet_unlink_port_nqn(char *device, int port, char *return_message) {
+	struct NVMET_PROFILE *profile, *orig_profile;
+	int rv = INVALID_VALUE, rc = INVALID_VALUE;
+	bool nqn_ok = FALSE, port_ok = FALSE;
+	char path[NAMELEN] = {0}, nqn[NAMELEN] = {0}, hostname[NAMELEN] = {0};
+	char *msg;
+	struct NVMET_PORTS *ports;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	/* Grab hostname for NQN */
+	if (gethostname(hostname, sizeof(hostname)) < 0) {
+		msg = "Error. Unable to obtain hostname. %s: gethostname: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
+		return rc;
+	}
+
+	sprintf(nqn, "%s%s-%s", NQN_HDR_STR, hostname, device);
+
+	profile = nvmet_scan_subsystem(return_message, &rv);
+	if (rv == INVALID_VALUE) {
+		return rc;
+	}
+
+	orig_profile = profile;
+
+	while (profile != NULL) {
+		if (strcmp(profile->nqn, nqn) == 0) {
+			nqn_ok = TRUE;
+			ports = profile->assigned_ports;
+			while (ports != NULL) {
+				if (ports->port == port) {
+					port_ok = TRUE;
+					break;
+				}
+				ports = ports->next;
+			}
+			break;
+		}
+		profile = profile->next;
+	}
+
+	free_nvmet_linked_lists(NULL, orig_profile);
+
+	if (nqn_ok != TRUE) {
+		// NO NQN
+		msg = "Error. NQN %s does not exist.";
+		print_error(msg, return_message, nqn);
+		return rc;
+	} else if (port_ok != TRUE) {
+		// assigned ports
+		msg = "Error. Port %d is not assigned to NQN %s.";
+		print_error(msg, return_message, port, nqn);
+		return rc;
+	}
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/ports/<PORT>/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0
+  	 */
+	sprintf(path, "%s/%d/subsystems/%s%s-%s", SYS_NVMET_PORTS, port, NQN_HDR_STR, hostname, device);
+	if (access(path, F_OK) == SUCCESS) {
+		if ((rc = unlink(path)) != SUCCESS) {
+			msg = "Error. Unable to remove link of port %d to NQN %s. %s: symlink: %s";
+			print_error(msg, return_message, port, nqn, __func__, strerror(errno));
+			return rc;
+		}
+		msg = "Target Port %d unlinked from NQN %s successfully.";
+		print_error(msg, return_message, port, nqn);
+		rc = SUCCESS;
+	}
+
+	return rc;
+}
+
+int nvmet_link_host_nqn(char *device, char *host, char *return_message) {
+	struct NVMET_PROFILE *profile, *orig_profile;
+	int rv = INVALID_VALUE, rc = INVALID_VALUE, total_hosts = 0;
+	bool host_ok = TRUE, nqn_ok = FALSE;
+	char path[NAMELEN] = {0}, nqn[NAMELEN] = {0}, hostname[NAMELEN] = {0}, link[NAMELEN] = {0};
+	char *msg;
+	struct NVMET_ALLOWED_HOST *hosts;
+	FILE *fp;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	/* Grab hostname for NQN */
+	if (gethostname(hostname, sizeof(hostname)) < 0) {
+		msg = "Error. Unable to obtain hostname. %s: gethostname: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
+		return rc;
+	}
+
+	sprintf(nqn, "%s%s-%s", NQN_HDR_STR, hostname, device);
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/hosts/<REMOTE-HOST>
+	 */
+	sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
+	if (access(path, F_OK) == SUCCESS) {
+		profile = nvmet_scan_subsystem(return_message, &rv);
+		if (rv == INVALID_VALUE) {
+			return rc;
+		}
+
+		orig_profile = profile;
+
+		while (profile != NULL) {
+			if (strcmp(profile->nqn, nqn) == 0) {
+				nqn_ok = TRUE;
+				hosts = profile->allowed_hosts;
+				while (hosts != NULL) {
+					total_hosts++;
+					if (strcmp(hosts->allowed_host, host) == 0) {
+						host_ok = FALSE;
+					}
+					hosts = hosts->next;
+				}
+				break;
+			}
+			profile = profile->next;
+		}
+
+		free_nvmet_linked_lists(NULL, orig_profile);
+
+		if (nqn_ok == FALSE) {
+			msg = "Error: the NQN %s does not exist.";
+			print_error(msg, return_message, nqn);
+			return rc;
+		}
+
+		if (host_ok == TRUE) {
+			if (total_hosts == 0) {
+				/* Example of this path:
+				 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/attr_allow_any_host
+				 */
+				sprintf(path, "%s/%s%s-%s/attr_allow_any_host", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+				if ((fp = fopen(path, "w")) == NULL){
+					msg = "Error. Unable to open %s. %s: fopen: %s";
+					print_error(msg, return_message, path, __func__, strerror(errno));
+					return rc;
+				}
+				fprintf(fp, "0");
+				fclose(fp);
+				msg = "Added %s to the list of allowed hosts for NQN %s. Now it is reachable from allowed hosts only.";
+			} else {
+				msg = "Added %s to the list of allowed hosts for NQN %s.";
+			}
+
+			/* Example of this path:
+		 	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/allowed_hosts/<REMOTE-HOST>
+	 	 	 */
+			sprintf(link, "%s/%s%s-%s/allowed_hosts/%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device, host);
+
+			/* Example of this path:
+		 	 * /sys/kernel/config/nvmet/hosts/<REMOTE-HOST>
+	 	 	 */
+			sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
+			if ((rc = symlink(path, link)) != SUCCESS) {
+				msg = "Error. Unable to link host to target. %s: symlink: %s";
+				print_error(msg, return_message, __func__, strerror(errno));
+				return rc;
+			}
+			print_error(msg, return_message, host, nqn);
+			rc = SUCCESS;
+		} else {
+			msg = "Error: the host is %s already in the allowed list of NQN %s.";
+			print_error(msg, return_message, host, nqn);
+		}
+	} else {
+		msg = "Error: the host %s is not present in the global allowed hosts list.";
+		print_error(msg, return_message, host);
+	}
+	return rc;
+}
+
+int nvmet_unlink_host_nqn(char *device, char *host, char *return_message) {
+	struct NVMET_PROFILE *profile, *orig_profile;
+	int rv = INVALID_VALUE, rc = INVALID_VALUE, total_hosts = 0;
+	bool host_ok = FALSE, nqn_ok = FALSE;
+	char path[NAMELEN] = {0}, nqn[NAMELEN] = {0}, hostname[NAMELEN] = {0};
+	char *msg;
+	struct NVMET_ALLOWED_HOST *hosts;
+	FILE *fp;
+
+	/* Check to see if NVMe subsystem is loaded */
+	if (check_nvmet_subsystem(return_message) == FALSE) return rc;
+
+	/* Grab hostname for NQN */
+	if (gethostname(hostname, sizeof(hostname)) < 0) {
+		msg = "Error. Unable to obtain hostname. %s: gethostname: %s";
+		print_error(msg, return_message, __func__, strerror(errno));
+		return rc;
+	}
+
+	sprintf(nqn, "%s%s-%s", NQN_HDR_STR, hostname, device);
+
+	/* Example of this path:
+	 * /sys/kernel/config/nvmet/hosts/<REMOTE-HOST>
+	 */
+	sprintf(path, "%s/%s", SYS_NVMET_HOSTS, host);
+	if (access(path, F_OK) == SUCCESS) {
+		profile = nvmet_scan_subsystem(return_message, &rv);
+		if (rv == INVALID_VALUE) {
+			return rc;
+		}
+
+		orig_profile = profile;
+
+		while (profile != NULL) {
+			if (strcmp(profile->nqn, nqn) == 0) {
+				nqn_ok = TRUE;
+				hosts = profile->allowed_hosts;
+				while (hosts != NULL) {
+					total_hosts++;
+					if (strcmp(hosts->allowed_host, host) == 0) {
+						host_ok = TRUE;
+					}
+					hosts = hosts->next;
+				}
+				if (host_ok == TRUE) break;
+			}
+			profile = profile->next;
+		}
+
+		free_nvmet_linked_lists(NULL, orig_profile);
+
+		if (nqn_ok == FALSE) {
+			msg = "Error: the NQN %s does not exist.";
+			print_error(msg, return_message, nqn);
+			return rc;
+		}
+
+		if (host_ok == TRUE) {
+
+			/* Example of this path:
+		 	 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/allowed_hosts/<REMOTE-HOST>
+	 	 	 */
+			sprintf(path, "%s/%s%s-%s/allowed_hosts/%s", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device, host);
+			if ((rc = unlink(path)) != SUCCESS) {
+				msg = "Error. Unable to remove link %s. %s: unlink: %s";
+				print_error(msg, return_message, path, __func__, strerror(errno));
+				return rc;
+			}
+			if (total_hosts == 1) {
+
+				/* Example of this path:
+				 * /sys/kernel/config/nvmet/subsystems/nqn.2021-06.org.rapiddisk:ubuserver-rd0/attr_allow_any_host
+				 */
+				sprintf(path, "%s/%s%s-%s/attr_allow_any_host", SYS_NVMET_TGT, NQN_HDR_STR, hostname, device);
+				if ((fp = fopen(path, "w")) == NULL){
+					msg = "Error. Unable to open %s. %s: fopen: %s";
+					print_error(msg, return_message, path, __func__, strerror(errno));
+					return INVALID_VALUE;
+				}
+				fprintf(fp, "1");
+				fclose(fp);
+				msg = "Removed %s from the list of allowed hosts for NQN %s. Now it is reachable from every host.";
+			} else {
+				msg = "Removed %s from the list of allowed hosts for NQN %s.";
+			}
+			print_error(msg, return_message, host, nqn);
+			rc = SUCCESS;
+
+		} else {
+			msg = "Error: the host %s is not in use by NQN %s.";
+			print_error(msg, return_message, host, nqn);
+		}
+	} else {
+		msg = "Error: the host %s is not present in the global allowed hosts list.";
+		print_error(msg, return_message, host);
+	}
+	return rc;
+}
+
 /*
  * description: List NVMe Target exports / ports.
  */
