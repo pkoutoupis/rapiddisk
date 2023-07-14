@@ -244,20 +244,6 @@ int scandir_filter_rc(const struct dirent *list) {
 }
 
 /**
- * scandir() filter: "If the name of the directory/file entry begins with 'dm-', return TRUE, otherwise return FALSE"
- *
- * @param list This is the directory entry that is being passed to the function.
- *
- * @return TRUE or FALSE
- */
-int scandir_filter_dm(const struct dirent *list) {
-	if (strncmp(list->d_name, "dm-", 3) == SUCCESS) {
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
  * It searches for all the cache targets in the system and returns a linked list of them
  *
  * @param return_message This is a pointer to a string that will be used to return any error messages.
@@ -266,9 +252,9 @@ int scandir_filter_dm(const struct dirent *list) {
  */
 struct RC_PROFILE *search_cache_targets(char *return_message)
 {
-	int num, num2, num3, n = 0, i, z;
-	struct dirent **list, **nodes, **maps;
-	char file[NAMELEN] = {0};
+	int num, num2, n, i;
+	struct dirent **list, **maps;
+	char file[NAMELEN] = {0}, link[0xf] = {0};
 	struct RC_PROFILE *prof = NULL;
 	char *msg;
 
@@ -280,54 +266,39 @@ struct RC_PROFILE *search_cache_targets(char *return_message)
 		print_error(msg, return_message, __func__, strerror(errno));
 		return NULL;
 	}
-	if ((num2 = scandir(SYS_BLOCK, &nodes, scandir_filter_dm, NULL)) < 0) {
-		msg = ERR_SCANDIR;
-		print_error(msg, return_message, __func__, strerror(errno));
-		list = clean_scandir(list, num);
-		return NULL;
-	}
 
-	for (;n < num; n++) {
+	for (n = 0; n < num; n++) {
 		prof = calloc(1, sizeof(struct RC_PROFILE));
 		if (prof == NULL) {
 			msg = ERR_CALLOC;
-			print_error(msg, return_message, __func__, strerror(errno));
-			list = clean_scandir(list, num);
-			nodes = clean_scandir(nodes, num2);
-			free_linked_lists(cache_head, NULL, NULL);
-			return NULL;
+			goto search_cache_targets_error;
 		}
 		strcpy(prof->device, list[n]->d_name);
-		for (i = 0; i < num2; i++) {
-			sprintf(file, "%s/%s", SYS_BLOCK, nodes[i]->d_name);
-			char *info_size = read_info(file, "dm/name", return_message);
-			if (info_size == NULL) {
-				list = clean_scandir(list, num);
-				nodes = clean_scandir(nodes, num2);
-				free(prof);
-				free_linked_lists(cache_head, NULL, NULL);
-				return NULL;
-			}
-			if (strncmp(info_size, prof->device, sizeof(prof->device)) == 0) {
-				sprintf(file, "%s/%s/slaves", SYS_BLOCK, nodes[i]->d_name);
-				if ((num3 = scandir(file, &maps, scandir_filter_no_dot, NULL)) < 0) {
-					msg = ERR_SCANDIR;
-					print_error(msg, return_message, __func__, strerror(errno));
-					list = clean_scandir(list, num);
-					nodes = clean_scandir(nodes, num2);
-					free(prof);
-					free_linked_lists(cache_head, NULL, NULL);
-					return NULL;
-				}
-				for (z=0;z < num3; z++) {
-					if (strncmp(maps[z]->d_name, "rd", 2) == SUCCESS)
-						strcpy(prof->cache, (char *)maps[z]->d_name);
-					else
-						strcpy(prof->source, (char *)maps[z]->d_name);
-				}
-				maps = clean_scandir(maps, num3);
-			}
+		sprintf(file, "%s/%s", DEV_MAPPER, list[n]->d_name);
+		readlink(file, link, sizeof(link));
+		memset(file, 0x0, sizeof(file));
+		sprintf(file, "%s/%s", SYS_BLOCK, link + 3);
+		if (access(file, F_OK) != SUCCESS) {
+			msg = "Error. Path %s does not exist.";
+			print_error(msg, return_message, file);
+			goto search_cache_targets_error2;
 		}
+
+		memset(file, 0x0, sizeof(file));
+		sprintf(file, "%s/%s/slaves", SYS_BLOCK, link + 3);
+		if ((num2 = scandir(file, &maps, scandir_filter_no_dot, NULL)) < 0) {
+			msg = ERR_SCANDIR;
+			free(prof);
+			goto search_cache_targets_error;
+		}
+		for (i = 0; i < num2; i++) {
+			if (strncmp(maps[i]->d_name, "rd", 2) == SUCCESS)
+				strcpy(prof->cache, (char *)maps[i]->d_name);
+			else
+				strcpy(prof->source, (char *)maps[i]->d_name);
+		}
+		maps = clean_scandir(maps, num2);
+
 		if (cache_head == NULL)
 			cache_head = prof;
 		else
@@ -336,8 +307,14 @@ struct RC_PROFILE *search_cache_targets(char *return_message)
 		prof->next = NULL;
 	}
 	list = clean_scandir(list, num);
-	nodes = clean_scandir(nodes, num2);
 	return cache_head;
+
+search_cache_targets_error:
+	print_error(msg, return_message, __func__, strerror(errno));
+search_cache_targets_error2:
+	list = clean_scandir(list, num);
+	free_linked_lists(cache_head, NULL, NULL);
+	return NULL;
 }
 
 /**
