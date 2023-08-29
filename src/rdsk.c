@@ -244,20 +244,6 @@ int scandir_filter_rc(const struct dirent *list) {
 }
 
 /**
- * scandir() filter: "If the name of the directory/file entry begins with 'dm-', return TRUE, otherwise return FALSE"
- *
- * @param list This is the directory entry that is being passed to the function.
- *
- * @return TRUE or FALSE
- */
-int scandir_filter_dm(const struct dirent *list) {
-	if (strncmp(list->d_name, "dm-", 3) == SUCCESS) {
-		return TRUE;
-	}
-	return FALSE;
-}
-
-/**
  * It searches for all the cache targets in the system and returns a linked list of them
  *
  * @param return_message This is a pointer to a string that will be used to return any error messages.
@@ -266,77 +252,78 @@ int scandir_filter_dm(const struct dirent *list) {
  */
 struct RC_PROFILE *search_cache_targets(char *return_message)
 {
-	int num, num2, num3, n = 0, i, z;
-	struct dirent **list, **nodes, **maps;
-	char file[NAMELEN] = {0};
+	int list_num, maps_num, n, z;
+	struct dirent **list = NULL, **maps = NULL;
+	char file[NAMELEN] = {0}, link[0xf] = {0};
 	struct RC_PROFILE *prof = NULL;
-	char *msg;
-
+	char *msg, *link_ptr;
+	bool error = FALSE;
 	cache_head = NULL;
 	cache_end = NULL;
 
-	if ((num = scandir(DEV_MAPPER, &list, scandir_filter_rc, NULL)) < 0) {
+	if ((list_num = scandir(DEV_MAPPER, &list, scandir_filter_rc, NULL)) >= 0) {
+		for (n = 0; n < list_num; n++) {
+			prof = calloc(1, sizeof(struct RC_PROFILE));
+			if (prof != NULL) {
+				strcpy(prof->device, list[n]->d_name);
+				sprintf(file, "%s/%s", DEV_MAPPER, list[n]->d_name);
+				if (readlink(file, link, sizeof(link)) != INVALID_VALUE) {
+					link_ptr = link + 3;
+					memset(file, 0x0, sizeof(file));
+					sprintf(file, "%s/%s", SYS_BLOCK, link_ptr);
+					if (access(file, F_OK) == SUCCESS) {
+						memset(file, 0x0, sizeof(file));
+						sprintf(file, "%s/%s/slaves", SYS_BLOCK, link_ptr);
+						if ((maps_num = scandir(file, &maps, scandir_filter_no_dot, NULL)) >= 0) {
+							for (z = 0; z < maps_num; z++) {
+								if (strncmp(maps[z]->d_name, "rd", 2) == SUCCESS) {
+									strcpy(prof->cache, (char *) maps[z]->d_name);
+								} else {
+									strcpy(prof->source, (char *) maps[z]->d_name);
+								}
+							}
+							maps = clean_scandir(maps, maps_num);
+							if (cache_head == NULL)
+								cache_head = prof;
+							else
+								cache_end->next = prof;
+							cache_end = prof;
+							prof->next = NULL;
+						} else { // scandir() of /sys/block/<device>/slaves
+							msg = ERR_SCANDIR;
+							free(prof);
+							error = TRUE;
+							break;
+						}
+					} else { // Existance check of /sys/block/dm-xx
+						msg = "%s: EXISTANCE: %s";
+						free(prof);
+						error = TRUE;
+						break;
+					}
+				} else { // Readlink call for /dev/mapper/rc-xx
+					msg = "%s: readlink: %s";
+					free(prof);
+					error = TRUE;
+					break;
+				}
+			} else { // calloc call
+				msg = ERR_CALLOC;
+				error = TRUE;
+				break;
+			}
+		}
+	} else { // scandir() call for rc-xx in /dev/mapper
 		msg = ERR_SCANDIR;
-		print_error(msg, return_message, __func__, strerror(errno));
-		return NULL;
-	}
-	if ((num2 = scandir(SYS_BLOCK, &nodes, scandir_filter_dm, NULL)) < 0) {
-		msg = ERR_SCANDIR;
-		print_error(msg, return_message, __func__, strerror(errno));
-		list = clean_scandir(list, num);
-		return NULL;
+		error = TRUE;
 	}
 
-	for (;n < num; n++) {
-		prof = calloc(1, sizeof(struct RC_PROFILE));
-		if (prof == NULL) {
-			msg = ERR_CALLOC;
-			print_error(msg, return_message, __func__, strerror(errno));
-			list = clean_scandir(list, num);
-			nodes = clean_scandir(nodes, num2);
-			free_linked_lists(cache_head, NULL, NULL);
-			return NULL;
-		}
-		strcpy(prof->device, list[n]->d_name);
-		for (i = 0; i < num2; i++) {
-			sprintf(file, "%s/%s", SYS_BLOCK, nodes[i]->d_name);
-			char *info_size = read_info(file, "dm/name", return_message);
-			if (info_size == NULL) {
-				list = clean_scandir(list, num);
-				nodes = clean_scandir(nodes, num2);
-				free(prof);
-				free_linked_lists(cache_head, NULL, NULL);
-				return NULL;
-			}
-			if (strncmp(info_size, prof->device, sizeof(prof->device)) == 0) {
-				sprintf(file, "%s/%s/slaves", SYS_BLOCK, nodes[i]->d_name);
-				if ((num3 = scandir(file, &maps, scandir_filter_no_dot, NULL)) < 0) {
-					msg = ERR_SCANDIR;
-					print_error(msg, return_message, __func__, strerror(errno));
-					list = clean_scandir(list, num);
-					nodes = clean_scandir(nodes, num2);
-					free(prof);
-					free_linked_lists(cache_head, NULL, NULL);
-					return NULL;
-				}
-				for (z=0;z < num3; z++) {
-					if (strncmp(maps[z]->d_name, "rd", 2) == SUCCESS)
-						strcpy(prof->cache, (char *)maps[z]->d_name);
-					else
-						strcpy(prof->source, (char *)maps[z]->d_name);
-				}
-				maps = clean_scandir(maps, num3);
-			}
-		}
-		if (cache_head == NULL)
-			cache_head = prof;
-		else
-			cache_end->next = prof;
-		cache_end = prof;
-		prof->next = NULL;
+	if (error) { // All of the above set errno upon error
+		print_error(msg, return_message, __func__, strerror(errno));
+		free_linked_lists(cache_head, NULL, NULL);
+		cache_head = NULL;
 	}
-	list = clean_scandir(list, num);
-	nodes = clean_scandir(nodes, num2);
+	list = clean_scandir(list, list_num);
 	return cache_head;
 }
 
