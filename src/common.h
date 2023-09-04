@@ -43,6 +43,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #include <unistd.h>
 #include <dirent.h>
 #include <stddef.h>
+#include <math.h>
 
 /** Rapiddisk Process name */
 #define PROCESS			"rapiddisk"

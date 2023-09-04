@@ -103,7 +103,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 	unsigned long long size = 0;
 	bool json_flag = FALSE;
 	bool header_flag = TRUE;
-	char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0}, header[NAMELEN] = {0};
+	char device[NAMELEN] = {0}, backing[NAMELEN] = {0}, host[NAMELEN] = {0}, header[NAMELEN] = {0}, sizearg[NAMELEN] = {0};
 	char generic_msg[NAMELEN] = {0};
 	struct RD_PROFILE *disk = NULL;
 	struct RC_PROFILE *cache = NULL;
@@ -120,13 +120,13 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				return SUCCESS;
 			case 'a':
 				action = ACTION_ATTACH;
-				size = strtoul(optarg, (char **)NULL, 10);
+				sprintf(sizearg, "%s", optarg);
 				break;
 			case 'b':
 				sprintf(backing, "%s", optarg);
 				break;
 			case 'c':
-				size = strtoul(optarg, (char **)NULL, 10);
+				sprintf(sizearg, "%s", optarg);
 				break;
 			case 'd':
 				action = ACTION_DETACH;
@@ -248,13 +248,17 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	switch(action) {
 		case ACTION_ATTACH:
-			if (size <= 0) {
+			size = validate_size("^(\\d+)(B|KB|KiB|MB|MiB|GB|GiB)?$", sizearg, generic_msg);
+			if (size == 0) {
 				rc = -EINVAL;
-				print_message(rc, ERR_INVALID_ARG, json_flag);
+				if (strlen(generic_msg) > 0) {
+					print_message(rc, generic_msg, json_flag);
+				} else {
+					print_message(rc, ERR_INVALID_ARG, json_flag);
+				}
 			} else {
-				char mem_device_attach_msg[NAMELEN] = {0};
-				rc = mem_device_attach(disk, size, mem_device_attach_msg);
-				print_message(rc, mem_device_attach_msg, json_flag);
+				rc = mem_device_attach(disk, size, generic_msg);
+				print_message(rc, generic_msg, json_flag);
 			}
 			break;
 		case ACTION_DETACH:
@@ -302,9 +306,14 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				print_message(rc, ERR_NO_DEVICES, json_flag);
 				break;
 			} else {
+				size = validate_size("^(\\d+)(B|KB|KiB|MB|MiB|GB|GiB)?$", sizearg, generic_msg);
 				if (size <= 0 || strlen(device) <= 0) {
 					rc = -EINVAL;
-					print_message(rc, ERR_INVALID_ARG, json_flag);
+					if (strlen(generic_msg) > 0) {
+						print_message(rc, generic_msg, json_flag);
+					} else {
+						print_message(rc, ERR_INVALID_ARG, json_flag);
+					}
 					break;
 				}
 				rc = mem_device_resize(disk, device, size, generic_msg);
