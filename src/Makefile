@@ -36,8 +36,8 @@ else
 NDEBUG_CFLAGS := -O2 -Wno-unused-result -flto=auto -ffat-lto-objects -fstack-protector-strong $(CFLAGS)
 endif
 ifndef LDLIBS
-COMMON_LDLIBS := -ljansson -ldevmapper -lpcre2-8
-DAEMON_LDLIBS := -ljansson -ldevmapper -lpcre2-8 -lmicrohttpd
+COMMON_LDLIBS := -ljansson -ldevmapper -lpcre2-8 -lm
+DAEMON_LDLIBS := -ljansson -ldevmapper -lpcre2-8 -lmicrohttpd -lm
 else
 COMMON_LDLIBS := $(LDLIBS)
 DAEMON_LDLIBS := $(LDLIBS)

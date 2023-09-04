@@ -422,3 +422,92 @@ int scandir_filter_no_dot(const struct dirent *list) {
 	}
 	return TRUE;
 }
+
+/**
+ * The function `validate_size` uses PCRE2 library to perform regular expression matching and extract a
+ * number from a given string converting in MiB from the specified size type.
+ *
+ * @param re A pointer to a null-terminated string representing the regular expression pattern to be matched.
+ * @param subject The subject is a character array that contains the string on which the regular expression will be
+ * applied.
+ * @param error_message The `error_message` parameter is a character array where an error string will be stored.
+ *
+ * @return a long value representing the calculated size in MiB.
+ */
+unsigned long long int validate_size(const char *re, char *subject, char *error_message) {
+
+	int rc, errorcode;
+	unsigned long long res;
+	PCRE2_SIZE erroroffset, pcre2_result_len, pcre2_human_size_len;
+	PCRE2_UCHAR reg_error[NAMELEN] = {0};
+	pcre2_match_data *pcre2_matchdata;
+	PCRE2_UCHAR *pcre2_result, *pcre2_human_size;
+
+	PCRE2_SPTR pcre2_re = (PCRE2_SPTR) re;
+	pcre2_code *compiled_re = pcre2_compile(pcre2_re, PCRE2_ZERO_TERMINATED, 0, &errorcode, &erroroffset, NULL);
+
+	if (compiled_re) {
+		PCRE2_SPTR pcre2_subject = (PCRE2_SPTR) subject;
+		size_t subject_length = strlen(subject);
+		pcre2_matchdata = pcre2_match_data_create_from_pattern(compiled_re, NULL);
+
+		rc = pcre2_match(
+				compiled_re,
+				pcre2_subject,
+				subject_length,
+				0,
+				0,
+				pcre2_matchdata,
+				NULL
+		);
+
+		if (rc < 0) {
+			// No match at all
+			pcre2_get_error_message(rc, reg_error, sizeof(reg_error));
+			sprintf(error_message, "Error during matching of size in string '%s': '%s'.", subject, reg_error);
+			res = 0;
+		} else if (rc == 2) {
+			// Only number
+			pcre2_substring_get_bynumber(pcre2_matchdata, 1, &pcre2_result, &pcre2_result_len);
+			res = strtoull((char *) pcre2_result, (char **) NULL, 10);
+			pcre2_substring_free(pcre2_result);
+		} else if (rc == 3) {
+			// Number and string (MB, GB, etc.)
+			pcre2_substring_get_bynumber(pcre2_matchdata, 1, &pcre2_result, &pcre2_result_len);
+			unsigned long long hsize = strtoull((char *) pcre2_result, (char **) NULL, 10);
+			long double ldhsize = hsize;
+			pcre2_substring_get_bynumber(pcre2_matchdata, 2, &pcre2_human_size, &pcre2_human_size_len);
+			char *cpcre2_human_size = (char *) pcre2_human_size;
+			if (strcmp("B", cpcre2_human_size) == 0) {
+				res = floorl(ldhsize / 1024 / 1024);
+			} else if (strcmp("KB", cpcre2_human_size) == 0) {
+				res = floorl(ldhsize * 1000 / 1024 / 1024);
+			} else if (strcmp("KiB", cpcre2_human_size) == 0) {
+				res = floorl(ldhsize * 1024 / 1024 / 1024);
+			} else if (strcmp("MB", cpcre2_human_size) == 0) {
+				res = floorl(ldhsize * 1000 * 1000 / 1024 / 1024);
+			} else if (strcmp("MiB", cpcre2_human_size) == 0) {
+				res = hsize;
+			} else if (strcmp("GB", cpcre2_human_size) == 0) {
+				res = floorl(ldhsize * 1000 * 1000 * 1000 / 1024 / 1024);
+			} else if (strcmp("GiB", cpcre2_human_size) == 0) {
+				res = hsize * 1024;
+			} else {
+				res = 0;
+			}
+			pcre2_substring_free(pcre2_result);
+			pcre2_substring_free(pcre2_human_size);
+		}
+
+		pcre2_code_free(compiled_re);
+		pcre2_match_data_free(pcre2_matchdata);
+
+	} else {
+		// Syntax error in the regular expression at erroroffset
+		pcre2_get_error_message(errorcode, reg_error, sizeof(reg_error));
+		sprintf(error_message, "Error compiling regexp at offset #%ld: '%s'.", erroroffset, reg_error);
+		res = 0;
+	}
+
+	return res;
+}

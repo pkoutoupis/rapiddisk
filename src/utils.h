@@ -43,5 +43,5 @@ struct dirent **clean_scandir(struct dirent **scanlist, int num);
 int check_loaded_modules(void);
 void print_message(int ret_value, char *message, bool json_flag);
 char *verbose_msg(char *dest, char *msg);
-
+unsigned long long int validate_size(const char *re, char *subject, char *error_message);
 #endif //UTILS_H
