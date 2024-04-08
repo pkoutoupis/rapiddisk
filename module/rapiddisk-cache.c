@@ -162,6 +162,21 @@ static void cache_write(struct cache_context *, struct bio *);
 static int cache_invalidate_blocks(struct cache_context *, struct bio *);
 static void rc_uncached_io_callback(unsigned long, void *);
 static void rc_start_uncached_io(struct cache_context *, struct bio *);
+void rc_io_callback(unsigned long, void *);
+int rc_do_complete(struct kcached_job *);
+void kcached_client_destroy(struct cache_context *);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0)
+int rc_map(struct dm_target *, struct bio *);
+#else
+int rc_map(struct dm_target *, struct bio *, union map_info *);
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
+int dm_io_async_bvec(unsigned int, struct dm_io_region *, int, struct bio *, io_notify_fn, void *);
+#else
+int dm_io_async_bvec(unsigned int, struct dm_io_region *, int, struct bio_vec *, io_notify_fn, void *);
+#endif
+int __init rc_init(void);
+void rc_exit(void);
 
 int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,14,0)
@@ -199,7 +214,11 @@ int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where,
 	iorq.notify.context = context;
 	iorq.client = dmc->io_client;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,2)
+	return dm_io(&iorq, num_regions, where, NULL, IOPRIO_DEFAULT);
+#else
 	return dm_io(&iorq, num_regions, where, NULL);
+#endif
 }
 
 static int jobs_init(void)
