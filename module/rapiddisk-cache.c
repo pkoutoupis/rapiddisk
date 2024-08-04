@@ -214,7 +214,10 @@ int dm_io_async_bvec(unsigned int num_regions, struct dm_io_region *where,
 	iorq.notify.context = context;
 	iorq.client = dmc->io_client;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,2)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,2)) || \
+	((LINUX_VERSION_CODE >= KERNEL_VERSION(6,7,11)) && (LINUX_VERSION_CODE < KERNEL_VERSION(6,8,0))) || \
+	((LINUX_VERSION_CODE >= KERNEL_VERSION(6,6,23)) && (LINUX_VERSION_CODE < KERNEL_VERSION(6,7,0))) || \
+	((LINUX_VERSION_CODE >= KERNEL_VERSION(6,1,83)) && (LINUX_VERSION_CODE < KERNEL_VERSION(6,2,0)))
 	return dm_io(&iorq, num_regions, where, NULL, IOPRIO_DEFAULT);
 #else
 	return dm_io(&iorq, num_regions, where, NULL);
