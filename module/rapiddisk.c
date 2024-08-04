@@ -648,11 +648,13 @@ out:
 	return;
 #endif
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0)
 io_error:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
 	bio->bi_status= err;
 #else
 	bio->bi_error = err;
+#endif
 #endif
 	bio_io_error(bio);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
