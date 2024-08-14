@@ -815,13 +815,6 @@ static int attach_device(unsigned long num, unsigned long long size)
 	if (!disk)
 		goto out_free_queue;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
-	disk = rdsk->rdsk_disk = blk_alloc_disk(NUMA_NO_NODE);
-#else
-	disk = rdsk->rdsk_disk = alloc_disk(1);
-#endif
-	if (!disk)
-		goto out_free_queue;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
 	blk_queue_logical_block_size(disk->queue, BYTES_PER_SECTOR);
 	blk_queue_physical_block_size(disk->queue, PAGE_SIZE);
 #else
