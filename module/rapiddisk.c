@@ -807,12 +807,18 @@ static int attach_device(unsigned long num, unsigned long long size)
 	blk_queue_make_request(rdsk->rdsk_queue, rdsk_make_request);
 #endif
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,9,0)
+	disk = rdsk->rdsk_disk = blk_alloc_disk(NULL, NUMA_NO_NODE);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
 	disk = rdsk->rdsk_disk = blk_alloc_disk(NUMA_NO_NODE);
 #else
 	disk = rdsk->rdsk_disk = alloc_disk(1);
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,9,0)
+	if (IS_ERR(disk))
+#else
 	if (!disk)
+#endif
 		goto out_free_queue;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
 	blk_queue_logical_block_size(disk->queue, BYTES_PER_SECTOR);
