@@ -1045,7 +1045,11 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 			goto construct_fail5;
 		}
 	} else {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,11,0)
+		dmc->size = bdev_nr_sectors(dmc->cache_dev->bdev);
+#else
 		dmc->size = to_sector(dmc->cache_dev->bdev->bd_inode->i_size);
+#endif
 	}
 
 	if (argc >= 4) {
@@ -1081,7 +1085,11 @@ static int cache_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	do_div(tmpsize, dmc->assoc);
 	dmc->size = tmpsize * dmc->assoc;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,11,0)
+	dev_size = bdev_nr_sectors(dmc->cache_dev->bdev);
+#else
 	dev_size = to_sector(dmc->cache_dev->bdev->bd_inode->i_size);
+#endif
 	data_size = dmc->size * dmc->block_size;
 	if (data_size > dev_size) {
 		DMERR("Requested cache size exceeds the cache device's capacity (%lu>%lu)",
