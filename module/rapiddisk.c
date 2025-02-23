@@ -860,9 +860,7 @@ static int attach_device(unsigned long num, unsigned long long size)
 #else
 	blk_queue_flag_set(QUEUE_FLAG_DISCARD, disk->queue);
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
-	disk->queue->limits.features = BLK_FEAT_ROTATIONAL;
-#else
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,11,0)
 	blk_queue_flag_set(QUEUE_FLAG_NONROT, disk->queue);
 #endif
 #else
