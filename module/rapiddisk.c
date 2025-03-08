@@ -820,7 +820,14 @@ static int attach_device(unsigned long num, unsigned long long size)
 	if (!disk)
 #endif
 		goto out_free_queue;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
+	struct request_queue *q = disk->queue;
+	struct queue_limits lim;
+	lim = queue_limits_start_update(q);
+	lim.logical_block_size = BYTES_PER_SECTOR;
+	lim.physical_block_size = PAGE_SIZE;
+	queue_limits_commit_update(q, &lim);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
 	blk_queue_logical_block_size(disk->queue, BYTES_PER_SECTOR);
 	blk_queue_physical_block_size(disk->queue, PAGE_SIZE);
 #else
@@ -828,7 +835,9 @@ static int attach_device(unsigned long num, unsigned long long size)
 	blk_queue_physical_block_size(rdsk->rdsk_queue, PAGE_SIZE);
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
+	blk_queue_write_cache(disk->queue);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
 	blk_queue_write_cache(disk->queue, false, false);
 #else
 	blk_queue_write_cache(rdsk->rdsk_queue, false, false);
@@ -844,12 +853,16 @@ static int attach_device(unsigned long num, unsigned long long size)
 	disk->queue->nr_requests = nr_requests;
 	disk->queue->limits.discard_granularity = PAGE_SIZE;
 	disk->queue->limits.max_discard_sectors = UINT_MAX;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
+	blk_queue_disable_discard(disk->queue);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0) || (defined(RHEL_MAJOR) && RHEL_MAJOR >= 9 && RHEL_MINOR >= 0)
 	blk_queue_max_discard_sectors(disk->queue, 0);
 #else
 	blk_queue_flag_set(QUEUE_FLAG_DISCARD, disk->queue);
 #endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,11,0)
 	blk_queue_flag_set(QUEUE_FLAG_NONROT, disk->queue);
+#endif
 #else
 	rdsk->rdsk_queue->limits.max_sectors = (max_sectors * 2);
 	rdsk->rdsk_queue->nr_requests = nr_requests;

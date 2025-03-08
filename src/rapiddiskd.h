@@ -57,7 +57,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #define D_STDOUT_LOG		"/tmp/rapiddiskd_out.log"
 #define D_EXITING		"Daemon exiting."
 #define D_STARTING		"Starting daemon..."
-#define D_RECV_REQ		"Recevied request '%s'."
+#define D_RECV_REQ		"Received request '%s'."
 #define D_LOOP_EXITING		"Daemon loop function exiting: %s."
 #define D_SIGNAL_RECEIVED	"Signal_handler function, SIGNAL received: %s."
 
