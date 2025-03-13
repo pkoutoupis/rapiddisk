@@ -78,7 +78,16 @@ void online_menu(char *string)
 	       "\t-u\t\tUnmap a RapidDisk device from another block device.\n"
 	       "\t-v\t\tDisplay the utility version string.\n"
 	       "\t-X\t\tRemove the NVMe Target port (must be unused).\n"
-	       "\t-x\t\tUnexport a RapidDisk block device from an NVMe Target.\n\n");
+	       "\t-x\t\tUnexport a RapidDisk block device from an NVMe Target.\n"
+		   "\t-y\t\tAdd NQN.\n"
+		   "\t-Y\t\tRemove NQN.\n"
+		   "\t-z\t\tAdd host.\n"
+		   "\t-Z\t\tRemove host.\n"
+		   "\t-o\t\tLink port to NQN.\n"
+		   "\t-O\t\tUnlink port from NQN.\n"
+		   "\t-T\t\tLink host to NQN.\n"
+		   "\t-M\t\tUnlink host from NQN.\n\n"
+		   );
         printf("Example Usage:\n\trapiddisk -a 64\n"
 	       "\trapiddisk -d rd2\n"
 	       "\trapiddisk -r rd2 -c 128\n"
@@ -89,17 +98,31 @@ void online_menu(char *string)
 	       "\trapiddisk -f rd2\n"
 	       "\trapiddisk -L rd2\n"
 	       "\trapiddisk -U rd3\n"
-	       "\trapiddisk -i eth0 -P 1 -t tcp\n"
-	       "\trapiddisk -i NULL -P 2 -t loop\n"
-	       "\trapiddisk -X -P 1\n"
 	       "\trapiddisk -e -b rd3 -P 1 -H nqn.host1\n"
 	       "\trapiddisk -R -b rd0\n"
-	       "\trapiddisk -x -b rd3 -P 1 -H nqn.host1\n\n");
+	       "\trapiddisk -x -b rd3 -P 1 -H nqn.host1\n"
+		   "\n"
+		   "\trapiddisk -y -b rd0\n"
+		   "\trapiddisk -Y -b rd0\n"
+		   "\trapiddisk -i eth0 -P 1 -t tcp\n"
+		   "\trapiddisk -i NULL -P 2 -t loop\n"
+		   "\trapiddisk -X -P 1\n"
+		   "\trapiddisk -o -b rd0 -P 1\n"
+		   "\trapiddisk -O -b rd0 -P 1\n"
+		   "\trapiddisk -z -H nqn.host1\n"
+		   "\trapiddisk -z -H nqn.host1\n"
+		   "\trapiddisk -T -b rd0 -H nqn.host1\n"
+		   "\trapiddisk -M -b rd0 -H nqn.host1\n\n\n"
+		   "\tNew syntax example:\n"
+		   "\trapiddisk -y -b rd0\n"
+		   "\trapiddisk -i any -P 1000 -t loop\n"
+		   "\trapiddisk -o -b rd0 -P 1000\n\n"
+		   );
 }
 
 int exec_cmdline_arg(int argcin, char *argvin[])
 {
-	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE, xfer = XFER_MODE_TCP;
+	int rc = INVALID_VALUE, mode = WRITETHROUGH, action = ACTION_NONE, i, port = INVALID_VALUE, xfer = INVALID_VALUE;
 	unsigned long long size = 0;
 	bool json_flag = FALSE;
 	bool header_flag = TRUE;
@@ -112,7 +135,7 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 
 	sprintf(header, "%s %s\n%s\n\n", PROCESS, VERSION_NUM, COPYRIGHT);
 
-	while ((i = getopt(argcin, argvin, "?:a:b:c:d:ef:gH:hi:jL:lm:NnP:p:qRr:s:t:U:u:VvXx")) != INVALID_VALUE) {
+	while ((i = getopt(argcin, argvin, "?:a:b:c:d:ef:gH:hi:jL:lm:NnP:p:qRr:s:t:U:u:VvXxYyzZoOTM")) != INVALID_VALUE) {
 		switch (i) {
 			case 'h':
 				printf("%s", header);
@@ -199,6 +222,8 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 					xfer = XFER_MODE_RDMA;
 				else if (strcmp(optarg, "loop") == 0)
 					xfer = XFER_MODE_LOOP;
+				else if (strcmp(optarg, "tcp") == 0)
+					xfer = XFER_MODE_TCP;
 				break;
 			case 'U':
 				action = ACTION_UNLOCK;
@@ -216,6 +241,30 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				break;
 			case 'x':
 				action = ACTION_UNEXPORT_NVMET;
+				break;
+			case 'y':
+				action = ACTION_ADD_NQN;
+				break;
+			case 'Y':
+				action = ACTION_REMOVE_NQN;
+				break;
+			case 'z':
+				action = ACTION_ADD_HOST;
+				break;
+			case 'Z':
+				action = ACTION_REMOVE_HOST;
+				break;
+			case 'T':
+				action = ACTION_LINK_HOST;
+				break;
+			case 'M':
+				action = ACTION_UNLINK_HOST;
+				break;
+			case 'o':
+				action = ACTION_LINK_PORT;
+				break;
+			case 'O':
+				action = ACTION_UNLINK_PORT;
 				break;
 			default:
 			case '?':
@@ -395,11 +444,16 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				print_message(rc, ERR_INVALID_PORT, json_flag);
 				break;
 			}
+			if (xfer == INVALID_VALUE) {
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_PROTOCOL, json_flag);
+				break;
+			}
 			if (json_flag) {
-				rc = nvmet_enable_port(host, port, xfer, generic_msg);
+				rc = nvmet_create_port(host, port, xfer, generic_msg);
 				print_message(rc, generic_msg, json_flag);
 			} else {
-				rc = nvmet_enable_port(host, port, xfer, NULL);
+				rc = nvmet_create_port(host, port, xfer, NULL);
 			}
 			break;
 		case ACTION_DISABLE_NVMET_PORT:
@@ -409,10 +463,10 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 				break;
 			}
 			if (json_flag) {
-				rc = nvmet_disable_port(port, generic_msg);
+				rc = nvmet_remove_port(port, generic_msg);
 				print_message(rc, generic_msg, json_flag);
 			} else {
-				rc = nvmet_disable_port(port, NULL);
+				rc = nvmet_remove_port(port, NULL);
 			}
 			break;
 		case ACTION_EXPORT_NVMET:
@@ -476,6 +530,90 @@ int exec_cmdline_arg(int argcin, char *argvin[])
 			} else {
 				rc = nvmet_revalidate_size(disk, cache, backing, NULL);
 			}
+			break;
+		case ACTION_ADD_NQN:
+			if (strlen(backing) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			rc = nvmet_add_nqn(disk, cache, backing, NULL);
+			break;
+		case ACTION_REMOVE_NQN:
+			if (strlen(backing) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			rc = nvmet_remove_nqn(backing, NULL);
+			break;
+		case ACTION_ADD_HOST:
+			if (strlen(host) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			rc = nvmet_add_host(host, NULL);
+			break;
+		case ACTION_REMOVE_HOST:
+			if (strlen(host) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			rc = nvmet_remove_host(host, NULL);
+			break;
+		case ACTION_LINK_PORT:
+			if (port == INVALID_VALUE) {
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_PORT, json_flag);
+				break;
+			}
+			if (strlen(backing) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			rc = nvmet_link_port_nqn(backing, port, NULL);
+			break;
+		case ACTION_UNLINK_PORT:
+			if (port == INVALID_VALUE) {
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_PORT, json_flag);
+				break;
+			}
+			if (strlen(backing) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			rc = nvmet_unlink_port_nqn(backing, port, NULL);
+			break;
+		case ACTION_LINK_HOST:
+			if (strlen(backing) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			if (strlen(host) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			rc = nvmet_link_host_nqn(backing, host, NULL);
+			break;
+		case ACTION_UNLINK_HOST:
+			if (strlen(backing) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			if (strlen(host) <= 0){
+				rc = -EINVAL;
+				print_message(rc, ERR_INVALID_ARG, json_flag);
+				break;
+			}
+			rc = nvmet_unlink_host_nqn(backing, host, NULL);
 			break;
 		default:
 		case ACTION_NONE:

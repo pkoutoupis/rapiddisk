@@ -52,11 +52,21 @@ SPDX-License-Identifier: GPL-2.0-or-later
 #define ACTION_LOCK			0x10
 #define ACTION_UNLOCK			0x11
 #define ACTION_REVALIDATE_NVMET_SIZE	0x12
+#define ACTION_ADD_HOST			0x13
+#define ACTION_REMOVE_HOST		0x14
+#define ACTION_ADD_NQN			0x15
+#define ACTION_REMOVE_NQN		0x16
+#define ACTION_LINK_HOST		0x17
+#define ACTION_UNLINK_HOST		0x18
+#define ACTION_LINK_PORT		0x19
+#define ACTION_UNLINK_PORT		0x20
+
 
 #define ERR_INVALID_ARG			"Error. Invalid argument(s) or values entered."
 #define ERR_NOWB_MODULE			"Please ensure that the dm-writecache module is loaded and retry."
 #define ERR_NO_DEVICES			"Unable to locate any RapidDisk devices."
 #define ERR_NO_MEMUSAGE			"Error. Unable to retrieve memory usage data."
 #define ERR_INVALID_PORT		"Error. Invalid port number."
+#define ERR_INVALID_PROTOCOL	"Error. Invalid protocol."
 
 #endif
