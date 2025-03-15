@@ -1,6 +1,6 @@
 Summary: The RapidDisk software defined advanced RAM drive and storage caching solution.
 Name: rapiddisk
-Version: 9.1.0
+Version: 9.2.0
 Release: 1
 License: General Public License Version 2
 Group: Applications/System
@@ -107,6 +107,17 @@ rm -rf %{buildroot}
 %attr(0644,root,root) /usr/lib/systemd/system-preset/30-rapiddiskd.preset
 
 %changelog
+* Sat Mar 15 2025 Petros Koutoupis <petros@petroskoutoupis.com>
+- module: Added support for the 6.11 kernel.
+- module: Added support for the 6.10 kernel.
+- module: Added support for the 6.9 kernel.
+- module: Added support for the 6.8.2 kernel.
+- module: Added support for RHEL 9.2 and CentOS Stream 9 kernels.
+- module: Remove duplicate code.
+- packaging: Changed Ubuntu/Debian files to create dkms and debug packages.
+- utility: Optimize search_cache_targets().
+- utility: Support human readable notation for CLI (B/KB/KiB).
+- utility: Removing deprecated REMAKE_INITRD option in dkms.conf plus dkms cleanup.
 * Sun Apr 23 2023 Petros Koutoupis <petros@petroskoutoupis.com>
 - module: Fixed large performance regression bug with resize mutex.
 - module: Added RHEL 9 support.

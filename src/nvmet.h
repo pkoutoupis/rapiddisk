@@ -3,7 +3,7 @@
  * @brief NVME function declarations
  * @details This header file declares some NVME related functions
  * @copyright @verbatim
-Copyright © 2011 - 2023 Petros Koutoupis
+Copyright © 2011 - 2025 Petros Koutoupis
 
 All rights reserved.
 
@@ -26,8 +26,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 @endverbatim
  * @author Petros Koutoupis \<petros\@petroskoutoupis.com\>
  * @author Matteo Tenca \<matteo.tenca\@gmail.com\>
- * @version 9.1.0
- * @date 23 April 2023
+ * @version 9.2.0
+ * @date 15 March 2025
  */
 
 #ifndef NVMET_H

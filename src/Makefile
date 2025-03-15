@@ -1,4 +1,4 @@
-# Copyright © 2011 - 2023 Petros Koutoupis
+# Copyright © 2011 - 2025 Petros Koutoupis
 # All rights reserved.
 #
 # This file is part of RapidDisk.
