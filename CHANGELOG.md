@@ -1,3 +1,15 @@
+### Release 9.2.0 ###
+- module: Added support for the 6.11 kernel.
+- module: Added support for the 6.10 kernel.
+- module: Added support for the 6.9 kernel.
+- module: Added support for the 6.8.2 kernel.
+- module: Added support for RHEL 9.2 and CentOS Stream 9 kernels.
+- module: Remove duplicate code.
+- packaging: Changed Ubuntu/Debian files to create dkms and debug packages.
+- utility: Optimize search_cache_targets().
+- utility: Support human readable notation for CLI (B/KB/KiB).
+- utility: Removing deprecated REMAKE_INITRD option in dkms.conf plus dkms cleanup.
+
 ### Release 9.1.0 ###
 - module: Fixed large performance regression bug with resize mutex.
 - module: Added RHEL 9 support.

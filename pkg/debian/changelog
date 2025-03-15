@@ -1,3 +1,19 @@
+rapiddisk (9.2.0-1) UNRELEASED; urgency=medium
+
+  [Petros Koutoupis]
+  * module: Added support for the 6.11 kernel.
+  * module: Added support for the 6.10 kernel.
+  * module: Added support for the 6.9 kernel.
+  * module: Added support for the 6.8.2 kernel.
+  * module: Added support for RHEL 9.2 and CentOS Stream 9 kernels.
+  * module: Remove duplicate code.
+  * packaging: Changed Ubuntu/Debian files to create dkms and debug packages.
+  * utility: Optimize search_cache_targets().
+  * utility: Support human readable notation for CLI (B/KB/KiB).
+  * utility: Removing deprecated REMAKE_INITRD option in dkms.conf plus dkms cleanup.
+
+ -- Petros Koutoupis <petros@petroskoutoupis.com>  Sat, 15 Mar 2025 18:41:34 -0500
+
 rapiddisk (9.1.0-1) UNRELEASED; urgency=medium
 
   [Petros Koutoupis]

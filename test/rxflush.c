@@ -1,6 +1,6 @@
 /* rxflush.c */
 
-/** Copyright © 2016 - 2023 Petros Koutoupis
+/** Copyright © 2016 - 2025 Petros Koutoupis
  ** All rights reserved.
  **
  ** This program is free software: you can redistribute it and/or modify
