@@ -249,7 +249,11 @@ static struct page *rdsk_lookup_page(struct rdsk_device *rdsk, sector_t sector)
 	page = radix_tree_lookup(&rdsk->rdsk_pages, idx);
 	rcu_read_unlock();
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+	BUG_ON(page && page_folio(page)->index != idx);
+#else
 	BUG_ON(page && page->index != idx);
+#endif
 
 	return page;
 }
@@ -285,12 +289,20 @@ static struct page *rdsk_insert_page(struct rdsk_device *rdsk, sector_t sector)
 
 	spin_lock(&rdsk->rdsk_lock);
 	idx = sector >> PAGE_SECTORS_SHIFT;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+	page_folio(page)->index = idx;
+#else
 	page->index = idx;
+#endif
 	if (radix_tree_insert(&rdsk->rdsk_pages, idx, page)) {
 		__free_page(page);
 		page = radix_tree_lookup(&rdsk->rdsk_pages, idx);
 		BUG_ON(!page);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+		BUG_ON(page_folio(page)->index != idx);
+#else
 		BUG_ON(page->index != idx);
+#endif
 	}
 	spin_unlock(&rdsk->rdsk_lock);
 
@@ -329,8 +341,13 @@ static void rdsk_free_pages(struct rdsk_device *rdsk)
 		for (i = 0; i < nr_pages; i++) {
 			void *ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0)
+			BUG_ON(page_folio(pages[i])->index < pos);
+			pos = page_folio(pages[i])->index;
+#else
 			BUG_ON(pages[i]->index < pos);
 			pos = pages[i]->index;
+#endif
 			ret = radix_tree_delete(&rdsk->rdsk_pages, pos);
 			BUG_ON(!ret || ret != pages[i]);
 			__free_page(pages[i]);
